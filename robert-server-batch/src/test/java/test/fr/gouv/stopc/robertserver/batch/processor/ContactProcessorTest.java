@@ -462,6 +462,9 @@ public class ContactProcessorTest {
 			verify(this.cryptoServerClient).decryptEBID(any());
 			verify(this.cryptoServerClient, never()).validateMacHello(any());
 
+			assertFalse(helloMessageDetail.toString().contains(Arrays.toString(mac)));
+			assertFalse(helloMessageDetail.toString().contains(Integer.toString(timeHello)));
+			assertFalse(helloMessageDetail.toString().contains(Long.toString(Integer.toUnsignedLong(timeReceived))));
 		} catch (Exception e) {
 			log.error(e.getMessage());
 			fail(SHOULD_NOT_FAIL);
