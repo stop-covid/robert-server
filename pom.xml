@@ -317,10 +317,9 @@
 	</distributionManagement>
 
 	<scm>
-		<connection>scm:git:https://gitlab.inria.fr/stemcovid19/wp3-robert-server/robert-server.git</connection>
-		<developerConnection>scm:git:https://gitlab.inria.fr/stemcovid19/wp3-robert-server/robert-server.git</developerConnection>
-		<url>https://gitlab.inria.fr/stemcovid19/wp3-robert-server/robert-server.git</url>
-		<tag>HEAD</tag>
+		<connection>scm:git:git@gitlab.inria.fr:stopcovid19/robert-server.git</connection>
+		<developerConnection>scm:git:git@gitlab.inria.fr:stopcovid19/robert-server.git</developerConnection>
+		<url>git@gitlab.inria.fr:stopcovid19/robert-server.git</url>
 	</scm>
 
 </project>
