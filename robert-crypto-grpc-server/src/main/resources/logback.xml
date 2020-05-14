@@ -59,7 +59,8 @@
         <appender-ref ref="RollingFile" />
         <appender-ref ref="Console" />
     </logger>
-    <!-- at TRACE level -->
+
+    <!-- at ERROR level -->
     <logger name="error" level="error" additivity="false">
         <appender-ref ref="RollingErrorFile" />
         <appender-ref ref="Console" />
