@@ -63,7 +63,6 @@ public class ContactMapper {
 				.ebid(Base64.decode(contactVo.getEbid()))
 				.timeInsertion(System.currentTimeMillis())
 				.messageDetails(messageDetails)
-				.timeInsertion(System.currentTimeMillis())
 				.build());
 	}
 }
