@@ -7,8 +7,7 @@ public enum DigestSaltEnum {
     HELLO((byte)0x01),
     STATUS((byte)0x02),
     UNREGISTER((byte)0x03),
-    REGISTER((byte)0x04),
-    DELETE_HISTORY((byte)0x05);
+    DELETE_HISTORY((byte)0x04);
 
     private final byte salt;
     private static Map map = new HashMap<>();
