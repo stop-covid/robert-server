@@ -92,12 +92,12 @@
 
 	<build>
 		<plugins>
-			<!-- Disabled because fails when not executed from each module's directory -->
-			<!--
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!-- Disabled because fails when not executed from each module's directory -->
+			<!--
 			<plugin>
 				<groupId>org.complykit</groupId>
 				<artifactId>license-check-maven-plugin</artifactId>
