@@ -6,7 +6,7 @@ import java.util.Objects;
 import javax.inject.Inject;
 
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
-import fr.gouv.stopc.robertserver.crypto.exception.RobertServerCryptoException;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -29,12 +29,12 @@ import fr.gouv.stopc.robert.crypto.grpc.server.response.MacHelloGenerationRespon
 import fr.gouv.stopc.robert.crypto.grpc.server.response.MacValidationResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
-import fr.gouv.stopc.robertserver.crypto.callables.TupleGenerator;
-import fr.gouv.stopc.robertserver.crypto.model.EphemeralTuple;
-import fr.gouv.stopc.robertserver.crypto.services.CryptoService;
-import fr.gouv.stopc.robertserver.crypto.structures.implementations.Crypto3DES;
-import fr.gouv.stopc.robertserver.crypto.structures.implementations.CryptoAES;
-import fr.gouv.stopc.robertserver.crypto.structures.implementations.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
+import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
+import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import io.grpc.stub.StreamObserver;
 
 @Service

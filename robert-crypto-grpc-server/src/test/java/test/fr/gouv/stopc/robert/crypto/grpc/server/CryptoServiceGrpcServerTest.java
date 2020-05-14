@@ -41,8 +41,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImp
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplStub;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoServerConfigurationServiceImpl;
-import fr.gouv.stopc.robertserver.crypto.services.CryptoService;
-import fr.gouv.stopc.robertserver.crypto.services.implementation.CryptoServiceImpl;
+import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
+import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
