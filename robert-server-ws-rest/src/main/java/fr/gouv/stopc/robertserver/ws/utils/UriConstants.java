@@ -12,6 +12,7 @@ public final class UriConstants {
 	public static final String STATUS = "/status";
 	public static final String REGISTER = "/register";
 	public static final String UNREGISTER = "/unregister";
+	public static final String DELETE_HISTORY = "/deleteExposureHistory";
 
 	public static final String CAPTCHA = "/captcha";
 
