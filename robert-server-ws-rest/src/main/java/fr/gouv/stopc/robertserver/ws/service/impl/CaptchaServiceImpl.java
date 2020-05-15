@@ -22,7 +22,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-
 @Service
 @Slf4j
 public class CaptchaServiceImpl implements CaptchaService {
@@ -46,28 +45,20 @@ public class CaptchaServiceImpl implements CaptchaService {
 		// TODO: Remove this forced returned value until reCATPCHA service is really
 		// used but method verifyCaptcha
 		// must be called for test
-		return true || Optional.ofNullable(registerVo) //
-				.map(item -> {
+		return true || Optional.ofNullable(registerVo).map(item -> {
 
-					HttpEntity<RegisterVo> request = new HttpEntity(
-							new CaptchaVo(item.getCaptcha(), this.serverConfigurationService.getCaptchaSecret())
-									.toString(),
-							initHttpHeaders());
+			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.serverConfigurationService.getCaptchaSecret()).toString(), initHttpHeaders());
+			Date sendingDate = new Date();
 
-					Date sendingDate = new Date();
+			ResponseEntity<CaptchaDto> response = this.restTemplate.postForEntity(URL_VERIFICATION, request, CaptchaDto.class);
 
-					ResponseEntity<CaptchaDto> response = restTemplate.postForEntity(URL_VERIFICATION, request,
-							CaptchaDto.class);
+			return Optional.ofNullable(response).map(ResponseEntity::getBody).filter(captchaDto -> !Objects.isNull(captchaDto.getChallengeTimestamp())).map(captchaDto -> {
 
-					return Optional.ofNullable(response).map(ResponseEntity::getBody)
-							.filter(captchaDto -> !Objects.isNull(captchaDto.getChallengeTimestamp()))
-							.map(captchaDto -> {
-								log.info("Result of CAPTCHA verification: {}", captchaDto);
+				log.info("Result of CAPTCHA verification: {}", captchaDto);
+				return isSuccess(captchaDto, sendingDate);
+			}).orElse(false);
 
-								return isSuccess(captchaDto, sendingDate);
-							}).orElse(false);
-
-				}).orElse(false);
+		}).orElse(false);
 	}
 
 	private HttpHeaders initHttpHeaders() {
@@ -82,7 +73,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 		return this.serverConfigurationService.getCaptchaAppPackageName().equals(captchaDto.getAppPackageName()) && Math.abs(
 				sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService
-						.getCaptchaChallengeTimestampTolerance() * 1000;
+						.getCaptchaChallengeTimestampTolerance() * 1000L;
 	}
 
 	@NoArgsConstructor
