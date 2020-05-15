@@ -26,9 +26,8 @@ public class CaptchaDto {
 	@JsonProperty("challenge_ts")
 	private Date challengeTimestamp;
 
-	@JsonProperty("apk_package_name")
 	@NotNull
-	private String appPackageName;
+	private String hostname;
 
 	@JsonProperty("error-codes")
 	private List<String> errorCodes;
