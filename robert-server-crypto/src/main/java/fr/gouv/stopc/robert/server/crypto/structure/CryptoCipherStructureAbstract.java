@@ -8,7 +8,9 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public abstract class CryptoCipherStructureAbstract implements ICryptoStructure, ICipherStructure {
 
     /**
@@ -22,6 +24,7 @@ public abstract class CryptoCipherStructureAbstract implements ICryptoStructure,
 
             return this.getCipher().doFinal(payloadToEncrypt);
         } catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
+            log.error(e.getMessage(), e);
             throw new RobertServerCryptoException(e.getMessage());
         }
     }
@@ -37,6 +40,7 @@ public abstract class CryptoCipherStructureAbstract implements ICryptoStructure,
 
             return this.getCipher().doFinal(payloadToEncrypt);
         } catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
+            log.error(e.getMessage(), e);
             throw new RobertServerCryptoException(e.getMessage());
         }
     }
