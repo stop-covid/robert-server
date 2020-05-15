@@ -9,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.bson.internal.Base64;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -36,7 +36,7 @@ public class EpochKeyBundleDtoMapperTest {
 		EphemeralTupleResponse ephemeralTupleResponse = null;
 
 		// When 
-		Optional<EpochKeyBundleDto> dto = mapper.convert(ephemeralTupleResponse);
+		Optional<EpochKeyBundleDto> dto = this.mapper.convert(ephemeralTupleResponse);
 		
 		// Then
 		assertFalse(dto.isPresent());
@@ -54,13 +54,11 @@ public class EpochKeyBundleDtoMapperTest {
 				.setEpochId(epochId)
 				.build();
 		
-		String expectedEbid = Base64.getEncoder().encodeToString(
-				ephemeralTupleResponse.getEbid().toByteArray());
-		String expectedEcc = Base64.getEncoder().encodeToString(
-				ephemeralTupleResponse.getEcc().toByteArray());
+		String expectedEbid = Base64.encode(ephemeralTupleResponse.getEbid().toByteArray());
+		String expectedEcc = Base64.encode(ephemeralTupleResponse.getEcc().toByteArray());
 		
 		// When 
-		Optional<EpochKeyBundleDto> dto = mapper.convert(ephemeralTupleResponse);
+		Optional<EpochKeyBundleDto> dto = this.mapper.convert(ephemeralTupleResponse);
 		
 		// Then
 		assertTrue(dto.isPresent());
@@ -77,7 +75,7 @@ public class EpochKeyBundleDtoMapperTest {
 		List<EphemeralTupleResponse> response = null;
 
 		// When
-		List<EpochKeyBundleDto> epochKeyBundleDtos = mapper.convert(response);
+		List<EpochKeyBundleDto> epochKeyBundleDtos = this.mapper.convert(response);
 
 		// Then
 		assertTrue(CollectionUtils.isEmpty(epochKeyBundleDtos));
@@ -90,7 +88,7 @@ public class EpochKeyBundleDtoMapperTest {
 		List<EphemeralTupleResponse> response = Collections.emptyList();
 
 		// When
-		List<EpochKeyBundleDto> epochKeyBundleDtos = mapper.convert(response);
+		List<EpochKeyBundleDto> epochKeyBundleDtos = this.mapper.convert(response);
 
 		// Then
 		assertTrue(CollectionUtils.isEmpty(epochKeyBundleDtos));
@@ -108,16 +106,14 @@ public class EpochKeyBundleDtoMapperTest {
 				.setEpochId(epochId)
 				.build();
 
-		String expectedEbid = Base64.getEncoder().encodeToString(
-				ephemeralTupleResponse.getEbid().toByteArray());
-		String expectedEcc = Base64.getEncoder().encodeToString(
-				ephemeralTupleResponse.getEcc().toByteArray());
+		String expectedEbid = Base64.encode(ephemeralTupleResponse.getEbid().toByteArray());
+		String expectedEcc = Base64.encode(ephemeralTupleResponse.getEcc().toByteArray());
 
 		List<EphemeralTupleResponse> response = new ArrayList<>();
 		response.add(ephemeralTupleResponse);
 
 		// When
-		List<EpochKeyBundleDto> epochKeyBundleDtos = mapper.convert(response);
+		List<EpochKeyBundleDto> epochKeyBundleDtos = this.mapper.convert(response);
 
 		// Then
 		assertFalse(CollectionUtils.isEmpty(epochKeyBundleDtos));

@@ -13,11 +13,11 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Optional;
 
 import javax.inject.Inject;
 
+import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -109,7 +109,7 @@ public class RegisterControllerWsRestTest {
 		// TODO: review this or find a better wail to validate epochid
 		// Sanity check: this test will fail one year after the start of the service
 		// (used to prevent epoch calculation errors)
-		assertTrue(currentEpoch <= 4*24*365);
+		assertTrue(this.currentEpoch <= 4*24*365);
 	}
 
 	@Test
@@ -184,10 +184,8 @@ public class RegisterControllerWsRestTest {
 		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
 		.epochId(120L)
 		.key(EpochKeyDto.builder()
-				.ebid(Base64.getEncoder().encodeToString(
-						"12345678".getBytes()))
-				.ecc(Base64.getEncoder().encodeToString(
-						"1".getBytes()))
+				.ebid(Base64.encode("12345678".getBytes()))
+				.ecc(Base64.encode("1".getBytes()))
 				.build())
 		.build();
 
@@ -207,8 +205,8 @@ public class RegisterControllerWsRestTest {
 
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
 		assertNotNull(response.getBody().getFilteringAlgoConfig());
-		assertEquals(32, Base64.getDecoder().decode(response.getBody().getKey()).length);
-		assertTrue(Arrays.equals(key, Base64.getDecoder().decode(response.getBody().getKey())));
+		assertEquals(32, Base64.decode(response.getBody().getKey()).length);
+		assertTrue(Arrays.equals(key, Base64.decode(response.getBody().getKey())));
 		assertNotNull(response.getBody().getIdsForEpochs());
 		assertTrue(response.getBody().getIdsForEpochs().size() > 0);
 		verify(this.registrationService, times(1)).createRegistration();

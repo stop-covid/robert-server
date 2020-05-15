@@ -1,6 +1,5 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -8,6 +7,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import org.bson.internal.Base64;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -75,7 +75,7 @@ public class RegisterControllerImpl implements IRegisterController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        if (!captchaService.verifyCaptcha(registerVo)) {
+        if (!this.captchaService.verifyCaptcha(registerVo)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -124,9 +124,9 @@ public class RegisterControllerImpl implements IRegisterController {
         }
 
         registerResponseDto.setIdsForEpochs(
-                epochKeyBundleDtoMapper.convert(ephTuples));
+                this.epochKeyBundleDtoMapper.convert(ephTuples));
 
-        registerResponseDto.setKey(Base64.getEncoder().encodeToString(registration.getSharedKey()));
+        registerResponseDto.setKey(Base64.encode(registration.getSharedKey()));
         return registerResponseDto;
     }
 

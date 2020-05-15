@@ -1,13 +1,13 @@
 package fr.gouv.stopc.robertserver.ws.service.impl;
 
 import java.nio.ByteBuffer;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 
 import javax.inject.Inject;
 
+import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthRequestValidationServiceImpl implements AuthRequestValidationService {
 
     private final IServerConfigurationService serverConfigurationService;
+
     private final RegistrationService registrationService;
+
     private final ICryptoServerGrpcClient cryptoServerClient;
 
 
@@ -44,29 +46,27 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
     }
 
     @Override
-    public Optional<ResponseEntity> validateRequestForAuth(AuthRequestVo authRequestVo,
-                                                 IMacValidator macValidator,
-                                                 IAuthenticatedRequestHandler otherValidator) {
+    public Optional<ResponseEntity> validateRequestForAuth(AuthRequestVo authRequestVo, IMacValidator macValidator, IAuthenticatedRequestHandler otherValidator) {
         // Step #1: Parameter check
-        if(Objects.isNull(authRequestVo)) {
+        if (Objects.isNull(authRequestVo)) {
             log.info("Discarding authenticated request because of empty request body");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
-        byte[] ebid = Base64.getDecoder().decode(authRequestVo.getEbid());
-        if(ByteUtils.isEmpty(ebid) || ebid.length != 8) {
+        byte[] ebid = Base64.decode(authRequestVo.getEbid());
+        if (ByteUtils.isEmpty(ebid) || ebid.length != 8) {
             log.info("Discarding authenticated request because of invalid EBID field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
-        byte[] time = Base64.getDecoder().decode(authRequestVo.getTime());
-        if(ByteUtils.isEmpty(time) || time.length != 4) {
+        byte[] time = Base64.decode(authRequestVo.getTime());
+        if (ByteUtils.isEmpty(time) || time.length != 4) {
             log.info("Discarding authenticated request because of invalid Time field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
-        byte[] mac = Base64.getDecoder().decode(authRequestVo.getMac());
-        if(ByteUtils.isEmpty(mac) || mac.length != 32) {
+        byte[] mac = Base64.decode(authRequestVo.getMac());
+        if (ByteUtils.isEmpty(mac) || mac.length != 32) {
             log.info("Discarding authenticated request because of invalid MAC field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
@@ -74,17 +74,14 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
         final long currentTime = TimeUtils.convertUnixMillistoNtpSeconds(new Date().getTime());
 
         // Step #2: check if time is close to current time
-        if(!checkTime(time, currentTime)) {
+        if (!checkTime(time, currentTime)) {
             log.info("Discarding authenticated request because provided time is too far from current server time");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
         try {
             // Step #3: retrieve id_A and epoch from EBID
-        	DecryptEBIDRequest request  = DecryptEBIDRequest
-        			.newBuilder()
-        			.setEbid(ByteString.copyFrom(ebid))
-        			.build();
+            DecryptEBIDRequest request = DecryptEBIDRequest.newBuilder().setEbid(ByteString.copyFrom(ebid)).build();
             byte[] decrytedEbid = this.cryptoServerClient.decryptEBID(request);
 
             byte[] epochId = new byte[4];
@@ -92,22 +89,22 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
             System.arraycopy(decrytedEbid, 0, epochId, 1, epochId.length - 1);
             System.arraycopy(decrytedEbid, epochId.length - 1, idA, 0, idA.length);
             ByteBuffer wrapped = ByteBuffer.wrap(epochId);
-            int epoch  = wrapped.getInt();
+            int epoch = wrapped.getInt();
 
             // Step #4: Get record from database
             Optional<Registration> record = this.registrationService.findById(idA);
 
-            if(record.isPresent()) {
+            if (record.isPresent()) {
                 byte[] ka = record.get().getSharedKey();
 
                 // Step #5: Verify MAC
-                byte [] toCheck  = new byte[12];
+                byte[] toCheck = new byte[12];
                 System.arraycopy(ebid, 0, toCheck, 0, 8);
                 System.arraycopy(time, 0, toCheck, 8, 4);
 
                 boolean isMacValid = macValidator.validate(ka, toCheck, mac);
 
-                if(!isMacValid) {
+                if (!isMacValid) {
                     log.info("Discarding authenticated request because MAC is invalid");
                     return Optional.of(ResponseEntity.badRequest().build());
                 }
