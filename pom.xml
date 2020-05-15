@@ -316,10 +316,4 @@
 		</snapshotRepository>
 	</distributionManagement>
 
-	<scm>
-		<connection>scm:git:git@gitlab.inria.fr:stopcovid19/robert-server.git</connection>
-		<developerConnection>scm:git:git@gitlab.inria.fr:stopcovid19/robert-server.git</developerConnection>
-		<url>git@gitlab.inria.fr:stopcovid19/robert-server.git</url>
-	</scm>
-
 </project>
