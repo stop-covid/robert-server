@@ -3,7 +3,9 @@ package fr.gouv.stopc.robert.server.crypto.structure;
 import java.security.InvalidKeyException;
 
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public abstract class CryptoMacStructureAbstract implements ICryptoStructure, IMacStructure {
 
     /**
@@ -18,6 +20,7 @@ public abstract class CryptoMacStructureAbstract implements ICryptoStructure, IM
 
             return this.getMac().doFinal(payloadToEncrypt);
         } catch (InvalidKeyException | IllegalStateException e) {
+            log.error(e.getMessage(), e);
             throw new RobertServerCryptoException(e.getMessage());
         }
     }
