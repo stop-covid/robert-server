@@ -11,11 +11,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.ws.dto.CaptchaDto;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
+import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,17 +28,18 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CaptchaServiceImpl implements CaptchaService {
 
-	final static String URL_VERIFICATION = "https://www.google.com/recaptcha/api/siteverify";
-
 	private RestTemplate restTemplate;
 
 	private IServerConfigurationService serverConfigurationService;
 
+	private PropertyLoader propertyLoader;
+
 	@Inject
-	public CaptchaServiceImpl(RestTemplate restTemplate, IServerConfigurationService serverConfigurationRepository) {
+	public CaptchaServiceImpl(RestTemplate restTemplate, IServerConfigurationService serverConfigurationService, PropertyLoader propertyLoader) {
 
 		this.restTemplate = restTemplate;
-		this.serverConfigurationService = serverConfigurationRepository;
+		this.serverConfigurationService = serverConfigurationService;
+		this.propertyLoader = propertyLoader;
 	}
 
 	@Override
@@ -47,12 +50,18 @@ public class CaptchaServiceImpl implements CaptchaService {
 		// must be called for test
 		return true || Optional.ofNullable(registerVo).map(item -> {
 
-			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.serverConfigurationService.getCaptchaSecret()).toString(), initHttpHeaders());
+			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.propertyLoader.getCaptchaSecret()).toString(), initHttpHeaders());
 			Date sendingDate = new Date();
 
-			ResponseEntity<CaptchaDto> response = this.restTemplate.postForEntity(URL_VERIFICATION, request, CaptchaDto.class);
+			ResponseEntity<CaptchaDto> response = null;
+			try {
+				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request, CaptchaDto.class);
+			} catch(RestClientException e) {
+				log.error(e.getMessage());
+				return false;
+			}
 
-			return Optional.ofNullable(response).map(ResponseEntity::getBody).filter(captchaDto -> !Objects.isNull(captchaDto.getChallengeTimestamp())).map(captchaDto -> {
+			return Optional.ofNullable(response).map(ResponseEntity::getBody).filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp())).map(captchaDto -> {
 
 				log.info("Result of CAPTCHA verification: {}", captchaDto);
 				return isSuccess(captchaDto, sendingDate);
@@ -71,9 +80,8 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 	private boolean isSuccess(CaptchaDto captchaDto, Date sendingDate) {
 
-		return this.serverConfigurationService.getCaptchaAppPackageName().equals(captchaDto.getAppPackageName()) && Math.abs(
-				sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService
-						.getCaptchaChallengeTimestampTolerance() * 1000L;
+		return this.propertyLoader.getCaptchaHostname().equals(captchaDto.getHostname()) && Math
+				.abs(sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance() * 1000L;
 	}
 
 	@NoArgsConstructor

@@ -13,7 +13,7 @@ public interface IServerConfigurationService {
      * @return The federation key (256 bits, 32 bytes)
      */
     byte[] getFederationKey();
-    
+
     /**
      * TpStart in NTP seconds
      * @return the time the ROBERT service was started (permanent, never changes, not tied to an instance)
@@ -25,7 +25,7 @@ public interface IServerConfigurationService {
      * @return
      */
     byte getServerCountryCode();
-    
+
     /**
      * 
      * @return the time tolerance for the validation of helloMessage timestamp
@@ -55,26 +55,14 @@ public interface IServerConfigurationService {
     int getStatusRequestMinimumEpochGap();
 
     /**
-     * 
-     * @return The secret to be sent to the captcha server along with challenge response
-     */
-    String getCaptchaSecret();
-
-    /**
-     * The FQ package name of the Android app to check against the response from the captcha server
-     * @return
-     */
-    String getCaptchaAppPackageName();
-
-	/**
      *
      * @return the accepted time delay between the solving of a captcha and the verification
-	 */
-	int getCaptchaChallengeTimestampTolerance();
+     */
+    int getCaptchaChallengeTimestampTolerance();
 
     /**
      *
      * @return the risk threshold (theta) determining whether someone is at risk
      */
-	double getRiskThreshold();
+    double getRiskThreshold();
 }

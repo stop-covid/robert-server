@@ -17,6 +17,7 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 public class ServerConfigurationServiceImpl implements IServerConfigurationService {
 
     private final byte[] serverKey;
+
     private final byte[] federationKey;
 
     /**
@@ -60,33 +61,43 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
     }
 
     @Override
-    public byte getServerCountryCode() { return (byte) 0x33; }
+    public byte getServerCountryCode() {
+        return (byte) 0x33;
+    }
 
     @Override
-    public int getHelloMessageTimeStampTolerance() { return 3; }
+    public int getHelloMessageTimeStampTolerance() {
+        return 3;
+    }
 
     @Override
-    public int getContagiousPeriod() { return 14; }
+    public int getContagiousPeriod() {
+        return 14;
+    }
 
     @Override
-    public int getEpochDurationSecs() { return TimeUtils.EPOCH_DURATION_SECS; }
+    public int getEpochDurationSecs() {
+        return TimeUtils.EPOCH_DURATION_SECS;
+    }
 
     @Override
-    public int getRequestTimeDeltaTolerance() { return 60; }
+    public int getRequestTimeDeltaTolerance() {
+        return 60;
+    }
 
     @Override
-    public int getStatusRequestMinimumEpochGap() { return 2; }
+    public int getStatusRequestMinimumEpochGap() {
+        return 2;
+    }
 
     @Override
-    public String getCaptchaSecret() { return ""; }
-
-    @Override
-    public String getCaptchaAppPackageName() { return "fr.gouv.stopc"; }
-
-    @Override
-    public int getCaptchaChallengeTimestampTolerance() { return 60; }
+    public int getCaptchaChallengeTimestampTolerance() {
+        return 60;
+    }
 
     // Issue #TODO: store all values of this risk threshold to track any configuration change over time
     @Override
-    public double getRiskThreshold() { return 5.0; }
+    public double getRiskThreshold() {
+        return 5.0;
+    }
 }
