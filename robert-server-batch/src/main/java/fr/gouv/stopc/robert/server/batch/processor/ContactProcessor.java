@@ -138,10 +138,6 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
      *  Robert Spec Step #5: check that the delta between tA (16 bits) & timeA (32 bits) [truncated to 16bits] is below threshold.
      */
     private boolean step5CheckDeltaTaAndTimeABelowThreshold(HelloMessageDetail helloMessageDetail) {
-        // Cast values from int that is unsigned into a signed long
-        final long timeFromHelloNTPsec = Integer.toUnsignedLong(helloMessageDetail.getTimeFromHelloMessage());
-        final long timeFromDevice = helloMessageDetail.getTimeCollectedOnDevice();
-
         // Process 16-bit values for sanity check
         final long timeFromHelloNTPsecAs16bits = castIntegerToLong(helloMessageDetail.getTimeFromHelloMessage(), 2);
         final long timeFromDeviceAs16bits = castLong(helloMessageDetail.getTimeCollectedOnDevice(), 2);
@@ -160,10 +156,10 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
     /**
      *  Robert Spec Step #6
      */
-    private boolean step6CheckTimeACorrespondsToEpochiA(byte[] epochId, int timeFromDevice) {
+    private boolean step6CheckTimeACorrespondsToEpochiA(byte[] epochId, long timeFromDevice) {
         final int epochIdFromEBID = ByteUtils.convertEpoch24bitsToInt(epochId);
         final long tpstStartNTPsec = this.serverConfigurationService.getServiceTimeStart();
-        long epochIdFromMessage = TimeUtils.getNumberOfEpochsBetween(tpstStartNTPsec, Integer.toUnsignedLong(timeFromDevice));
+        long epochIdFromMessage = TimeUtils.getNumberOfEpochsBetween(tpstStartNTPsec, timeFromDevice);
 
         // Check if epochs match with a limited tolerance
         if (Math.abs(epochIdFromMessage - epochIdFromEBID) > 1) {
@@ -258,7 +254,7 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
                                          byte[] epochId) {
         final long timeFromDevice = helloMessageDetail.getTimeCollectedOnDevice();
         if (!step5CheckDeltaTaAndTimeABelowThreshold(helloMessageDetail)
-                || !step6CheckTimeACorrespondsToEpochiA(epochId, (int) timeFromDevice)
+                || !step6CheckTimeACorrespondsToEpochiA(epochId, timeFromDevice)
                 // Step #7: retrieve from IDTable, KA, the key associated with idA
                 || !step8VerifyMACIsValid(ebid, encryptedCodeCountry, helloMessageDetail, registration)) {
             return false;
