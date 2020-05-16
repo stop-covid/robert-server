@@ -1,13 +1,13 @@
 package test.fr.gouv.stopc.robert.server.common.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.HashMap;
+
+import org.bson.internal.Base64;
 import org.junit.jupiter.api.Test;
 
 import fr.gouv.stopc.robert.server.common.service.impl.ServerConfigurationServiceImpl;
-
-import java.util.Base64;
-import java.util.HashMap;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class ServerConfigurationServiceImplTest {
 
@@ -22,14 +22,14 @@ class ServerConfigurationServiceImplTest {
 
             // Federation key should be 256-bits long
             final byte[] fakeFederationKey = keyService.getFederationKey();
-            String federationKeyAsBase64 = Base64.getEncoder().encodeToString(fakeFederationKey);
+            String federationKeyAsBase64 = Base64.encode(fakeFederationKey);
             System.out.println(federationKeyAsBase64);
             federationMap.put(federationKeyAsBase64, i);
             assertEquals(fakeFederationKey.length, 256/8);
 
             // Server key should be 192-bits long
             final byte[] fakeServerKey = keyService.getServerKey();
-            String serverKeyAsBase64 = Base64.getEncoder().encodeToString(fakeServerKey);
+            String serverKeyAsBase64 = Base64.encode(fakeServerKey);
             System.out.println(serverKeyAsBase64);
             serverMap.put(serverKeyAsBase64, i);
             assertEquals(fakeServerKey.length, 192/8);
