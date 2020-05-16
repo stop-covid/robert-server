@@ -71,9 +71,10 @@ public class RegisterControllerImpl implements IRegisterController {
     @Override
     public ResponseEntity<RegisterResponseDto> register(RegisterVo registerVo) throws RobertServerException {
 
-        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+          // TODO: Enable this when the capcha becomes
+//        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
 
         if (!captchaService.verifyCaptcha(registerVo)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
