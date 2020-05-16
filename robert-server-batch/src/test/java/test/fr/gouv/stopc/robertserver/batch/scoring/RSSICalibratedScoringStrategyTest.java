@@ -243,7 +243,7 @@ public class RSSICalibratedScoringStrategyTest {
                 .build());
 
         messages.add(HelloMessageDetail.builder()
-                .timeCollectedOnDevice(this.randomReferenceEpochStartTime + (900 - 5))
+                .timeCollectedOnDevice(this.randomReferenceEpochStartTime + (900L - 5L))
                 .rssiCalibrated(-78)
                 .build());
 
@@ -289,7 +289,7 @@ public class RSSICalibratedScoringStrategyTest {
     public void testScoreRiskOneMessageLateNotAtRisk() {
         List<HelloMessageDetail> messages = new ArrayList<>();
         messages.add(HelloMessageDetail.builder()
-                .timeCollectedOnDevice(this.randomReferenceEpochStartTime + (900 - 5))
+                .timeCollectedOnDevice(this.randomReferenceEpochStartTime + (900L - 5L))
                 .rssiCalibrated(-78)
                 .build());
 
