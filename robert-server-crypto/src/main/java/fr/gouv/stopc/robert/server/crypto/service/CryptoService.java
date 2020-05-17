@@ -1,5 +1,7 @@
 package fr.gouv.stopc.robert.server.crypto.service;
 
+import java.security.KeyPair;
+
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
@@ -116,4 +118,11 @@ public interface CryptoService {
      * @return encrypted
      */
     byte[] aesEncrypt(byte [] toEncrypt, byte[] key);
+
+    /**
+     *
+     * @return
+     */
+    public byte[] generateECDHPublicKey();
+
 }

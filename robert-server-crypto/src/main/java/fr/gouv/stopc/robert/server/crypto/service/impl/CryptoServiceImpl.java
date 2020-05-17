@@ -1,17 +1,8 @@
 package fr.gouv.stopc.robert.server.crypto.service.impl;
 
-import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
-import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
-import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
-import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
@@ -20,6 +11,18 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
+
+import org.springframework.stereotype.Service;
+
+import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
+import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
+import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -182,6 +185,24 @@ public class CryptoServiceImpl implements CryptoService {
 
             log.error("Unable to encrypt with AES cryptographic algorithm due to {}", e.getMessage());
         }
+        return null;
+    }
+
+    @Override
+    public byte[] generateECDHPublicKey() {
+        try {
+            // Generate ephemeral ECDH keypair
+            KeyPairGenerator kpg;
+            kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(256);
+            KeyPair keyPair = kpg.generateKeyPair();
+
+            return keyPair.getPublic().getEncoded();
+
+        } catch (NoSuchAlgorithmException | IllegalStateException e) {
+            log.error("Unable to generate ECDH public key", e.getMessage());
+        }
+
         return null;
     }
 
