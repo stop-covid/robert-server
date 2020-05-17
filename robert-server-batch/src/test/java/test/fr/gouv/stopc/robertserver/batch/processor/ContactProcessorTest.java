@@ -214,7 +214,7 @@ public class ContactProcessorTest {
 
 		return HelloMessageDetail.builder()
 				.timeFromHelloMessage(timeHello)
-				.timeCollectedOnDevice((long)timeReceived)
+				.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
 				.rssiCalibrated(rssi)
 				.mac(mac)
 				.build();
@@ -253,7 +253,8 @@ public class ContactProcessorTest {
 
 			// Setup id with an existing score below threshold
 			Registration registrationWithEE = this.registration.get();
-			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
+			registrationWithEE.setExposedEpochs(Arrays.asList(
+					EpochExposition.builder()
 					.epochId(previousEpoch)
 					.expositionScores(Arrays.asList(3.0))
 					.build(), 
