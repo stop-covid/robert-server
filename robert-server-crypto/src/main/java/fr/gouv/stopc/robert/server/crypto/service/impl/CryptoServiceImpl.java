@@ -1,9 +1,12 @@
 package fr.gouv.stopc.robert.server.crypto.service.impl;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.ECGenParameterSpec;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
@@ -194,12 +197,12 @@ public class CryptoServiceImpl implements CryptoService {
             // Generate ephemeral ECDH keypair
             KeyPairGenerator kpg;
             kpg = KeyPairGenerator.getInstance("EC");
-            kpg.initialize(256);
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
             KeyPair keyPair = kpg.generateKeyPair();
 
             return keyPair.getPublic().getEncoded();
 
-        } catch (NoSuchAlgorithmException | IllegalStateException e) {
+        } catch (NoSuchAlgorithmException | IllegalStateException | InvalidAlgorithmParameterException e) {
             log.error("Unable to generate ECDH public key", e.getMessage());
         }
 

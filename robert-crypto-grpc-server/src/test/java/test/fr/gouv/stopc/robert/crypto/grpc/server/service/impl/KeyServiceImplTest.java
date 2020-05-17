@@ -39,7 +39,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = null;
  
         // When
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
 
         // Then
         assertFalse(keys.isPresent());
@@ -53,7 +53,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = ByteUtils.generate(50);
  
         // When
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
 
         // Then
         assertFalse(keys.isPresent());
@@ -67,7 +67,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = this.cryptoService.generateECDHPublicKey();
  
         // When
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
 
         // Then
         assertTrue(keys.isPresent());

@@ -1,11 +1,14 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Optional;
@@ -21,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class KeyServiceImpl implements IKeyService {
 
     @Override
-    public Optional<ClientECDHBundle> generateECHKeysForEncryption(byte[] clientPublicKey) {
+    public Optional<ClientECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey) {
 
         if (ByteUtils.isEmpty(clientPublicKey)) {
             return Optional.empty();
@@ -31,29 +34,28 @@ public class KeyServiceImpl implements IKeyService {
             // Generate ephemeral ECDH keypair
             KeyPairGenerator kpg;
             kpg = KeyPairGenerator.getInstance("EC");
-            kpg.initialize(256);
+            kpg.initialize(new ECGenParameterSpec("secp256r1"), new SecureRandom());
             KeyPair keyPair = kpg.generateKeyPair();
-            byte[] serverPublicKey = keyPair.getPublic().getEncoded();
 
             KeyFactory kf = KeyFactory.getInstance("EC");
             X509EncodedKeySpec pkSpec = new X509EncodedKeySpec(clientPublicKey);
-            PublicKey otherPublicKey = kf.generatePublic(pkSpec);
+            PublicKey publicKey = kf.generatePublic(pkSpec);
 
             // Perform key agreement
             KeyAgreement ka = KeyAgreement.getInstance("ECDH");
             ka.init(keyPair.getPrivate());
-            ka.doPhase(otherPublicKey, true);
+            ka.doPhase(publicKey, true);
 
             // Read shared secret
             byte[] sharedSecret = ka.generateSecret();
             
             return Optional.of(ClientECDHBundle.builder()
                     .generatedSharedSecret(sharedSecret)
-                    .serverPublicKey(serverPublicKey)
+                    .serverPublicKey(keyPair.getPublic().getEncoded())
                     .build());
 
         } catch (NoSuchAlgorithmException | InvalidKeySpecException 
-                | InvalidKeyException | IllegalStateException e) {
+                | InvalidKeyException | IllegalStateException | InvalidAlgorithmParameterException e) {
 
             log.error("Unable to generate ECDH Keys due to {}", e.getMessage());
         }

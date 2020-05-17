@@ -246,7 +246,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     public void generateIdentity(GenerateIdentityRequest request,
             StreamObserver<GenerateIdentityResponse> responseObserver) {
 
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
                 request.getClientPublicKey().toByteArray());
 
         ClientIdentifierBundle clientIdentifierBundle = this.clientStorageService.createClientIdAndKey();
