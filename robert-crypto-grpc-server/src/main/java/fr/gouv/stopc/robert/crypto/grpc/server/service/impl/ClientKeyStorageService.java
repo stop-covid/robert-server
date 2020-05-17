@@ -1,6 +1,6 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.service.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

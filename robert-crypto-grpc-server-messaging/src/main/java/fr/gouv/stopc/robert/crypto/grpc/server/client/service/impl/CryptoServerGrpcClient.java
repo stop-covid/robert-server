@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -14,12 +15,14 @@ import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcC
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.EphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.request.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacEsrValidationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacHelloValidationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacValidationForTypeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.DecryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.response.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.MacValidationResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplBlockingStub;
@@ -187,6 +190,24 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 	/**
 	 * Only used for helping unit test.
 	 */
+	@Override
+	public Optional<GenerateIdentityResponse> generateIdentity(GenerateIdentityRequest request) {
+
+	    try {
+            GenerateIdentityResponse response = this.blockingStub.generateIdentity(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+            
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+	    
+	    return Optional.empty();
+	}
+
+	
 	@VisibleForTesting
 	public interface TestHelper {
 		/**
@@ -205,5 +226,6 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 	void setTestHelper(TestHelper testHelper) {
 		this.testHelper = testHelper;
 	}
+
 
 }

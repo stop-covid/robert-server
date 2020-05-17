@@ -1,5 +1,7 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+
 public interface IClientKeyStorageService {
     /**
      * Create a random identifier and an associated random key

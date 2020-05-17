@@ -54,7 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
-@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
+@DirtiesContext(classMode = ClassMode.BEFORE_CLASS)
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = {
 		RobertServerWsRestApplication.class }, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -94,7 +94,7 @@ public class StatusControllerWsRestTest {
 
 	@BeforeEach
 	public void before() {
-		MockitoAnnotations.initMocks(this);
+//		MockitoAnnotations.initMocks(this);
 		assert (this.restTemplate != null);
 		this.headers = new HttpHeaders();
 		this.headers.setContentType(MediaType.APPLICATION_JSON);

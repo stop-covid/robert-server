@@ -33,6 +33,7 @@ service CryptoGrpcServiceImpl {
   rpc validateMacHello(MacHelloValidationRequest) returns (MacValidationResponse){}
   rpc validateMacEsr(MacEsrValidationRequest) returns (MacValidationResponse){}
   rpc validateMacForType(MacValidationForTypeRequest) returns (MacValidationResponse){}
+  rpc generateIdentity(GenerateIdentityRequest) returns (GenerateIdentityResponse){}
 }
 
 // The request message containing the user's name.
@@ -147,3 +148,14 @@ message MacValidationForTypeRequest {
 	bytes prefixe = 4;
 }
 
+message GenerateIdentityRequest {
+	bytes clientPublicKey = 1;
+
+}
+
+message GenerateIdentityResponse {
+
+	bytes idA = 1;
+	bytes encryptedSharedKey = 2;
+	bytes serverPublicKeyForKey = 3;
+}

@@ -108,4 +108,12 @@ public interface CryptoService {
                                  final byte[] toBeEncrypted,
                                  final byte[] macToVerify,
                                  final DigestSaltEnum salt) throws Exception;
+
+    /**
+     * Encrypt data using the cryptographic AES algorithm
+     * @param toEncrypt
+     * @param key
+     * @return encrypted
+     */
+    byte[] aesEncrypt(byte [] toEncrypt, byte[] key);
 }

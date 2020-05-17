@@ -10,7 +10,16 @@ import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 
 @Service
 @Slf4j
@@ -101,8 +110,8 @@ public class CryptoServiceImpl implements CryptoService {
      * @return the HMAC-SHA256 encrypted, truncated value.
      */
     private byte[] generateHMAC(final CryptoHMACSHA256 cryptoHMACSHA256S,
-                                final byte[] argument,
-                                final DigestSaltEnum salt) throws RobertServerCryptoException {
+            final byte[] argument,
+            final DigestSaltEnum salt) throws RobertServerCryptoException {
 
         final byte[] prefix = new byte[] { salt.getValue() };
 
@@ -125,16 +134,16 @@ public class CryptoServiceImpl implements CryptoService {
 
     @Override
     public boolean macESRValidation(final CryptoHMACSHA256 cryptoHMACSHA256S,
-                                    final byte[] toBeEncrypted,
-                                    final byte[] macToVerify) throws RobertServerCryptoException {
+            final byte[] toBeEncrypted,
+            final byte[] macToVerify) throws RobertServerCryptoException {
         return macValidationForType(cryptoHMACSHA256S, toBeEncrypted, macToVerify, DigestSaltEnum.STATUS);
     }
 
     @Override
     public boolean macValidationForType(final CryptoHMACSHA256 cryptoHMACSHA256S,
-                                        final byte[] toBeEncrypted,
-                                        final byte[] macToVerify,
-                                        final DigestSaltEnum salt) throws RobertServerCryptoException {
+            final byte[] toBeEncrypted,
+            final byte[] macToVerify,
+            final DigestSaltEnum salt) throws RobertServerCryptoException {
         this.assertLength("concat(EBID | Time)", 96, toBeEncrypted);
         byte[] generatedMAC = this.generateHMAC(cryptoHMACSHA256S, toBeEncrypted, salt);
         return Arrays.equals(macToVerify, generatedMAC);
@@ -153,6 +162,27 @@ public class CryptoServiceImpl implements CryptoService {
             log.error(message);
             throw new RobertServerCryptoException(message);
         }
+    }
+
+    @Override
+    public byte[] aesEncrypt(byte[] toEncrypt, byte[] key) {
+
+        try {
+
+            SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
+
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+
+            return cipher.doFinal(toEncrypt);
+
+        } catch (NoSuchPaddingException |  NoSuchAlgorithmException |
+                InvalidKeyException |
+                IllegalBlockSizeException | BadPaddingException e) {
+
+            log.error("Unable to encrypt with AES cryptographic algorithm due to {}", e.getMessage());
+        }
+        return null;
     }
 
 }

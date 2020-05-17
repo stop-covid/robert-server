@@ -1,4 +1,4 @@
-package fr.gouv.stopc.robert.crypto.grpc.server.service;
+package fr.gouv.stopc.robert.crypto.grpc.server.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

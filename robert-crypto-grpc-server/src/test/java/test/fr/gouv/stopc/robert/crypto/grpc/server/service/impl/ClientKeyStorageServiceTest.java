@@ -1,6 +1,6 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.service.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ClientKeyStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

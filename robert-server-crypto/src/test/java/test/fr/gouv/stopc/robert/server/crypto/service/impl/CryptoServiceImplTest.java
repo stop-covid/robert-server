@@ -1,29 +1,28 @@
 package test.fr.gouv.stopc.robert.server.crypto.service.impl;
 
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
-import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
-import fr.gouv.stopc.robert.server.crypto.RobertServerCryptoApplication;
-import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
-import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
-import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-@Slf4j
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
+import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
+import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
+import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
+import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+
+
 @ExtendWith(SpringExtension.class)
 class CryptoServiceImplTest {
 
@@ -180,7 +179,7 @@ class CryptoServiceImplTest {
 
         // 8. verifies if the MAC, macA
         System.out.println("------ MAC VALIDATION ------");
-        boolean isValid = this.cryptoService.macHelloValidation(new CryptoHMACSHA256(applicationKey), hello);
+        boolean isValid = cryptoService.macHelloValidation(new CryptoHMACSHA256(applicationKey), hello);
         System.out.println("mac valid : " + (isValid ? "yes" : "no"));
     }
 
@@ -191,4 +190,20 @@ class CryptoServiceImplTest {
 
         assertEquals(Integer.BYTES, valAsBytes.length);
     }
+    
+
+   @Test
+   public void testAESEncrypt() {
+
+       // Given
+       byte [] toEncrypt = ByteUtils.generate(16);
+ 
+       // When
+       byte [] encrypted = cryptoService.aesEncrypt(toEncrypt, ByteUtils.generate(32));
+ 
+       // Then
+       assertNotNull(encrypted);
+       assertEquals(32, encrypted.length);
+       assertFalse(Arrays.equals(encrypted, toEncrypt));
+   }
 }

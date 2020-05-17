@@ -17,7 +17,9 @@ import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.EphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.request.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.response.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robertserver.database.model.ApplicationConfigurationModel;
@@ -73,6 +75,13 @@ public class RegisterControllerImpl implements IRegisterController {
 
           // TODO: Enable this when the capcha becomes
 //        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
+//            log.error("The 'captcha' is required.");
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        }
+
+          // TODO: Unable this when the key sharing is enabled
+//        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
+//            log.error("The client ECDH public is required.");
 //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 //        }
 
@@ -80,15 +89,35 @@ public class RegisterControllerImpl implements IRegisterController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Optional<Registration> registration = this.registrationService.createRegistration();
+        byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
+        
+        GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
+        .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
+        .build();
+        
+        Optional<GenerateIdentityResponse> response = this.cryptoServerClient.generateIdentity(request);
+ 
+        if(!response.isPresent()) {
+            log.error("Unable to generate an identity for the client");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
 
-        if (registration.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(processRegistration(registration.get()));
+        GenerateIdentityResponse identity = response.get();
+
+        Registration registration = Registration.builder()
+                .permanentIdentifier(identity.getIdA().toByteArray())
+                .build();
+        
+        Optional<Registration> registreted = this.registrationService.saveRegistration(registration);
+                
+        
+        if (registreted.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(processRegistration(identity));
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    private RegisterResponseDto processRegistration(Registration registration) throws RobertServerException {
+    private RegisterResponseDto processRegistration(GenerateIdentityResponse identity) throws RobertServerException {
 
         RegisterResponseDto registerResponseDto = new RegisterResponseDto();
 
@@ -112,7 +141,7 @@ public class RegisterControllerImpl implements IRegisterController {
         EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
                 .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
                 .setCurrentEpochID(currentEpochId)
-                .setIdA(ByteString.copyFrom(registration.getPermanentIdentifier()))
+                .setIdA(ByteString.copyFrom(identity.getIdA().toByteArray()))
                 .setNumberOfEpochsToGenerate(numberOfEpochs)
                 .build();
 
@@ -127,7 +156,7 @@ public class RegisterControllerImpl implements IRegisterController {
         registerResponseDto.setIdsForEpochs(
                 this.epochKeyBundleDtoMapper.convert(ephTuples));
 
-        registerResponseDto.setKey(Base64.encode(registration.getSharedKey()));
+        registerResponseDto.setKey(Base64.encode(identity.getEncryptedSharedKey().toByteArray()));
         return registerResponseDto;
     }
 

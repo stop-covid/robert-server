@@ -2,21 +2,23 @@ package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
-import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import com.google.protobuf.ByteString;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ECDHKeys;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.EncryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.EphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.GenerateEBIDRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.request.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacEsrValidationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacHelloGenerationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.MacHelloValidationRequest;
@@ -25,36 +27,49 @@ import fr.gouv.stopc.robert.crypto.grpc.server.response.DecryptCountryCodeRespon
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EncryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.response.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.MacHelloGenerationResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.MacValidationResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
+import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import io.grpc.stub.StreamObserver;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
 
     private final ICryptoServerConfigurationService serverConfigurationService;
     private final CryptoService cryptoService;
+    private final IKeyService keyService;
+    private final IClientKeyStorageService clientStorageService;
 
     @Inject
     public CryptoGrpcServiceBaseImpl(final ICryptoServerConfigurationService serverConfigurationService,
-                                     final CryptoService cryptoService) {
+            final CryptoService cryptoService,
+            final IKeyService keyService,
+            final IClientKeyStorageService clientStorageService) {
 
         this.serverConfigurationService = serverConfigurationService;
         this.cryptoService = cryptoService;
+        this.keyService = keyService;
+        this.clientStorageService = clientStorageService;
     }
 
     @Override
     public void generateEphemeralTuple(EphemeralTupleRequest request,
-                                       StreamObserver<EphemeralTupleResponse> responseObserver) {
+            StreamObserver<EphemeralTupleResponse> responseObserver) {
 
         final byte[] serverKey = this.serverConfigurationService.getServerKey();
         final byte[] federationKey = this.serverConfigurationService.getFederationKey();
@@ -65,23 +80,24 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                     request.getCurrentEpochID(),
                     request.getNumberOfEpochsToGenerate(),
                     request.getCountryCode().byteAt(0)
-            );
+                    );
             tupleGenerator.stop();
 
             if (!CollectionUtils.isEmpty(ephemeralTuples)) {
 
                 ephemeralTuples.stream()
-                        .map(tuple -> EphemeralTupleResponse
-                                .newBuilder()
-                                .setEbid(ByteString.copyFrom(tuple.getEbid()))
-                                .setEcc(ByteString.copyFrom(tuple.getEncryptedCountryCode()))
-                                .setEpochId(tuple.getEpoch())
-                                .build())
-                        .forEach(response -> responseObserver.onNext(response));
+                .map(tuple -> EphemeralTupleResponse
+                        .newBuilder()
+                        .setEbid(ByteString.copyFrom(tuple.getEbid()))
+                        .setEcc(ByteString.copyFrom(tuple.getEncryptedCountryCode()))
+                        .setEpochId(tuple.getEpoch())
+                        .build())
+                .forEach(response -> responseObserver.onNext(response));
 
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
+
             responseObserver.onError(e);
         } finally {
             tupleGenerator.stop();
@@ -90,7 +106,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void generateEBID(GenerateEBIDRequest request,
-                             StreamObserver<EBIDResponse> responseObserver) {
+            StreamObserver<EBIDResponse> responseObserver) {
         try {
             responseObserver.onNext(EBIDResponse.newBuilder()
                     .setEbid(ByteString.copyFrom(this.cryptoService.generateEBID(
@@ -106,7 +122,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void decryptEBID(DecryptEBIDRequest request,
-                            StreamObserver<EBIDResponse> responseObserver) {
+            StreamObserver<EBIDResponse> responseObserver) {
         try {
             responseObserver.onNext(EBIDResponse.newBuilder()
                     .setEbid(ByteString.copyFrom(
@@ -122,7 +138,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void encryptCountryCode(EncryptCountryCodeRequest request,
-                                   StreamObserver<EncryptCountryCodeResponse> responseObserver) {
+            StreamObserver<EncryptCountryCodeResponse> responseObserver) {
         try {
             responseObserver.onNext(EncryptCountryCodeResponse.newBuilder()
                     .setEncryptedCountryCode(ByteString.copyFrom(this.cryptoService.encryptCountryCode(
@@ -138,7 +154,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void decryptCountryCode(DecryptCountryCodeRequest request,
-                                   StreamObserver<DecryptCountryCodeResponse> responseObserver) {
+            StreamObserver<DecryptCountryCodeResponse> responseObserver) {
         try {
             responseObserver.onNext(DecryptCountryCodeResponse.newBuilder()
                     .setCountryCode(ByteString.copyFrom(this.cryptoService.decryptCountryCode(
@@ -154,7 +170,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void generateMacHello(MacHelloGenerationRequest request,
-                                 StreamObserver<MacHelloGenerationResponse> responseObserver) {
+            StreamObserver<MacHelloGenerationResponse> responseObserver) {
         try {
 
             responseObserver.onNext(MacHelloGenerationResponse.newBuilder()
@@ -170,7 +186,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void validateMacHello(MacHelloValidationRequest request,
-                                 StreamObserver<MacValidationResponse> responseObserver) {
+            StreamObserver<MacValidationResponse> responseObserver) {
         try {
 
             responseObserver.onNext(MacValidationResponse.newBuilder()
@@ -186,7 +202,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void validateMacEsr(MacEsrValidationRequest request,
-                               StreamObserver<MacValidationResponse> responseObserver) {
+            StreamObserver<MacValidationResponse> responseObserver) {
 
         try {
             responseObserver.onNext(MacValidationResponse.newBuilder()
@@ -203,7 +219,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     @Override
     public void validateMacForType(MacValidationForTypeRequest request,
-                                   StreamObserver<MacValidationResponse> responseObserver) {
+            StreamObserver<MacValidationResponse> responseObserver) {
 
         try {
             DigestSaltEnum salt = DigestSaltEnum.valueOf(request.getPrefixe().byteAt(0));
@@ -220,9 +236,49 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 responseObserver.onCompleted();
             }
         } catch (Exception e) {
+            log.error(e.getMessage(), e);
             responseObserver.onError(e);
         }
 
     }
 
+    @Override
+    public void generateIdentity(GenerateIdentityRequest request,
+            StreamObserver<GenerateIdentityResponse> responseObserver) {
+
+        Optional<ECDHKeys> keys = this.keyService.generateECHKeysForEncryption(
+                request.getClientPublicKey().toByteArray());
+
+        ClientIdentifierBundle clientIdentifierBundle = this.clientStorageService.createClientIdAndKey();
+
+        if(Objects.isNull(clientIdentifierBundle)) {
+            responseObserver.onError(new RobertServerCryptoException("Unable to generate the client"));
+        }
+        else if(!keys.isPresent()) {
+            responseObserver.onError(new RobertServerCryptoException("Unable to generate an ECDH Keys"));
+        }
+        else {
+            byte[] encrypted = this.cryptoService.aesEncrypt(clientIdentifierBundle.getKey(),
+                    keys.get().getGeneratedSharedSecret());
+
+            if(Objects.isNull(encrypted)) {
+                responseObserver.onError(new RobertServerCryptoException("Unable encrypt the client key"));
+            }
+            else {
+                GenerateIdentityResponse response = GenerateIdentityResponse
+                        .newBuilder()
+                        .setIdA(ByteString.copyFrom(clientIdentifierBundle.getId()))
+                        .setServerPublicKeyForKey(ByteString.copyFrom(keys.get().getGeneratedSharedSecret()))
+                        .setEncryptedSharedKey(ByteString.copyFrom(encrypted))
+                        .build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+
+            }
+
+        }
+
+    }
 }
+ 
