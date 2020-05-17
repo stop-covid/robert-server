@@ -6,7 +6,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.ECGenParameterSpec;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
