@@ -37,4 +37,7 @@ public class RegisterResponseDto
 	@Min(3797858242L)
 	private long timeStart;
 
+	@NotNull
+	private String serverPublicECDHKeyForKey;
+
 }
