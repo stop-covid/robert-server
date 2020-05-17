@@ -60,9 +60,8 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+
 @ExtendWith(SpringExtension.class)
 public class CryptoServiceGrpcServerTest {
 
@@ -629,8 +628,9 @@ public class CryptoServiceGrpcServerTest {
 
         try {
             // Given
+            byte[] clientPublicKey = this.cryptoService.generateECDHPublicKey();
             GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
-                    .setClientPublicKey(ByteString.copyFrom(this.getValidClientPublicKey()))
+                    .setClientPublicKey(ByteString.copyFrom(clientPublicKey))
                     .build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -675,13 +675,6 @@ public class CryptoServiceGrpcServerTest {
         SecureRandom sr = new SecureRandom();
         sr.nextBytes(rndBytes);
         return rndBytes;
-    }
-
-    private byte[] getValidClientPublicKey(){
-        return new byte [] { 48, 89, 48, 19, 6, 7, 42, -122, 72, -50, 61, 2, 1, 6, 8, 42, -122, 72, -50, 61, 3, 1, 7, 3, 66, 0, 
-                4, -61, -16, -102, -1, 37, -72, 88, 17, -6, 19, 79, 57, 68, -93, 26, 102, 6, -59, -93, -79, -100, 123, -101,
-                -113, -14, 87, 21, -52, -38, -30, 72, -26, -35, 67, -46, -115, 42, -112, 64, 45, -40, 82, 100, 
-                115, 0, 80, -51, -30, 9, 29, 105, -103, -95, -33, -101, -111, 127, 22, 21, 71, 50, 91, -35, 11};
     }
 
 }

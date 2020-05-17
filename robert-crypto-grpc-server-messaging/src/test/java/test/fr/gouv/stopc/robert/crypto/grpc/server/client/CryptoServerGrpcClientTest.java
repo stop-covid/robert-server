@@ -311,7 +311,7 @@ public class CryptoServerGrpcClientTest {
         serviceRegistry.addService(genereateIdentity);
 
         // When
-        Optional<GenerateIdentityResponse> expectedResponse  = this.client.generateIdentity(request);
+        Optional<GenerateIdentityResponse> expectedResponse = this.client.generateIdentity(request);
 
         // Then
         assertTrue(expectedResponse.isPresent());
