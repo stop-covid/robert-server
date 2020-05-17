@@ -156,6 +156,8 @@ public class RegisterControllerImpl implements IRegisterController {
         registerResponseDto.setIdsForEpochs(
                 this.epochKeyBundleDtoMapper.convert(ephTuples));
 
+        registerResponseDto.setServerPublicECDHKeyForKey(Base64.encode(identity.getServerPublicKeyForKey().toByteArray()));
+
         registerResponseDto.setKey(Base64.encode(identity.getEncryptedSharedKey().toByteArray()));
         return registerResponseDto;
     }

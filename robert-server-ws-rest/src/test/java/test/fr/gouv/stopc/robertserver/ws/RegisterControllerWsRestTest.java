@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -40,10 +42,15 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.google.protobuf.ByteString;
+
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
 import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.response.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
+import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
 import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
@@ -89,6 +96,8 @@ public class RegisterControllerWsRestTest {
 	@MockBean
 	EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
 
+	@Autowired
+	CryptoService cryptoService;
 
 	@Autowired
 	private IServerConfigurationService serverConfigurationService;
@@ -153,9 +162,13 @@ public class RegisterControllerWsRestTest {
 //		verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
 //	}
 
+
 	@Test
 	public void testCaptchaFailure() {
-		this.body = RegisterVo.builder().captcha("TEST").build();
+		this.body = RegisterVo.builder()
+		        .captcha("TEST")
+		        .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
+		        .build();
 
 		this.requestEntity = new HttpEntity<>(this.body, this.headers);
 
@@ -172,8 +185,129 @@ public class RegisterControllerWsRestTest {
 	}
 
 	@Test
+    public void testRegisterFailsWhenIdentityGenerationFails() {
+
+	    // Given
+        this.body = RegisterVo.builder()
+                .captcha("TEST")
+                .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
+                .build();
+
+        this.requestEntity = new HttpEntity<>(this.body, this.headers);
+
+        // Make it so that CAPTCHA verification fails (either incorrect token or too
+        // great a time
+        // difference between solving and the request)
+        doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
+
+        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.empty());
+
+        // When
+        ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
+                this.requestEntity, String.class);
+
+        // Then
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.cryptoServerClient).generateIdentity(any());
+        verify(this.cryptoServerClient, never()).generateEphemeralTuple(any());
+        verify(this.registrationService, never()).saveRegistration(any());
+    }
+
+	@Test
+    public void testRegisterFailsWhenCreateRegistrationFails() {
+
+        // Given
+        this.body = RegisterVo.builder()
+                .captcha("TEST")
+                .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
+                .build();
+
+        this.requestEntity = new HttpEntity<>(this.body, this.headers);
+
+        byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
+        byte[] id = "12345".getBytes();
+
+        GenerateIdentityResponse identityResponse = GenerateIdentityResponse
+                .newBuilder()
+                .setIdA(ByteString.copyFrom(id))
+                .setEncryptedSharedKey(ByteString.copyFrom(key))
+                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+                .build();
+
+        // Make it so that CAPTCHA verification fails (either incorrect token or too
+        // great a time
+        // difference between solving and the request)
+        doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
+
+        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
+
+        when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Collections.emptyList());
+
+        when(this.registrationService.saveRegistration(any())).thenReturn(Optional.empty());
+        // When
+        ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
+                this.requestEntity, String.class);
+
+        // Then
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.cryptoServerClient).generateIdentity(any());
+        verify(this.registrationService).saveRegistration(any());
+        verify(this.cryptoServerClient, never()).generateEphemeralTuple(any());
+        verify(this.epochKeyBundleDtoMapper, never()).convert(anyList());
+    }
+
+	@Test
+    public void testRegisterFailsWhenEphemeralTupleGenerationFails() {
+
+        // Given
+        this.body = RegisterVo.builder()
+                .captcha("TEST")
+                .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
+                .build();
+
+        this.requestEntity = new HttpEntity<>(this.body, this.headers);
+
+        byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
+        byte[] id = "12345".getBytes();
+
+        GenerateIdentityResponse identityResponse = GenerateIdentityResponse
+                .newBuilder()
+                .setIdA(ByteString.copyFrom(id))
+                .setEncryptedSharedKey(ByteString.copyFrom(key))
+                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+                .build();
+
+        Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
+                .isNotified(false).sharedKey(key).atRisk(false).build();
+        // Make it so that CAPTCHA verification fails (either incorrect token or too
+        // great a time
+        // difference between solving and the request)
+        doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
+
+        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
+
+        when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Collections.emptyList());
+
+        when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
+
+        // When
+        ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
+                this.requestEntity, String.class);
+
+        // Then
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(this.cryptoServerClient).generateIdentity(any());
+        verify(this.cryptoServerClient).generateEphemeralTuple(any());
+        verify(this.registrationService).saveRegistration(any());
+        verify(this.epochKeyBundleDtoMapper, never()).convert(anyList());
+	}
+
+	@Test
 	public void testSuccess() {
-		this.body = RegisterVo.builder().captcha("TEST").build();
+		this.body = RegisterVo.builder()
+		        .captcha("TEST")
+		        .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
+		        .build();
 
 		this.requestEntity = new HttpEntity<>(this.body, this.headers);
 
@@ -192,13 +326,23 @@ public class RegisterControllerWsRestTest {
 		Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
 				.isNotified(false).sharedKey(key).atRisk(false).build();
 
+		GenerateIdentityResponse identityResponse = GenerateIdentityResponse
+		        .newBuilder()
+		        .setIdA(ByteString.copyFrom(id))
+		        .setEncryptedSharedKey(ByteString.copyFrom(key))
+		        .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+		        .build();
+
+		when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
+
 		when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Arrays.asList( EphemeralTupleResponse
 				.newBuilder().build()));
 		when(this.epochKeyBundleDtoMapper.convert(anyList())).thenReturn(Arrays.asList(epochKeyDto));
 		
-		when(this.registrationService.createRegistration()).thenReturn(Optional.of(reg));
+		when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
 		when(this.captchaService.verifyCaptcha(this.body)).thenReturn(true);
 
+		String expectedServerPublicKey = Base64.encode(identityResponse.getServerPublicKeyForKey().toByteArray());
 
 		ResponseEntity<RegisterResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
 				HttpMethod.POST, this.requestEntity, RegisterResponseDto.class);
@@ -206,10 +350,10 @@ public class RegisterControllerWsRestTest {
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
 		assertNotNull(response.getBody().getFilteringAlgoConfig());
 		assertEquals(32, Base64.decode(response.getBody().getKey()).length);
-		assertTrue(Arrays.equals(key, Base64.decode(response.getBody().getKey())));
+		assertEquals(expectedServerPublicKey, response.getBody().getServerPublicECDHKeyForKey());
 		assertNotNull(response.getBody().getIdsForEpochs());
 		assertTrue(response.getBody().getIdsForEpochs().size() > 0);
-		verify(this.registrationService, times(1)).createRegistration();
+		verify(this.registrationService).saveRegistration(any());
 	}
 
 	private int getCurrentEpoch() {
