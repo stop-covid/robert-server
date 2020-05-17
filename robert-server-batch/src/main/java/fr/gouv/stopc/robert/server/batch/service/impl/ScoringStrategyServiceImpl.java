@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.inject.Inject;
 import java.util.List;
 
 
@@ -26,8 +27,12 @@ public class ScoringStrategyServiceImpl implements ScoringStrategyService {
     private final static int RSSI_1M = -60;
     private final static int ALPHA = -RSSI_1M - 5;
 
-    @Autowired
-    private IServerConfigurationService serverConfigurationService;
+    private final IServerConfigurationService serverConfigurationService;
+
+    @Inject
+    public ScoringStrategyServiceImpl(IServerConfigurationService serverConfigurationService) {
+        this.serverConfigurationService = serverConfigurationService;
+    }
 
     @Override
     public Double execute(Contact contact) throws RobertScoringException {

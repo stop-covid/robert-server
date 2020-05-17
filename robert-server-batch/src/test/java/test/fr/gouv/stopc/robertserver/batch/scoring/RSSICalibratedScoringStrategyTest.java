@@ -9,9 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import fr.gouv.stopc.robert.server.batch.service.impl.ScoringStrategyServiceImpl;
+import fr.gouv.stopc.robert.server.common.service.impl.ServerConfigurationServiceImpl;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
@@ -28,19 +32,14 @@ import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { RobertServerBatchApplication.class })
-@TestPropertySource("classpath:application.properties")
 public class RSSICalibratedScoringStrategyTest {
 
     private final static String FAIL_EXCEPTION = "Should not fail";
 
-    @Autowired
-    private ScoringStrategyService scoringStrategyService;
+    private ScoringStrategyServiceImpl scoringStrategyService;
 
-    @Autowired
-    private IServerConfigurationService serverConfigurationService;
+    private ServerConfigurationServiceImpl serverConfigurationService;
 
     private Long randomReferenceEpochStartTime;
 
@@ -48,6 +47,8 @@ public class RSSICalibratedScoringStrategyTest {
 
     @BeforeEach
     public void beforeEach() {
+        this.serverConfigurationService = new ServerConfigurationServiceImpl();
+        this.scoringStrategyService = new ScoringStrategyServiceImpl(this.serverConfigurationService);
         this.randomReferenceEpochStartTime = this.serverConfigurationService.getServiceTimeStart() + new Random().nextInt(20) * this.serverConfigurationService.getEpochDurationSecs();
         this.riskThreshold = this.serverConfigurationService.getRiskThreshold();
     }
