@@ -12,7 +12,7 @@ import java.util.Optional;
 
 import javax.crypto.KeyAgreement;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ECDHKeys;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class KeyServiceImpl implements IKeyService {
 
     @Override
-    public Optional<ECDHKeys> generateECHKeysForEncryption(byte[] clientPublicKey) {
+    public Optional<ClientECDHBundle> generateECHKeysForEncryption(byte[] clientPublicKey) {
 
         if (ByteUtils.isEmpty(clientPublicKey)) {
             return Optional.empty();
@@ -47,7 +47,7 @@ public class KeyServiceImpl implements IKeyService {
             // Read shared secret
             byte[] sharedSecret = ka.generateSecret();
             
-            return Optional.of(ECDHKeys.builder()
+            return Optional.of(ClientECDHBundle.builder()
                     .generatedSharedSecret(sharedSecret)
                     .serverPublicKey(serverPublicKey)
                     .build());

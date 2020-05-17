@@ -12,7 +12,7 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ECDHKeys;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.request.EncryptCountryCodeRequest;
@@ -246,7 +246,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     public void generateIdentity(GenerateIdentityRequest request,
             StreamObserver<GenerateIdentityResponse> responseObserver) {
 
-        Optional<ECDHKeys> keys = this.keyService.generateECHKeysForEncryption(
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(
                 request.getClientPublicKey().toByteArray());
 
         ClientIdentifierBundle clientIdentifierBundle = this.clientStorageService.createClientIdAndKey();

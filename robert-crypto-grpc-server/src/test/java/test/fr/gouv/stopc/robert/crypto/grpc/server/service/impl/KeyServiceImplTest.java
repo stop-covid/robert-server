@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ECDHKeys;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.KeyServiceImpl;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -39,7 +39,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = null;
  
         // When
-        Optional<ECDHKeys> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
 
         // Then
         assertFalse(keys.isPresent());
@@ -53,7 +53,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = ByteUtils.generate(50);
  
         // When
-        Optional<ECDHKeys> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
 
         // Then
         assertFalse(keys.isPresent());
@@ -67,7 +67,7 @@ public class KeyServiceImplTest {
         byte [] clientPublicKey = this.cryptoService.generateECDHPublicKey();
  
         // When
-        Optional<ECDHKeys> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHKeysForEncryption(clientPublicKey);
 
         // Then
         assertTrue(keys.isPresent());
