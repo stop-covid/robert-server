@@ -15,7 +15,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "fr.gouv.stopc.robert.crypto.grpc.server.service.others";
+option java_package = "fr.gouv.stopc.robert.crypto.grpc.server.messaging";
 option java_outer_classname = "CryptoGrpcService";
 option objc_class_prefix = "";
 
@@ -34,6 +34,7 @@ service CryptoGrpcServiceImpl {
   rpc validateMacEsr(MacEsrValidationRequest) returns (MacValidationResponse){}
   rpc validateMacForType(MacValidationForTypeRequest) returns (MacValidationResponse){}
   rpc generateIdentity(GenerateIdentityRequest) returns (GenerateIdentityResponse){}
+  rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest) returns (EncryptedEphemeralTupleResponse){}
 }
 
 // The request message containing the user's name.
@@ -158,4 +159,26 @@ message GenerateIdentityResponse {
 	bytes idA = 1;
 	bytes encryptedSharedKey = 2;
 	bytes serverPublicKeyForKey = 3;
+}
+
+// The request message containing the user's name.
+message EncryptedEphemeralTupleRequest {
+	// byte[] IDA of Registration
+	// int currentEpochID
+	// int numberOfEpochsToGenerate
+	// byte countryCode;
+	// byte clientPublicKey
+	bytes idA = 1;
+	int32 currentEpochID = 2;
+	int32 numberOfEpochsToGenerate = 3;
+	bytes countryCode = 4;
+	bytes clientPublicKey = 5;
+	
+}
+
+ message EncryptedEphemeralTupleResponse {
+	// byte [] tuples;
+	// byte serverPublicKeyForTuple
+	bytes tuples = 1;
+	bytes serverPublicKeyForTuple = 3;
 }

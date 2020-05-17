@@ -3,15 +3,17 @@ package fr.gouv.stopc.robert.crypto.grpc.server.client.service;
 import java.util.List;
 import java.util.Optional;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptCountryCodeRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.DecryptEBIDRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.GenerateIdentityRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.MacEsrValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.MacHelloValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.request.MacValidationForTypeRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.response.GenerateIdentityResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloValidationRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeRequest;
+
+
 
 public interface ICryptoServerGrpcClient {
 

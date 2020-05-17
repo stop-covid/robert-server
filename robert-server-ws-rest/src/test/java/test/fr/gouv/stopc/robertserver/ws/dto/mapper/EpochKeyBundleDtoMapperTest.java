@@ -21,7 +21,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.google.protobuf.ByteString;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.response.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robertserver.ws.dto.EpochKeyBundleDto;
 import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 
