@@ -20,7 +20,6 @@ import java.util.Optional;
 import javax.crypto.KeyGenerator;
 import javax.inject.Inject;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -399,7 +398,7 @@ public class DeleteHistoryControllerWsRestTest {
 		final byte[] prefix = new byte[] { prefixByte };
 
 		// HMAC-SHA256 processing
-		byte[] generatedSHA256 = cryptoHMACSHA256S.encrypt(ArrayUtils.addAll(prefix, argument));
+		byte[] generatedSHA256 = cryptoHMACSHA256S.encrypt(ByteUtils.addAll(prefix, argument));
 
 		return generatedSHA256;
 	}
