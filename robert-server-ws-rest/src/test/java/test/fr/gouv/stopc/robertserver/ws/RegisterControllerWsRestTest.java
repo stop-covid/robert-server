@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -13,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -24,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
-import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,7 +42,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -54,13 +51,11 @@ import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
 import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyBundleDto;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyDto;
 import fr.gouv.stopc.robertserver.ws.dto.RegisterResponseDto;
-import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.UriConstants;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
+import io.micrometer.core.instrument.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
@@ -93,9 +88,6 @@ public class RegisterControllerWsRestTest {
 	@MockBean
 	ICryptoServerGrpcClient cryptoServerClient;
 
-	@MockBean
-	EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
-
 	@Autowired
 	CryptoService cryptoService;
 
@@ -106,7 +98,7 @@ public class RegisterControllerWsRestTest {
 
 	@BeforeEach
 	public void before() {
-		MockitoAnnotations.initMocks(this);
+
 		assert (this.restTemplate != null);
 		this.headers = new HttpHeaders();
 		this.headers.setContentType(MediaType.APPLICATION_JSON);
@@ -209,7 +201,7 @@ public class RegisterControllerWsRestTest {
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(this.cryptoServerClient).generateIdentity(any());
-        verify(this.cryptoServerClient, never()).generateEphemeralTuple(any());
+        verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
         verify(this.registrationService, never()).saveRegistration(any());
     }
 
@@ -231,7 +223,7 @@ public class RegisterControllerWsRestTest {
                 .newBuilder()
                 .setIdA(ByteString.copyFrom(id))
                 .setEncryptedSharedKey(ByteString.copyFrom(key))
-                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
                 .build();
 
         // Make it so that CAPTCHA verification fails (either incorrect token or too
@@ -252,8 +244,7 @@ public class RegisterControllerWsRestTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(this.cryptoServerClient).generateIdentity(any());
         verify(this.registrationService).saveRegistration(any());
-        verify(this.cryptoServerClient, never()).generateEphemeralTuple(any());
-        verify(this.epochKeyBundleDtoMapper, never()).convert(anyList());
+        verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
     }
 
 	@Test
@@ -274,7 +265,7 @@ public class RegisterControllerWsRestTest {
                 .newBuilder()
                 .setIdA(ByteString.copyFrom(id))
                 .setEncryptedSharedKey(ByteString.copyFrom(key))
-                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
                 .build();
 
         Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
@@ -286,7 +277,7 @@ public class RegisterControllerWsRestTest {
 
         when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
 
-        when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Collections.emptyList());
+        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.empty());
 
         when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
 
@@ -297,9 +288,8 @@ public class RegisterControllerWsRestTest {
         // Then
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         verify(this.cryptoServerClient).generateIdentity(any());
-        verify(this.cryptoServerClient).generateEphemeralTuple(any());
+        verify(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
         verify(this.registrationService).saveRegistration(any());
-        verify(this.epochKeyBundleDtoMapper, never()).convert(anyList());
 	}
 
 	@Test
@@ -314,15 +304,6 @@ public class RegisterControllerWsRestTest {
 		byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
 		byte[] id = "12345".getBytes();
 		
-		
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-		.epochId(120L)
-		.key(EpochKeyDto.builder()
-				.ebid(Base64.encode("12345678".getBytes()))
-				.ecc(Base64.encode("1".getBytes()))
-				.build())
-		.build();
-
 		Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
 				.isNotified(false).sharedKey(key).atRisk(false).build();
 
@@ -330,29 +311,36 @@ public class RegisterControllerWsRestTest {
 		        .newBuilder()
 		        .setIdA(ByteString.copyFrom(id))
 		        .setEncryptedSharedKey(ByteString.copyFrom(key))
-		        .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generate(32)))
+		        .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
 		        .build();
 
 		when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
 
-		when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build()));
-		when(this.epochKeyBundleDtoMapper.convert(anyList())).thenReturn(Arrays.asList(epochKeyDto));
-		
+		EncryptedEphemeralTupleResponse encryptedTupleResponse = EncryptedEphemeralTupleResponse.newBuilder()
+                .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
+                .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
+                .build();
+
+		when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.of(encryptedTupleResponse));
+				
 		when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
 		when(this.captchaService.verifyCaptcha(this.body)).thenReturn(true);
 
-		String expectedServerPublicKey = Base64.encode(identityResponse.getServerPublicKeyForKey().toByteArray());
+		String expectedServerPublicKeyForKey = Base64.encode(identityResponse.getServerPublicKeyForKey().toByteArray());
+		
+		String expectedServerPublicKeyForTuples = Base64.encode(encryptedTupleResponse.getServerPublicKeyForTuples().toByteArray());
 
+		
 		ResponseEntity<RegisterResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
 				HttpMethod.POST, this.requestEntity, RegisterResponseDto.class);
 
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
 		assertNotNull(response.getBody().getFilteringAlgoConfig());
 		assertEquals(32, Base64.decode(response.getBody().getKey()).length);
-		assertEquals(expectedServerPublicKey, response.getBody().getServerPublicECDHKeyForKey());
-		assertNotNull(response.getBody().getIdsForEpochs());
-		assertTrue(response.getBody().getIdsForEpochs().size() > 0);
+		assertEquals(expectedServerPublicKeyForKey, response.getBody().getServerPublicECDHKeyForKey());
+		assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
+		assertNotNull(response.getBody().getTuples());
+		assertTrue(StringUtils.isNotEmpty(response.getBody().getTuples()));
 		verify(this.registrationService).saveRegistration(any());
 	}
 

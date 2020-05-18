@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,9 +24,7 @@ public class RegisterResponseDto
 	private String key;
 
 	@NotNull
-	@Size(min = 1)
-	@Singular
-	private List<EpochKeyBundleDto> idsForEpochs;
+	private String tuples;
 
 	private String message;
 
@@ -39,5 +36,8 @@ public class RegisterResponseDto
 
 	@NotNull
 	private String serverPublicECDHKeyForKey;
+
+	@NotNull
+	private String serverPublicECDHKeyForTuples;
 
 }

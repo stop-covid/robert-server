@@ -16,8 +16,8 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
@@ -29,7 +29,6 @@ import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IRegisterController;
 import fr.gouv.stopc.robertserver.ws.dto.AlgoConfigDto;
 import fr.gouv.stopc.robertserver.ws.dto.RegisterResponseDto;
-import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
@@ -48,23 +47,19 @@ public class RegisterControllerImpl implements IRegisterController {
 
     private final CaptchaService captchaService;
 
-    private final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
-
     private  final ICryptoServerGrpcClient cryptoServerClient;
 
     @Inject
     public RegisterControllerImpl(final IRegistrationService registrationService,
-                                  final IServerConfigurationService serverConfigurationService,
-                                  final IApplicationConfigService applicationConfigService,
-                                  final CaptchaService captchaService,
-                                  final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
-                                  final ICryptoServerGrpcClient cryptoServerClient) {
+            final IServerConfigurationService serverConfigurationService,
+            final IApplicationConfigService applicationConfigService,
+            final CaptchaService captchaService,
+            final ICryptoServerGrpcClient cryptoServerClient) {
 
         this.registrationService = registrationService;
         this.serverConfigurationService = serverConfigurationService;
         this.applicationConfigService = applicationConfigService;
         this.captchaService = captchaService;
-        this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
         this.cryptoServerClient = cryptoServerClient;
 
     }
@@ -72,30 +67,30 @@ public class RegisterControllerImpl implements IRegisterController {
     @Override
     public ResponseEntity<RegisterResponseDto> register(RegisterVo registerVo) throws RobertServerException {
 
-          // TODO: Enable this when the capcha becomes
-//        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
-//            log.error("The 'captcha' is required.");
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
+        // TODO: Enable this when the capcha becomes
+        //        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
+        //            log.error("The 'captcha' is required.");
+        //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        //        }
 
-          // TODO: Unable this when the key sharing is enabled
-//        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
-//            log.error("The client ECDH public is required.");
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//        }
+        // TODO: Unable this when the key sharing is enabled
+        //        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
+        //            log.error("The client ECDH public is required.");
+        //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        //        }
 
         if (!this.captchaService.verifyCaptcha(registerVo)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
-        
+
         GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
-        .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
-        .build();
-        
+                .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
+                .build();
+
         Optional<GenerateIdentityResponse> response = this.cryptoServerClient.generateIdentity(request);
- 
+
         if(!response.isPresent()) {
             log.error("Unable to generate an identity for the client");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -106,17 +101,18 @@ public class RegisterControllerImpl implements IRegisterController {
         Registration registration = Registration.builder()
                 .permanentIdentifier(identity.getIdA().toByteArray())
                 .build();
-        
-        Optional<Registration> registreted = this.registrationService.saveRegistration(registration);
-                
-        
-        if (registreted.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(processRegistration(identity));
+
+        Optional<Registration> registered = this.registrationService.saveRegistration(registration);
+
+
+        if (registered.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(processRegistration(registerVo, identity));
         }
+
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    private RegisterResponseDto processRegistration(GenerateIdentityResponse identity) throws RobertServerException {
+    private RegisterResponseDto processRegistration(RegisterVo registerVo, GenerateIdentityResponse identity) throws RobertServerException {
 
         RegisterResponseDto registerResponseDto = new RegisterResponseDto();
 
@@ -125,7 +121,7 @@ public class RegisterControllerImpl implements IRegisterController {
             registerResponseDto.setFilteringAlgoConfig(Collections.emptyList());
         } else {
             registerResponseDto
-                    .setFilteringAlgoConfig(serverConf.stream().map(item -> AlgoConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
+            .setFilteringAlgoConfig(serverConf.stream().map(item -> AlgoConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
         }
 
         final byte countrycode = this.serverConfigurationService.getServerCountryCode();
@@ -137,23 +133,29 @@ public class RegisterControllerImpl implements IRegisterController {
 
         registerResponseDto.setTimeStart(tpstStart);
 
-        EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
+        byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
+
+        EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
                 .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
-                .setCurrentEpochID(currentEpochId)
+                .setFromEpoch(currentEpochId)
                 .setIdA(ByteString.copyFrom(identity.getIdA().toByteArray()))
                 .setNumberOfEpochsToGenerate(numberOfEpochs)
+                .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
                 .build();
 
 
-        List<EphemeralTupleResponse> ephTuples = this.cryptoServerClient.generateEphemeralTuple(request);
+        Optional<EncryptedEphemeralTupleResponse> encryptedTuple = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
 
-        if (CollectionUtils.isEmpty(ephTuples)) {
-            log.warn("Could not generate (EBID, ECC) tuples");
+        if (!encryptedTuple.isPresent()) {
+            log.warn("Could not generate encrypted (EBID, ECC) tuples");
             throw new RobertServerException(MessageConstants.ERROR_OCCURED);
         }
 
-        registerResponseDto.setIdsForEpochs(
-                this.epochKeyBundleDtoMapper.convert(ephTuples));
+        registerResponseDto.setServerPublicECDHKeyForTuples(Base64.encode(
+                encryptedTuple.get().getServerPublicKeyForTuples().toByteArray()));
+
+        registerResponseDto.setTuples(Base64.encode(
+                encryptedTuple.get().getEncryptedTuples().toByteArray()));
 
         registerResponseDto.setServerPublicECDHKeyForKey(Base64.encode(identity.getServerPublicKeyForKey().toByteArray()));
 
