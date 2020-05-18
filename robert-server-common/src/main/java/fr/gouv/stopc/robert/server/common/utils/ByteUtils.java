@@ -2,7 +2,6 @@ package fr.gouv.stopc.robert.server.common.utils;
 
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 /**
  * Simplify conversion to/from numerical value to byte arrays
@@ -71,7 +70,7 @@ public final class ByteUtils {
 
     public static byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
-    public static byte[] generate(final int nbOfbytes) {
+    public static byte[] generateRandom(final int nbOfbytes) {
         byte[] rndBytes = new byte[nbOfbytes];
         SecureRandom sr = new SecureRandom();
         sr.nextBytes(rndBytes);
