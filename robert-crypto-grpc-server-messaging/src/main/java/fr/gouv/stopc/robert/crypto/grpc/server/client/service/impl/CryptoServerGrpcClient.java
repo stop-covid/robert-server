@@ -18,6 +18,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeReque
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
@@ -35,197 +37,212 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 
-	private ManagedChannel channel;
-	private CryptoGrpcServiceImplBlockingStub blockingStub;
-	private TestHelper testHelper;
+    private ManagedChannel channel;
+    private CryptoGrpcServiceImplBlockingStub blockingStub;
+    private TestHelper testHelper;
 
-	private final static String ERROR_MESSAGE = "RPC failed: {}";
+    private final static String ERROR_MESSAGE = "RPC failed: {}";
 
-	public CryptoServerGrpcClient(){}
+    public CryptoServerGrpcClient(){}
 
-	public CryptoServerGrpcClient(String host, int port) {
-		this(ManagedChannelBuilder.forAddress(host, port).usePlaintext());
-	}
+    public CryptoServerGrpcClient(String host, int port) {
+        this(ManagedChannelBuilder.forAddress(host, port).usePlaintext());
+    }
 
-	public CryptoServerGrpcClient(ManagedChannelBuilder<?> channelBuilder) {
-		this.channel = channelBuilder.build();
-		this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(this.channel);
-	}
+    public CryptoServerGrpcClient(ManagedChannelBuilder<?> channelBuilder) {
+        this.channel = channelBuilder.build();
+        this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(this.channel);
+    }
 
-	public CryptoServerGrpcClient(ManagedChannel channel) {
-		this.channel =  channel;
-		this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(channel);
-	}
+    public CryptoServerGrpcClient(ManagedChannel channel) {
+        this.channel =  channel;
+        this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(channel);
+    }
 
-	@Override
-	public void init(String host, int port) {
-		this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-		this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(this.channel);
-	}
-	@Override
-	public List<EphemeralTupleResponse> generateEphemeralTuple(EphemeralTupleRequest request) {
+    @Override
+    public void init(String host, int port) {
+        this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+        this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(this.channel);
+    }
+    @Override
+    public List<EphemeralTupleResponse> generateEphemeralTuple(EphemeralTupleRequest request) {
 
-		List<EphemeralTupleResponse> tuples = new ArrayList<>();
-		try {
-			Iterator<EphemeralTupleResponse> tupleIterator = this.blockingStub.generateEphemeralTuple(request);
-			while(tupleIterator != null && tupleIterator.hasNext()) {
-				EphemeralTupleResponse response = tupleIterator.next();
+        List<EphemeralTupleResponse> tuples = new ArrayList<>();
+        try {
+            Iterator<EphemeralTupleResponse> tupleIterator = this.blockingStub.generateEphemeralTuple(request);
+            while(tupleIterator != null && tupleIterator.hasNext()) {
+                EphemeralTupleResponse response = tupleIterator.next();
 
-				if (this.testHelper != null) {
-					this.testHelper.onMessage(response);
-				}
+                if (this.testHelper != null) {
+                    this.testHelper.onMessage(response);
+                }
 
-				tuples.add(response);
-			}
+                tuples.add(response);
+            }
 
-		} catch (StatusRuntimeException ex) {
-			log.warn(ERROR_MESSAGE, ex.getStatus());
-		}
+        } catch (StatusRuntimeException ex) {
+            log.warn(ERROR_MESSAGE, ex.getStatus());
+        }
 
-		return tuples;
-	}
-
-
-	@Override
-	public byte[] decryptEBID(DecryptEBIDRequest request) {
-		try {
-
-			EBIDResponse response = this.blockingStub.decryptEBID(request);
-
-			if (this.testHelper != null) {
-				this.testHelper.onMessage(response);
-			}
-
-			if(Objects.nonNull(response)) {
-				return response.getEbid().toByteArray();
-			}
-		} catch (StatusRuntimeException ex) {
-			log.error(ERROR_MESSAGE, ex.getStatus());
-		}
-		return null;
-	}
-
-	@Override
-	public boolean validateMacEsr(MacEsrValidationRequest request) {
-
-		try {
-
-			MacValidationResponse response = blockingStub.validateMacEsr(request);
-
-			if (this.testHelper != null) {
-				this.testHelper.onMessage(response);
-			}
-
-			if(Objects.nonNull(response)) {
-				return response.getIsValid();
-			}
-		} catch (StatusRuntimeException ex) {
-			log.error(ERROR_MESSAGE, ex.getStatus());
-		}
-		return false;
-	}
+        return tuples;
+    }
 
 
-	@Override
-	public boolean validateMacForType(MacValidationForTypeRequest request) {
+    @Override
+    public byte[] decryptEBID(DecryptEBIDRequest request) {
+        try {
 
-		try {
+            EBIDResponse response = this.blockingStub.decryptEBID(request);
 
-			MacValidationResponse response = this.blockingStub.validateMacForType(request);
+            if (this.testHelper != null) {
+                this.testHelper.onMessage(response);
+            }
 
-			if (this.testHelper != null) {
-				this.testHelper.onMessage(response);
-			}
+            if(Objects.nonNull(response)) {
+                return response.getEbid().toByteArray();
+            }
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getStatus());
+        }
+        return null;
+    }
 
-			if(Objects.nonNull(response)) {
-				return response.getIsValid();
-			}
-		} catch (StatusRuntimeException ex) {
-			log.error(ERROR_MESSAGE, ex.getStatus());
-		}
-		return false;
-	}
+    @Override
+    public boolean validateMacEsr(MacEsrValidationRequest request) {
+
+        try {
+
+            MacValidationResponse response = blockingStub.validateMacEsr(request);
+
+            if (this.testHelper != null) {
+                this.testHelper.onMessage(response);
+            }
+
+            if(Objects.nonNull(response)) {
+                return response.getIsValid();
+            }
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getStatus());
+        }
+        return false;
+    }
 
 
-	@Override
-	public boolean validateMacHello(MacHelloValidationRequest request) {
+    @Override
+    public boolean validateMacForType(MacValidationForTypeRequest request) {
 
-		try {
+        try {
 
-			MacValidationResponse response = this.blockingStub.validateMacHello(request);
+            MacValidationResponse response = this.blockingStub.validateMacForType(request);
 
-			if (this.testHelper != null) {
-				this.testHelper.onMessage(response);
-			}
+            if (this.testHelper != null) {
+                this.testHelper.onMessage(response);
+            }
 
-			if(Objects.nonNull(response)) {
-				return response.getIsValid();
-			}
-		} catch (StatusRuntimeException ex) {
-			log.error(ERROR_MESSAGE, ex.getStatus());
-		}
-		return false;
-	}
+            if(Objects.nonNull(response)) {
+                return response.getIsValid();
+            }
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getStatus());
+        }
+        return false;
+    }
 
-	@Override
-	public byte decryptCountryCode(DecryptCountryCodeRequest request) {
 
-		try {
+    @Override
+    public boolean validateMacHello(MacHelloValidationRequest request) {
 
-			DecryptCountryCodeResponse response = this.blockingStub.decryptCountryCode(request);
+        try {
 
-			if (this.testHelper != null) {
-				this.testHelper.onMessage(response);
-			}
+            MacValidationResponse response = this.blockingStub.validateMacHello(request);
 
-			if(Objects.nonNull(response)) {
-				return response.getCountryCode().toByteArray()[0];
-			}
-		} catch (StatusRuntimeException ex) {
-			log.error(ERROR_MESSAGE, ex.getStatus());
-		}
-		return 0;
-	}
+            if (this.testHelper != null) {
+                this.testHelper.onMessage(response);
+            }
 
-	/**
-	 * Only used for helping unit test.
-	 */
-	@Override
-	public Optional<GenerateIdentityResponse> generateIdentity(GenerateIdentityRequest request) {
+            if(Objects.nonNull(response)) {
+                return response.getIsValid();
+            }
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getStatus());
+        }
+        return false;
+    }
 
-	    try {
+    @Override
+    public byte decryptCountryCode(DecryptCountryCodeRequest request) {
+
+        try {
+
+            DecryptCountryCodeResponse response = this.blockingStub.decryptCountryCode(request);
+
+            if (this.testHelper != null) {
+                this.testHelper.onMessage(response);
+            }
+
+            if(Objects.nonNull(response)) {
+                return response.getCountryCode().toByteArray()[0];
+            }
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getStatus());
+        }
+        return 0;
+    }
+
+    /**
+     * Only used for helping unit test.
+     */
+    @Override
+    public Optional<GenerateIdentityResponse> generateIdentity(GenerateIdentityRequest request) {
+
+        try {
             GenerateIdentityResponse response = this.blockingStub.generateIdentity(request);
             if (Objects.nonNull(this.testHelper)) {
                 this.testHelper.onMessage(response);
             }
-            
+
             return Optional.ofNullable(response);
         } catch (StatusRuntimeException ex) {
             log.error(ERROR_MESSAGE, ex.getMessage());
         }
-	    
-	    return Optional.empty();
-	}
 
-	
-	@VisibleForTesting
-	public interface TestHelper {
-		/**
-		 * Used for verify/inspect message received from server.
-		 */
-		void onMessage(Message message);
+        return Optional.empty();
+    }
 
-		/**
-		 * Used for verify/inspect error received from server.
-		 */
-		void onRpcError(Throwable exception);
-	}
+    @Override
+    public Optional<EncryptedEphemeralTupleResponse> generateEncryptedEphemeralTuple(
+            EncryptedEphemeralTupleRequest request) {
 
-	@VisibleForTesting
-	public
-	void setTestHelper(TestHelper testHelper) {
-		this.testHelper = testHelper;
-	}
+        try {
+            EncryptedEphemeralTupleResponse response = this.blockingStub.generateEncryptedEphemeralTuple(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
 
 
+    @VisibleForTesting
+    public interface TestHelper {
+        /**
+         * Used for verify/inspect message received from server.
+         */
+        void onMessage(Message message);
+
+        /**
+         * Used for verify/inspect error received from server.
+         */
+        void onRpcError(Throwable exception);
+    }
+
+    @VisibleForTesting
+    public
+    void setTestHelper(TestHelper testHelper) {
+        this.testHelper = testHelper;
+    }
 }

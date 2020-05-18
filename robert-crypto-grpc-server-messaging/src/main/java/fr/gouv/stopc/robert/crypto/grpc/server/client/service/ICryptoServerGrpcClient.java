@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
@@ -30,5 +32,7 @@ public interface ICryptoServerGrpcClient {
 	byte decryptCountryCode(DecryptCountryCodeRequest request);
 	
 	Optional<GenerateIdentityResponse> generateIdentity(GenerateIdentityRequest request);
+
+	Optional<EncryptedEphemeralTupleResponse> generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request);
 
 }
