@@ -1,11 +1,13 @@
 package test.fr.gouv.stopc.robertserver.ws.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.util.Date;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +26,7 @@ import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
 
 @ExtendWith(SpringExtension.class)
+@TestPropertySource("classpath:application.properties")
 public class CaptchaServiceImplTest {
 
 	@Value("${captcha.verify.url}")
@@ -47,6 +50,14 @@ public class CaptchaServiceImplTest {
 	@Mock
 	private PropertyLoader propertyLoader;
 
+	private RegisterVo registerVo;
+
+	@BeforeEach
+	public void beforeEach() {
+
+		this.registerVo = RegisterVo.builder().captcha("captcha").build();
+	}
+
 	@Test
 	public void testVerifyCaptchaWhenVoIsNull() {
 
@@ -54,15 +65,33 @@ public class CaptchaServiceImplTest {
 		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(null);
 
 		// Then
-		assertTrue(isVerified);
+		assertFalse(isVerified);
+	}
+
+	@Test
+	public void testVerifyCaptchaWhenVoHasNoCaptcha() {
+
+		// Given
+		this.registerVo.setCaptcha(null);
+
+		// When
+		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(null);
+
+		// Then
+		assertFalse(isVerified);
 	}
 
 	@Test
 	public void testVerifyCaptchaWhenVoIsNotNull() {
 
 		// Given
-		CaptchaDto captchaDto = CaptchaDto.builder().success(true).challengeTimestamp(new Date()).hostname(this.captchaHostname).build();
-		when(this.restTemplate.postForEntity(any(String.class), any(), any())).thenReturn(ResponseEntity.ok(captchaDto));
+		CaptchaDto captchaDto = CaptchaDto.builder()
+										  .success(true)
+										  .challengeTimestamp(new Date())
+										  .hostname(this.captchaHostname)
+										  .build();
+		when(this.restTemplate.postForEntity(any(String.class), any(),
+											 any())).thenReturn(ResponseEntity.ok(captchaDto));
 
 		when(this.propertyLoader.getCaptchaVerificationUrl()).thenReturn(this.captchaVerificationUrl);
 		when(this.propertyLoader.getCaptchaSecret()).thenReturn(this.captchaSecret);
@@ -70,7 +99,7 @@ public class CaptchaServiceImplTest {
 		when(this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()).thenReturn(3600);
 
 		// When
-		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(RegisterVo.builder().build());
+		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(this.registerVo);
 
 		// Then
 		assertTrue(isVerified);
@@ -83,10 +112,10 @@ public class CaptchaServiceImplTest {
 		when(this.restTemplate.postForEntity(any(String.class), any(), any())).thenThrow(RestClientException.class);
 
 		// When
-		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(RegisterVo.builder().build());
+		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(this.registerVo);
 
 		// Then
-		assertTrue(isVerified);
+		assertFalse(isVerified);
 	}
 
 }
