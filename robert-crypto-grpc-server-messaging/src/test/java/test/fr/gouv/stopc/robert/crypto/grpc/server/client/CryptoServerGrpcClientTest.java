@@ -74,47 +74,6 @@ public class CryptoServerGrpcClientTest {
     }
 
     @Test
-    public void testGenerateEphemeralTuple() {
-
-        // Given
-        EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
-                .setCountryCode(ByteString.copyFrom(generate(1)))
-                .setFromEpoch(2100)
-                .setIdA(ByteString.copyFrom(generate(5)))
-                .setNumberOfEpochsToGenerate(1)
-                .build();
-
-        EphemeralTupleResponse response = EphemeralTupleResponse
-                .newBuilder()
-                .setEbid(ByteString.copyFrom(generate(8)))
-                .setEcc(ByteString.copyFrom(generate(1)))
-                .setEpochId(2102)
-                .build();
-
-        CryptoGrpcServiceImplImplBase generateEphemeralTuple = new CryptoGrpcServiceImplImplBase() {
-
-            @Override
-            public void generateEphemeralTuple(EphemeralTupleRequest request,
-                    StreamObserver<EphemeralTupleResponse> responseObserver) {
-
-                responseObserver.onNext(response);
-
-                responseObserver.onCompleted();
-            }
-
-        };
-
-        serviceRegistry.addService(generateEphemeralTuple);
-
-        // When
-        List<EphemeralTupleResponse> ephTuples = client.generateEphemeralTuple(request);
-
-        // Then
-        assertFalse(CollectionUtils.isEmpty(ephTuples));
-        verify(testHelper).onMessage(response);
-    }
-
-    @Test
     public void testDecryptEBID() {
 
         // Given

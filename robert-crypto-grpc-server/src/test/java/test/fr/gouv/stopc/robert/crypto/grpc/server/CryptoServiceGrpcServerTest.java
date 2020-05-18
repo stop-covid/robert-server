@@ -116,51 +116,6 @@ public class CryptoServiceGrpcServerTest {
     }
 
     @Test
-    public void testGenerateEphemeralTuple()  {
-
-        try {
-            // Given
-            EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
-                    .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
-                    .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
-                    .setFromEpoch(2100)
-                    .setNumberOfEpochsToGenerate(1)
-                    .build();
-            CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
-
-            final List<EphemeralTupleResponse> response = new ArrayList<>();
-            final CountDownLatch latch = new CountDownLatch(1);
-
-            StreamObserver<EphemeralTupleResponse> responseObserver =
-                    new StreamObserver<EphemeralTupleResponse>() {
-                @Override
-                public void onNext(EphemeralTupleResponse value) {
-                    response.add(value);
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    fail();
-                }
-
-                @Override
-                public void onCompleted() {
-                    latch.countDown();
-                }
-            };
-
-            // When
-            stub.generateEphemeralTuple(request, responseObserver);
-
-            // Then
-            assertTrue(latch.await(1, TimeUnit.SECONDS));
-            assertEquals(1, response.size());
-        } catch (InterruptedException e) {
-            fail(e.getMessage());
-        }
-    }
-
-    @Test
     public void testGenerateEBID() {
         try {
             // Given

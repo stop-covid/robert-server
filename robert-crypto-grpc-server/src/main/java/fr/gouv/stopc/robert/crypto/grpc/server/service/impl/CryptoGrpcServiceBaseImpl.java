@@ -22,8 +22,6 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeReque
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
@@ -33,8 +31,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloGenerationRespo
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloValidationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
@@ -69,43 +67,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         this.cryptoService = cryptoService;
         this.keyService = keyService;
         this.clientStorageService = clientStorageService;
-    }
-
-    @Override
-    public void generateEphemeralTuple(EphemeralTupleRequest request,
-            StreamObserver<EphemeralTupleResponse> responseObserver) {
-
-        final byte[] serverKey = this.serverConfigurationService.getServerKey();
-        final byte[] federationKey = this.serverConfigurationService.getFederationKey();
-        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, federationKey, 1);
-        try {
-            final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(
-                    request.getIdA().toByteArray(),
-                    request.getFromEpoch(),
-                    request.getNumberOfEpochsToGenerate(),
-                    request.getCountryCode().byteAt(0)
-                    );
-            tupleGenerator.stop();
-
-            if (!CollectionUtils.isEmpty(ephemeralTuples)) {
-
-                ephemeralTuples.stream()
-                .map(tuple -> EphemeralTupleResponse
-                        .newBuilder()
-                        .setEbid(ByteString.copyFrom(tuple.getEbid()))
-                        .setEcc(ByteString.copyFrom(tuple.getEncryptedCountryCode()))
-                        .setEpochId(tuple.getEpoch())
-                        .build())
-                .forEach(response -> responseObserver.onNext(response));
-
-            }
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-
-            responseObserver.onError(e);
-        } finally {
-            tupleGenerator.stop();
-        }
     }
 
     @Override

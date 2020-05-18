@@ -24,7 +24,6 @@ package robert.server.crypto;
 // The greeting service definition.
 service CryptoGrpcServiceImpl {
 
-  rpc generateEphemeralTuple (EphemeralTupleRequest) returns (stream EphemeralTupleResponse) {}
   rpc generateEBID(GenerateEBIDRequest) returns (EBIDResponse){}
   rpc decryptEBID(DecryptEBIDRequest) returns (EBIDResponse){}
   rpc encryptCountryCode(EncryptCountryCodeRequest) returns (EncryptCountryCodeResponse){}
@@ -37,29 +36,6 @@ service CryptoGrpcServiceImpl {
   rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest) returns (EncryptedEphemeralTupleResponse){}
 }
 
-// The request message containing the user's name.
-message EphemeralTupleRequest {
-	// byte[] IDA of Registration
-	// int currentEpochID
-	// int numberOfEpochsToGenerate
-	// byte countryCode;
-	
-	bytes idA = 1;
-	int32 fromEpoch = 2;
-	int32 numberOfEpochsToGenerate = 3;
-	bytes countryCode = 4;
-	
-}
-
-// The response message containing the greetings
- message EphemeralTupleResponse {
-	// int epochId;
-	// byte[] ebid;
-	// byte[] ecc;
-	int32 epochId = 1;
-	bytes ebid = 2;
-	bytes ecc = 3;
-}
 
 message GenerateEBIDRequest {
 	// byte[] IDA of Registration

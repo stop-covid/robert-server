@@ -1,8 +1,5 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.client.service.impl;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,8 +17,6 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
@@ -64,29 +59,6 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
         this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         this.blockingStub = CryptoGrpcServiceImplGrpc.newBlockingStub(this.channel);
     }
-    @Override
-    public List<EphemeralTupleResponse> generateEphemeralTuple(EphemeralTupleRequest request) {
-
-        List<EphemeralTupleResponse> tuples = new ArrayList<>();
-        try {
-            Iterator<EphemeralTupleResponse> tupleIterator = this.blockingStub.generateEphemeralTuple(request);
-            while(tupleIterator != null && tupleIterator.hasNext()) {
-                EphemeralTupleResponse response = tupleIterator.next();
-
-                if (this.testHelper != null) {
-                    this.testHelper.onMessage(response);
-                }
-
-                tuples.add(response);
-            }
-
-        } catch (StatusRuntimeException ex) {
-            log.warn(ERROR_MESSAGE, ex.getStatus());
-        }
-
-        return tuples;
-    }
-
 
     @Override
     public byte[] decryptEBID(DecryptEBIDRequest request) {
