@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
@@ -18,6 +19,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateEBIDRequest;
@@ -77,7 +80,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         try {
             final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(
                     request.getIdA().toByteArray(),
-                    request.getCurrentEpochID(),
+                    request.getFromEpoch(),
                     request.getNumberOfEpochsToGenerate(),
                     request.getCountryCode().byteAt(0)
                     );
@@ -255,10 +258,10 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             responseObserver.onError(new RobertServerCryptoException("Unable to generate the client"));
         }
         else if(!keys.isPresent()) {
-            responseObserver.onError(new RobertServerCryptoException("Unable to generate an ECDH Keys"));
+            responseObserver.onError(new RobertServerCryptoException("Unable to generate an ECDH Key"));
         }
         else {
-            byte[] encrypted = this.cryptoService.aesEncrypt(clientIdentifierBundle.getKey(),
+            byte[] encrypted = this.cryptoService.encryptWithAES(clientIdentifierBundle.getKey(),
                     keys.get().getGeneratedSharedSecret());
 
             if(Objects.isNull(encrypted)) {
@@ -268,7 +271,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 GenerateIdentityResponse response = GenerateIdentityResponse
                         .newBuilder()
                         .setIdA(ByteString.copyFrom(clientIdentifierBundle.getId()))
-                        .setServerPublicKeyForKey(ByteString.copyFrom(keys.get().getGeneratedSharedSecret()))
+                        .setServerPublicKeyForKey(ByteString.copyFrom(keys.get().getServerPublicKey()))
                         .setEncryptedSharedKey(ByteString.copyFrom(encrypted))
                         .build();
 
@@ -277,6 +280,49 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
             }
 
+        }
+
+    }
+
+    public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request,
+            io.grpc.stub.StreamObserver<EncryptedEphemeralTupleResponse> responseObserver) {
+
+        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
+                request.getClientPublicKey().toByteArray());
+
+        if(!keys.isPresent()) {
+            responseObserver.onError(new RobertServerCryptoException("Unable to generate an ECDH Key"));
+        } else {
+
+            final byte[] serverKey = this.serverConfigurationService.getServerKey();
+            final byte[] federationKey = this.serverConfigurationService.getFederationKey();
+            final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, federationKey, 1);
+            try {
+                final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(
+                        request.getIdA().toByteArray(),
+                        request.getFromEpoch(),
+                        request.getNumberOfEpochsToGenerate(),
+                        request.getCountryCode().byteAt(0)
+                        );
+                tupleGenerator.stop();
+
+                if (!CollectionUtils.isEmpty(ephemeralTuples)) {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(ephemeralTuples);
+                    byte[] encryptedTuples = this.cryptoService.encryptWithAES(tuplesAsBytes,  keys.get().getGeneratedSharedSecret());
+
+                    responseObserver.onNext(EncryptedEphemeralTupleResponse.newBuilder()
+                            .setEncryptedTuples(ByteString.copyFrom(encryptedTuples))
+                            .setServerPublicKeyForTuples(ByteString.copyFrom(keys.get().getServerPublicKey()))
+                            .build());
+                }
+                responseObserver.onCompleted();
+            } catch (Exception e) {
+
+                responseObserver.onError(e);
+            } finally {
+                tupleGenerator.stop();
+            }
         }
 
     }

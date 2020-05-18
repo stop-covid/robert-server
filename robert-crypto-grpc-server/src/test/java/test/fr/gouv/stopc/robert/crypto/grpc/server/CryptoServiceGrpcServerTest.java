@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -32,6 +31,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateEBIDRequest;
@@ -60,6 +61,7 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
+import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
 
 @ExtendWith(SpringExtension.class)
@@ -119,9 +121,9 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
-                    .setIdA(ByteString.copyFrom(generateKey(5)))
-                    .setCountryCode(ByteString.copyFrom(generateKey(1)))
-                    .setCurrentEpochID(2100)
+                    .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
+                    .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
+                    .setFromEpoch(2100)
                     .setNumberOfEpochsToGenerate(1)
                     .build();
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -164,7 +166,7 @@ public class CryptoServiceGrpcServerTest {
             // Given
             GenerateEBIDRequest request = GenerateEBIDRequest
                     .newBuilder()
-                    .setIdA(ByteString.copyFrom(generateKey(5))).build();
+                    .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5))).build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
 
@@ -208,7 +210,7 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             DecryptEBIDRequest request = DecryptEBIDRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(generateKey(8))).build();
+                    .setEbid(ByteString.copyFrom(ByteUtils.generateRandom(8))).build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
 
@@ -253,8 +255,8 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             EncryptCountryCodeRequest request = EncryptCountryCodeRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(generateKey(8)))
-                    .setCountryCode(ByteString.copyFrom(generateKey(1))).build();
+                    .setEbid(ByteString.copyFrom(ByteUtils.generateRandom(8)))
+                    .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1))).build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
 
@@ -301,8 +303,8 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             DecryptCountryCodeRequest request = DecryptCountryCodeRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(generateKey(8)))
-                    .setEncryptedCountryCode(ByteString.copyFrom(generateKey(1)))
+                    .setEbid(ByteString.copyFrom(ByteUtils.generateRandom(8)))
+                    .setEncryptedCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
                     .build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -349,8 +351,8 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             MacHelloGenerationRequest request  = MacHelloGenerationRequest.newBuilder()
-                    .setKa(ByteString.copyFrom(generateKey(16)))
-                    .setHelloMessage(ByteString.copyFrom(generateKey(16)))
+                    .setKa(ByteString.copyFrom(ByteUtils.generateRandom(16)))
+                    .setHelloMessage(ByteString.copyFrom(ByteUtils.generateRandom(16)))
                     .build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -398,8 +400,8 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             MacHelloValidationRequest request = MacHelloValidationRequest.newBuilder()
-                    .setKa(ByteString.copyFrom(generateKey(16)))
-                    .setDataToValidate(ByteString.copyFrom(generateKey(16)))
+                    .setKa(ByteString.copyFrom(ByteUtils.generateRandom(16)))
+                    .setDataToValidate(ByteString.copyFrom(ByteUtils.generateRandom(16)))
                     .build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -445,9 +447,9 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             MacEsrValidationRequest request = MacEsrValidationRequest.newBuilder()
-                    .setKa(ByteString.copyFrom(generateKey(16)))
-                    .setDataToValidate(ByteString.copyFrom(generateKey(12)))
-                    .setMacToMatchWith(ByteString.copyFrom(generateKey(16)))
+                    .setKa(ByteString.copyFrom(ByteUtils.generateRandom(16)))
+                    .setDataToValidate(ByteString.copyFrom(ByteUtils.generateRandom(12)))
+                    .setMacToMatchWith(ByteString.copyFrom(ByteUtils.generateRandom(16)))
                     .build();
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -493,9 +495,9 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             MacValidationForTypeRequest request = MacValidationForTypeRequest.newBuilder()
-                    .setKa(ByteString.copyFrom(generateKey(16)))
-                    .setDataToValidate(ByteString.copyFrom(generateKey(12)))
-                    .setMacToMatchWith(ByteString.copyFrom(generateKey(16)))
+                    .setKa(ByteString.copyFrom(ByteUtils.generateRandom(16)))
+                    .setDataToValidate(ByteString.copyFrom(ByteUtils.generateRandom(12)))
+                    .setMacToMatchWith(ByteString.copyFrom(ByteUtils.generateRandom(16)))
                     .setPrefixe(ByteString.copyFrom(new byte[] { DigestSaltEnum.UNREGISTER.getValue() }))
                     .build();
 
@@ -542,9 +544,9 @@ public class CryptoServiceGrpcServerTest {
 
         // Given
         MacValidationForTypeRequest request = MacValidationForTypeRequest.newBuilder()
-                .setKa(ByteString.copyFrom(generateKey(16)))
-                .setDataToValidate(ByteString.copyFrom(generateKey(12)))
-                .setMacToMatchWith(ByteString.copyFrom(generateKey(16)))
+                .setKa(ByteString.copyFrom(ByteUtils.generateRandom(16)))
+                .setDataToValidate(ByteString.copyFrom(ByteUtils.generateRandom(12)))
+                .setMacToMatchWith(ByteString.copyFrom(ByteUtils.generateRandom(16)))
                 .setPrefixe(ByteString.copyFrom(new byte[] { (byte)0xFF }))
                 .build();
 
@@ -586,7 +588,7 @@ public class CryptoServiceGrpcServerTest {
 
         // Given
         GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
-                .setClientPublicKey(ByteString.copyFrom(generateKey(32)))
+                .setClientPublicKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
                 .build();
 
         CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
@@ -624,11 +626,11 @@ public class CryptoServiceGrpcServerTest {
     }
 
     @Test
-    public void GenerateIdentityWhenGoodClientPublicKey() {
+    public void testGenerateIdentityWhenGoodClientPublicKey() {
 
         try {
             // Given
-            byte[] clientPublicKey = this.cryptoService.generateECDHPublicKey();
+            byte[] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();
             GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
                     .setClientPublicKey(ByteString.copyFrom(clientPublicKey))
                     .build();
@@ -670,11 +672,101 @@ public class CryptoServiceGrpcServerTest {
         }
     }
 
-    private byte[] generateKey(final int nbOfbytes) {
-        byte[] rndBytes = new byte[nbOfbytes];
-        SecureRandom sr = new SecureRandom();
-        sr.nextBytes(rndBytes);
-        return rndBytes;
+    @Test
+    public void testGenerateEncryptedEphemeralTupleWhenBadClientPublicKey() {
+
+        // Given
+        EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+                .setClientPublicKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
+                .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
+                .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
+                .setFromEpoch(2100)
+                .setNumberOfEpochsToGenerate(1)
+                .build();
+
+        CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
+
+        List<Throwable> exceptions  = new ArrayList<>();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        StreamObserver<EncryptedEphemeralTupleResponse> responseObserver =
+                new StreamObserver<EncryptedEphemeralTupleResponse>() {
+            @Override
+            public void onNext(EncryptedEphemeralTupleResponse value) {
+                fail();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                exceptions.add(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                latch.countDown();
+            }
+        };
+
+
+        // When
+        stub.generateEncryptedEphemeralTuple(request, responseObserver);
+
+        // Then
+        assertFalse(CollectionUtils.isEmpty(exceptions));
+        assertEquals(1, exceptions.size());
+        assertTrue(exceptions.get(0) instanceof StatusRuntimeException);
     }
 
+    @Test
+    public void testGenerateEncryptedEphemeralTupleWhenGoodClientPublicKey() {
+
+        try {
+            // Given
+            byte[] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();
+            EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+                    .setClientPublicKey(ByteString.copyFrom(clientPublicKey))
+                    .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
+                    .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
+                    .setFromEpoch(2100)
+                    .setNumberOfEpochsToGenerate(1)
+                    .build();
+
+            CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
+
+            List<EncryptedEphemeralTupleResponse> response = new ArrayList<>();
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            StreamObserver<EncryptedEphemeralTupleResponse> responseObserver =
+                    new StreamObserver<EncryptedEphemeralTupleResponse>() {
+
+                @Override
+                public void onNext(EncryptedEphemeralTupleResponse value) {
+                    response.add(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    fail();
+                }
+
+                @Override
+                public void onCompleted() {
+                    latch.countDown();
+                }
+            };
+
+            // When
+            stub.generateEncryptedEphemeralTuple(request, responseObserver);
+
+            //
+            assertTrue(latch.await(1, TimeUnit.SECONDS));
+            assertEquals(1, response.size());
+            assertNotNull(response.get(0).getEncryptedTuples());
+            assertNotNull(response.get(0).getServerPublicKeyForTuples());
+        } catch (InterruptedException e) {
+            fail(e.getMessage());
+        }
+    }
 }
