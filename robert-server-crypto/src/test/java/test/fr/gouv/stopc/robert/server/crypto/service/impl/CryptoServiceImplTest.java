@@ -196,7 +196,7 @@ class CryptoServiceImplTest {
     
 
    @Test
-   public void testEncryptWithAES() {
+   public void testPerformAESEncryption() {
 
        // Given
        byte [] toEncrypt = ByteUtils.generateRandom(16);
@@ -211,7 +211,7 @@ class CryptoServiceImplTest {
    }
 
    @Test
-   public void testDecryptWithAES() {
+   public void testPerformAESDecryption() {
 
        // Given
        byte [] toEncrypt = ByteUtils.generateRandom(16);
