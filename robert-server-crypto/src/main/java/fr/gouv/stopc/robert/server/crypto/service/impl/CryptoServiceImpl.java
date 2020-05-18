@@ -171,38 +171,16 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] encryptWithAES(byte[] toEncrypt, byte[] key) {
+    public byte[] performAESOperation(int mode, byte[] data, byte[] key) {
 
         try {
             IvParameterSpec ivspec = new IvParameterSpec(iv);
             SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
 
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivspec);
+            cipher.init(mode, skeySpec, ivspec);
 
-            return cipher.doFinal(toEncrypt);
-
-        } catch (NoSuchPaddingException |  NoSuchAlgorithmException |
-                InvalidKeyException |
-                IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
-
-            log.error("Unable to encrypt with AES cryptographic algorithm due to {}", e.getMessage());
-        }
-        return null;
-    }
-
-    @Override
-    public byte[] decryptWithAES(byte[] toDecrypt, byte[] key) {
-
-        try {
-
-            IvParameterSpec ivspec = new IvParameterSpec(iv);
-            SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
-
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
-
-            return cipher.doFinal(toDecrypt);
+            return cipher.doFinal(data);
 
         } catch (NoSuchPaddingException |  NoSuchAlgorithmException |
                 InvalidKeyException |
@@ -212,5 +190,4 @@ public class CryptoServiceImpl implements CryptoService {
         }
         return null;
     }
-
 }

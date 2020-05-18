@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.crypto.Cipher;
 import javax.inject.Inject;
 
 import org.springframework.stereotype.Service;
@@ -261,7 +262,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             responseObserver.onError(new RobertServerCryptoException("Unable to generate an ECDH Key"));
         }
         else {
-            byte[] encrypted = this.cryptoService.encryptWithAES(clientIdentifierBundle.getKey(),
+            byte[] encrypted = this.cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, clientIdentifierBundle.getKey(),
                     keys.get().getGeneratedSharedSecret());
 
             if(Objects.isNull(encrypted)) {
@@ -309,7 +310,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 if (!CollectionUtils.isEmpty(ephemeralTuples)) {
                     ObjectMapper objectMapper = new ObjectMapper();
                     byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(ephemeralTuples);
-                    byte[] encryptedTuples = this.cryptoService.encryptWithAES(tuplesAsBytes,  keys.get().getGeneratedSharedSecret());
+                    byte[] encryptedTuples = this.cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, tuplesAsBytes,  keys.get().getGeneratedSharedSecret());
 
                     responseObserver.onNext(EncryptedEphemeralTupleResponse.newBuilder()
                             .setEncryptedTuples(ByteString.copyFrom(encryptedTuples))

@@ -110,8 +110,6 @@ public interface CryptoService {
                                  final DigestSaltEnum salt) throws Exception;
 
 
-    byte[] encryptWithAES(byte [] toEncrypt, byte[] key);
-
-    byte[] decryptWithAES(byte[] toDecrypt, byte[] key);
+    byte[] performAESOperation(int mode, byte[] data, byte[] key);
 
 }

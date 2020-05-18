@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Random;
 
+import javax.crypto.Cipher;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -200,7 +202,7 @@ class CryptoServiceImplTest {
        byte [] toEncrypt = ByteUtils.generateRandom(16);
 
        // When
-       byte [] encrypted = cryptoService.encryptWithAES(toEncrypt, ByteUtils.generateRandom(32));
+       byte [] encrypted = cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, toEncrypt, ByteUtils.generateRandom(32));
 
        // Then
        assertNotNull(encrypted);
@@ -214,11 +216,11 @@ class CryptoServiceImplTest {
        // Given
        byte [] toEncrypt = ByteUtils.generateRandom(16);
        byte [] key = ByteUtils.generateRandom(32);
-       byte [] encrypted = cryptoService.encryptWithAES(toEncrypt, key);
+       byte [] encrypted = cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, toEncrypt, key);
        assertNotNull(encrypted);
 
        // When
-       byte [] decrypted = cryptoService.decryptWithAES(encrypted, key  );
+       byte [] decrypted = cryptoService.performAESOperation(Cipher.DECRYPT_MODE, encrypted, key  );
 
        // Then
        assertNotNull(decrypted);
