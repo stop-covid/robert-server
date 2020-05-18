@@ -17,7 +17,7 @@ import javax.crypto.KeyAgreement;
 
 import org.springframework.stereotype.Service;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ECDHKeyServiceImpl implements IECDHKeyService {
 
     @Override
-    public Optional<ClientECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey) {
+    public Optional<ServerECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey) {
 
         if (ByteUtils.isEmpty(clientPublicKey)) {
             return Optional.empty();
@@ -52,7 +52,7 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
             // Read shared secret
             byte[] sharedSecret = ka.generateSecret();
             
-            return Optional.of(ClientECDHBundle.builder()
+            return Optional.of(ServerECDHBundle.builder()
                     .generatedSharedSecret(sharedSecret)
                     .serverPublicKey(keyPair.getPublic().getEncoded())
                     .build());

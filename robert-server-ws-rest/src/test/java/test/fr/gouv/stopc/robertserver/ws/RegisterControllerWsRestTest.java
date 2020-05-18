@@ -199,7 +199,7 @@ public class RegisterControllerWsRestTest {
                 this.requestEntity, String.class);
 
         // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         verify(this.cryptoServerClient).generateIdentity(any());
         verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
         verify(this.registrationService, never()).saveRegistration(any());

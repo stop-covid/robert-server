@@ -93,7 +93,7 @@ public class RegisterControllerImpl implements IRegisterController {
 
         if(!response.isPresent()) {
             log.error("Unable to generate an identity for the client");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            throw new RobertServerException(MessageConstants.ERROR_OCCURED);
         }
 
         GenerateIdentityResponse identity = response.get();

@@ -10,7 +10,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @Data
 @Builder
-public class ClientECDHBundle {
+public class ServerECDHBundle {
 
     @ToString.Exclude
     private byte [] serverPublicKey;

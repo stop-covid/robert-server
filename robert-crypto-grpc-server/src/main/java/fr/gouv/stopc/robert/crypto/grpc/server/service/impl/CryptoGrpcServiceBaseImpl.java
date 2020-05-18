@@ -32,7 +32,7 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloGenerationRespo
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloValidationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
@@ -249,7 +249,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     public void generateIdentity(GenerateIdentityRequest request,
             StreamObserver<GenerateIdentityResponse> responseObserver) {
 
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
+        Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
                 request.getClientPublicKey().toByteArray());
 
         ClientIdentifierBundle clientIdentifierBundle = this.clientStorageService.createClientIdAndKey();
@@ -287,7 +287,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request,
             io.grpc.stub.StreamObserver<EncryptedEphemeralTupleResponse> responseObserver) {
 
-        Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
+        Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
                 request.getClientPublicKey().toByteArray());
 
         if(!keys.isPresent()) {
