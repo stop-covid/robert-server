@@ -45,7 +45,7 @@ message EphemeralTupleRequest {
 	// byte countryCode;
 	
 	bytes idA = 1;
-	int32 currentEpochID = 2;
+	int32 fromEpoch = 2;
 	int32 numberOfEpochsToGenerate = 3;
 	bytes countryCode = 4;
 	
@@ -169,7 +169,7 @@ message EncryptedEphemeralTupleRequest {
 	// byte countryCode;
 	// byte clientPublicKey
 	bytes idA = 1;
-	int32 currentEpochID = 2;
+	int32 fromEpoch = 2;
 	int32 numberOfEpochsToGenerate = 3;
 	bytes countryCode = 4;
 	bytes clientPublicKey = 5;
@@ -177,8 +177,8 @@ message EncryptedEphemeralTupleRequest {
 }
 
  message EncryptedEphemeralTupleResponse {
-	// byte [] tuples;
+	// byte [] encryptedTuples;
 	// byte serverPublicKeyForTuple
-	bytes tuples = 1;
-	bytes serverPublicKeyForTuple = 3;
+	bytes encryptedTuples = 1;
+	bytes serverPublicKeyForTuples = 3;
 }
