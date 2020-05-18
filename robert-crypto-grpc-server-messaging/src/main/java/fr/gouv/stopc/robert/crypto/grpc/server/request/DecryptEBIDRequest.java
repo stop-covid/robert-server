@@ -146,8 +146,7 @@ public com.google.protobuf.ByteString getEbid() {
 
     if (!getEbid()
         .equals(other.getEbid())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
-    return true;
+    return unknownFields.equals(other.unknownFields);
   }
 
   @java.lang.Override
@@ -285,6 +284,7 @@ public com.google.protobuf.ByteString getEbid() {
       maybeForceBuilderInitialization();
     }
     private void maybeForceBuilderInitialization() {
+    	// TODO : empty method, to fill or remove
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
       }
@@ -482,7 +482,7 @@ public com.google.protobuf.ByteString getEbid() {
 
   @java.lang.Override
   public DecryptEBIDRequest getDefaultInstanceForType() {
-    return DEFAULT_INSTANCE;
+    return getDefaultInstance();
   }
 
 }

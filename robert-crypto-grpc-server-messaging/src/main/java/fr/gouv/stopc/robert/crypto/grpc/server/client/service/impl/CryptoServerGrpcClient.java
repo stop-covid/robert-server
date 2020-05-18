@@ -32,11 +32,11 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 
+	private static final String ERROR_MESSAGE = "RPC failed: {}";
+	
 	private ManagedChannel channel;
 	private CryptoGrpcServiceImplBlockingStub blockingStub;
 	private TestHelper testHelper;
-
-	private final static String ERROR_MESSAGE = "RPC failed: {}";
 
 	public CryptoServerGrpcClient(){}
 
@@ -99,7 +99,7 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 		} catch (StatusRuntimeException ex) {
 			log.error(ERROR_MESSAGE, ex.getStatus());
 		}
-		return null;
+		return new byte[0];
 	}
 
 	@Override

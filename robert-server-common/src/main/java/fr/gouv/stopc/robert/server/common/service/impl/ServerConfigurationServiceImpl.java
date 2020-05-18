@@ -30,7 +30,8 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
         size /= 8;
         byte[] data = new byte[size];
         for (int i = 0; i < size; i++) {
-            data[i] = new Long(i).byteValue();
+        	Long l = Long.valueOf(i);
+            data[i] = l.byteValue();
         }
         return data;
     }

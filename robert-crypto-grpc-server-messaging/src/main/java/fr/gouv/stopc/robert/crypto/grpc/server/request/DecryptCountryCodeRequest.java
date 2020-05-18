@@ -18,8 +18,8 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private DecryptCountryCodeRequest() {
-    ebid_ = com.google.protobuf.ByteString.EMPTY;
-    encryptedCountryCode_ = com.google.protobuf.ByteString.EMPTY;
+    ebid = com.google.protobuf.ByteString.EMPTY;
+    encryptedCountryCode = com.google.protobuf.ByteString.EMPTY;
   }
 
   @java.lang.Override
@@ -54,12 +54,12 @@ private static final long serialVersionUID = 0L;
             break;
           case 10: {
 
-            ebid_ = input.readBytes();
+            ebid = input.readBytes();
             break;
           }
           case 18: {
 
-            encryptedCountryCode_ = input.readBytes();
+            encryptedCountryCode = input.readBytes();
             break;
           }
           default: {
@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int EBID_FIELD_NUMBER = 1;
-  private com.google.protobuf.ByteString ebid_;
+  private com.google.protobuf.ByteString ebid;
   /**
    * <pre>
    *  byte[] ebid;
@@ -107,18 +107,18 @@ private static final long serialVersionUID = 0L;
    */
   @Override
 public com.google.protobuf.ByteString getEbid() {
-    return ebid_;
+    return ebid;
   }
 
   public static final int ENCRYPTEDCOUNTRYCODE_FIELD_NUMBER = 2;
-  private com.google.protobuf.ByteString encryptedCountryCode_;
+  private com.google.protobuf.ByteString encryptedCountryCode;
   /**
    * <code>bytes encryptedCountryCode = 2;</code>
    * @return The encryptedCountryCode.
    */
   @Override
 public com.google.protobuf.ByteString getEncryptedCountryCode() {
-    return encryptedCountryCode_;
+    return encryptedCountryCode;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -135,11 +135,11 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!ebid_.isEmpty()) {
-      output.writeBytes(1, ebid_);
+    if (!ebid.isEmpty()) {
+      output.writeBytes(1, ebid);
     }
-    if (!encryptedCountryCode_.isEmpty()) {
-      output.writeBytes(2, encryptedCountryCode_);
+    if (!encryptedCountryCode.isEmpty()) {
+      output.writeBytes(2, encryptedCountryCode);
     }
     unknownFields.writeTo(output);
   }
@@ -150,13 +150,13 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
     if (size != -1) return size;
 
     size = 0;
-    if (!ebid_.isEmpty()) {
+    if (!ebid.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(1, ebid_);
+        .computeBytesSize(1, ebid);
     }
-    if (!encryptedCountryCode_.isEmpty()) {
+    if (!encryptedCountryCode.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(2, encryptedCountryCode_);
+        .computeBytesSize(2, encryptedCountryCode);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -177,8 +177,8 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
         .equals(other.getEbid())) return false;
     if (!getEncryptedCountryCode()
         .equals(other.getEncryptedCountryCode())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
-    return true;
+    
+    return unknownFields.equals(other.unknownFields);
   }
 
   @java.lang.Override
@@ -284,8 +284,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
   @java.lang.Override
   protected Builder newBuilderForType(
       com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-    Builder builder = new Builder(parent);
-    return builder;
+    return new Builder(parent);
   }
   /**
    * Protobuf type {@code robert.server.crypto.DecryptCountryCodeRequest}
@@ -318,6 +317,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
       maybeForceBuilderInitialization();
     }
     private void maybeForceBuilderInitialization() {
+    	// TODO : empty method, to fill or remove
       if (com.google.protobuf.GeneratedMessageV3
               .alwaysUseFieldBuilders) {
       }
@@ -325,9 +325,9 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      ebid_ = com.google.protobuf.ByteString.EMPTY;
+      ebid = com.google.protobuf.ByteString.EMPTY;
 
-      encryptedCountryCode_ = com.google.protobuf.ByteString.EMPTY;
+      encryptedCountryCode = com.google.protobuf.ByteString.EMPTY;
 
       return this;
     }
@@ -355,8 +355,8 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
     @java.lang.Override
     public DecryptCountryCodeRequest buildPartial() {
       DecryptCountryCodeRequest result = new DecryptCountryCodeRequest(this);
-      result.ebid_ = ebid_;
-      result.encryptedCountryCode_ = encryptedCountryCode_;
+      result.ebid = ebid;
+      result.encryptedCountryCode = encryptedCountryCode;
       onBuilt();
       return result;
     }
@@ -440,7 +440,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
       return this;
     }
 
-    private com.google.protobuf.ByteString ebid_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString ebid = com.google.protobuf.ByteString.EMPTY;
     /**
      * <pre>
      *  byte[] ebid;
@@ -452,7 +452,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
      */
     @Override
 	public com.google.protobuf.ByteString getEbid() {
-      return ebid_;
+      return ebid;
     }
     /**
      * <pre>
@@ -469,7 +469,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
     throw new NullPointerException();
   }
   
-      ebid_ = value;
+      ebid = value;
       onChanged();
       return this;
     }
@@ -484,19 +484,19 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
      */
     public Builder clearEbid() {
       
-      ebid_ = getDefaultInstance().getEbid();
+      ebid = getDefaultInstance().getEbid();
       onChanged();
       return this;
     }
 
-    private com.google.protobuf.ByteString encryptedCountryCode_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString encryptedCountryCode = com.google.protobuf.ByteString.EMPTY;
     /**
      * <code>bytes encryptedCountryCode = 2;</code>
      * @return The encryptedCountryCode.
      */
     @Override
 	public com.google.protobuf.ByteString getEncryptedCountryCode() {
-      return encryptedCountryCode_;
+      return encryptedCountryCode;
     }
     /**
      * <code>bytes encryptedCountryCode = 2;</code>
@@ -508,7 +508,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
     throw new NullPointerException();
   }
   
-      encryptedCountryCode_ = value;
+      encryptedCountryCode = value;
       onChanged();
       return this;
     }
@@ -518,7 +518,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
      */
     public Builder clearEncryptedCountryCode() {
       
-      encryptedCountryCode_ = getDefaultInstance().getEncryptedCountryCode();
+      encryptedCountryCode = getDefaultInstance().getEncryptedCountryCode();
       onChanged();
       return this;
     }
@@ -570,7 +570,7 @@ public com.google.protobuf.ByteString getEncryptedCountryCode() {
 
   @java.lang.Override
   public DecryptCountryCodeRequest getDefaultInstanceForType() {
-    return DEFAULT_INSTANCE;
+    return getDefaultInstance();
   }
 
 }

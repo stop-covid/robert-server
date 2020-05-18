@@ -4,6 +4,8 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service;
 
 public final class CryptoGrpcService {
+	private static final String COUNTRY_CODE = "CountryCode";
+	private static final String DATA_TO_VALIDATE = "DataToValidate";
 	private CryptoGrpcService() {}
 	public static void registerAllExtensions(
 			com.google.protobuf.ExtensionRegistryLite registry) {
@@ -163,7 +165,7 @@ public final class CryptoGrpcService {
 		internal_static_robert_server_crypto_EphemeralTupleRequest_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_EphemeralTupleRequest_descriptor,
-						new java.lang.String[] { "IdA", "CurrentEpochID", "NumberOfEpochsToGenerate", "CountryCode", });
+						new java.lang.String[] { "IdA", "CurrentEpochID", "NumberOfEpochsToGenerate", COUNTRY_CODE, });
 		internal_static_robert_server_crypto_EphemeralTupleResponse_descriptor =
 				getDescriptor().getMessageTypes().get(1);
 		internal_static_robert_server_crypto_EphemeralTupleResponse_fieldAccessorTable = new
@@ -193,7 +195,7 @@ public final class CryptoGrpcService {
 		internal_static_robert_server_crypto_EncryptCountryCodeRequest_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_EncryptCountryCodeRequest_descriptor,
-						new java.lang.String[] { "Ebid", "CountryCode", });
+						new java.lang.String[] { "Ebid", COUNTRY_CODE, });
 		internal_static_robert_server_crypto_EncryptCountryCodeResponse_descriptor =
 				getDescriptor().getMessageTypes().get(6);
 		internal_static_robert_server_crypto_EncryptCountryCodeResponse_fieldAccessorTable = new
@@ -211,7 +213,7 @@ public final class CryptoGrpcService {
 		internal_static_robert_server_crypto_DecryptCountryCodeResponse_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_DecryptCountryCodeResponse_descriptor,
-						new java.lang.String[] { "CountryCode", });
+						new java.lang.String[] { COUNTRY_CODE, });
 		internal_static_robert_server_crypto_MacHelloGenerationRequest_descriptor =
 				getDescriptor().getMessageTypes().get(9);
 		internal_static_robert_server_crypto_MacHelloGenerationRequest_fieldAccessorTable = new
@@ -229,7 +231,7 @@ public final class CryptoGrpcService {
 		internal_static_robert_server_crypto_MacHelloValidationRequest_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_MacHelloValidationRequest_descriptor,
-						new java.lang.String[] { "Ka", "DataToValidate", });
+						new java.lang.String[] { "Ka", DATA_TO_VALIDATE, });
 		internal_static_robert_server_crypto_MacValidationResponse_descriptor =
 				getDescriptor().getMessageTypes().get(12);
 		internal_static_robert_server_crypto_MacValidationResponse_fieldAccessorTable = new
@@ -241,13 +243,13 @@ public final class CryptoGrpcService {
 		internal_static_robert_server_crypto_MacEsrValidationRequest_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_MacEsrValidationRequest_descriptor,
-						new java.lang.String[] { "Ka", "DataToValidate", "MacToMatchWith", });
+						new java.lang.String[] { "Ka", DATA_TO_VALIDATE, "MacToMatchWith", });
 		internal_static_robert_server_crypto_MacValidationForTypeRequest_descriptor =
 				getDescriptor().getMessageTypes().get(14);
 		internal_static_robert_server_crypto_MacValidationForTypeRequest_fieldAccessorTable = new
 				com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
 						internal_static_robert_server_crypto_MacValidationForTypeRequest_descriptor,
-						new java.lang.String[] { "Ka", "DataToValidate", "MacToMatchWith", "Prefixe", });
+						new java.lang.String[] { "Ka", DATA_TO_VALIDATE, "MacToMatchWith", "Prefixe", });
 	}
 
 	// @@protoc_insertion_point(outer_class_scope)

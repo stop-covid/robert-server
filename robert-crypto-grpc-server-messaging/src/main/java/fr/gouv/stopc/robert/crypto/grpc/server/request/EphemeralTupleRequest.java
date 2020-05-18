@@ -226,8 +226,7 @@ public com.google.protobuf.ByteString getCountryCode() {
         != other.getNumberOfEpochsToGenerate()) return false;
     if (!getCountryCode()
         .equals(other.getCountryCode())) return false;
-    if (!unknownFields.equals(other.unknownFields)) return false;
-    return true;
+    return unknownFields.equals(other.unknownFields);
   }
 
   @java.lang.Override
@@ -337,8 +336,7 @@ public com.google.protobuf.ByteString getCountryCode() {
   @java.lang.Override
   protected Builder newBuilderForType(
       com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-    Builder builder = new Builder(parent);
-    return builder;
+    return new Builder(parent);
   }
   /**
    * <pre>
@@ -686,7 +684,7 @@ public com.google.protobuf.ByteString getCountryCode() {
 
   @java.lang.Override
   public EphemeralTupleRequest getDefaultInstanceForType() {
-    return DEFAULT_INSTANCE;
+    return getDefaultInstance();
   }
 
 }

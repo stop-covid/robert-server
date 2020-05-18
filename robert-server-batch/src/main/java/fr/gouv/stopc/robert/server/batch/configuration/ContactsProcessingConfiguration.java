@@ -44,7 +44,7 @@ public class ContactsProcessingConfiguration {
 
 	private final ICryptoServerGrpcClient cryptoServerClient;
 
-	private final int CHUNK_SIZE = 10000;
+	private static final int CHUNK_SIZE = 10000;
 	
 	@Inject
 	public ContactsProcessingConfiguration(final IServerConfigurationService serverConfigurationService,
@@ -81,11 +81,9 @@ public class ContactsProcessingConfiguration {
 
 	    reader.setTemplate(mongoTemplate);
 
-	    reader.setSort(new HashMap<String, Sort.Direction>() {{
-
-	      put("_id", Direction.DESC);
-
-	    }});
+	    Map<String, Sort.Direction> sortMap = new HashMap<>();
+	    sortMap.put("_id", Direction.DESC);
+	    reader.setSort(sortMap);
 
 	    reader.setTargetType(Contact.class);
 
@@ -97,9 +95,8 @@ public class ContactsProcessingConfiguration {
 	public MongoItemWriter<Contact> mongoItemWriter(MongoTemplate mongoTemplate) {
 		Map<String, Direction> sortDirection = new HashMap<>();
 		sortDirection.put("timeInsertion", Direction.DESC);
-		MongoItemWriter<Contact> writer = new MongoItemWriterBuilder<Contact>().template(mongoTemplate)
+		return new MongoItemWriterBuilder<Contact>().template(mongoTemplate)
 				.collection("contacts_to_process").build();
-		return writer;
 	}
 
 	@Bean
