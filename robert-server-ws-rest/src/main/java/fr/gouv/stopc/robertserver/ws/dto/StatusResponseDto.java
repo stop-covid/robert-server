@@ -23,10 +23,16 @@ public class StatusResponseDto {
 	private String message;
 
 	@NotNull
+    private String tuples;
+
+	@NotNull
 	@Singular
 	@Size(min = 1)
 	private List<EpochKeyBundleDto> idsForEpochs;
 	
 	@Singular("filteringAlgoConfig")
 	private List<AlgoConfigDto> filteringAlgoConfig;
+
+	@NotNull
+    private String serverPublicECDHKeyForTuples;
 }

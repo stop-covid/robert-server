@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -16,8 +17,8 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
@@ -29,11 +30,11 @@ import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IStatusController;
 import fr.gouv.stopc.robertserver.ws.dto.AlgoConfigDto;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
-import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -50,7 +51,6 @@ public class StatusControllerImpl implements IStatusController {
 
 	private final ICryptoServerGrpcClient cryptoServerClient;
 
-	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
 
 	@Inject
 	public StatusControllerImpl(
@@ -58,7 +58,6 @@ public class StatusControllerImpl implements IStatusController {
 			final IRegistrationService registrationService,
 			final IApplicationConfigService applicationConfigService,
 			final AuthRequestValidationService authRequestValidationService,
-			final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
 			final ICryptoServerGrpcClient cryptoServerClient
 	) {
 		this.serverConfigurationService = serverConfigurationService;
@@ -66,15 +65,18 @@ public class StatusControllerImpl implements IStatusController {
 		this.applicationConfigService = applicationConfigService;
 		this.authRequestValidationService = authRequestValidationService;
 		this.cryptoServerClient = cryptoServerClient;
-		this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
 	}
 
 	@Override
 	public ResponseEntity<StatusResponseDto> getStatus(StatusVo statusVo) {
+
+	    AuthenticatedRequestHandler authRequest =  new AuthenticatedRequestHandler();
+	    authRequest.setClientPublicECDHKey(Base64.decode(statusVo.getClientPublicECDHKey()));
+
 		Optional<ResponseEntity> entity = authRequestValidationService.validateRequestForAuth(
 				statusVo,
 				new StatusMacValidator(this.cryptoServerClient),
-				new AuthenticatedRequestHandler());
+				authRequest);
 
 		if (entity.isPresent()) {
 			return entity.get();
@@ -110,7 +112,11 @@ public class StatusControllerImpl implements IStatusController {
 		}
 	}
 
+
 	private class AuthenticatedRequestHandler implements AuthRequestValidationService.IAuthenticatedRequestHandler {
+
+	    @Setter
+	    byte[] clientPublicECDHKey;
 
 		@Override
 		public Optional<ResponseEntity> validate(Registration record, int epoch) throws RobertServerException {
@@ -169,7 +175,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			// Include new EBIDs and ECCs for next M epochs
 			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
-			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4);
+			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4, this.clientPublicECDHKey);
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
 		}
@@ -177,7 +183,8 @@ public class StatusControllerImpl implements IStatusController {
 
 	private void includeEphemeralTuplesForNextMEpochs(final StatusResponseDto statusResponse,
 													  final Registration user,
-													  final int numberOfDays) throws RobertServerException {
+													  final int numberOfDays,
+													  byte[] clientPublicECDHKey) throws RobertServerException {
 
 		if (statusResponse != null && user != null) {
 			List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
@@ -195,22 +202,25 @@ public class StatusControllerImpl implements IStatusController {
 
 			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
 
-			EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
+			EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
 					.setCountryCode(ByteString.copyFrom(new byte[] { countryCode }))
-					.setCurrentEpochID(currentEpochId)
+					.setFromEpoch(currentEpochId)
 					.setIdA(ByteString.copyFrom(user.getPermanentIdentifier()))
 					.setNumberOfEpochsToGenerate(numberOfEpochs)
+					.setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
 					.build();
 
-			List<EphemeralTupleResponse> ephTuples = this.cryptoServerClient.generateEphemeralTuple(request);
+			Optional<EncryptedEphemeralTupleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
 
-			if(CollectionUtils.isEmpty(ephTuples)) {
-				log.error("Could not generate (EBID, ECC) tuples");
+			if(!encryptedTuples.isPresent()) {
+				log.error("Could not generate encrypted (EBID, ECC) tuples");
 				throw new RobertServerException(MessageConstants.ERROR_OCCURED);
 			}
 
-			statusResponse.setIdsForEpochs(
-					epochKeyBundleDtoMapper.convert(ephTuples));
+			statusResponse.setTuples(Base64.encode(encryptedTuples.get().getEncryptedTuples().toByteArray()));
+
+			statusResponse.setServerPublicECDHKeyForTuples(Base64.encode(
+			        encryptedTuples.get().getServerPublicKeyForTuples().toByteArray()));
 
 		}
 	}

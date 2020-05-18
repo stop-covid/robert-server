@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -44,8 +43,10 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.google.protobuf.ByteString;
+
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -57,10 +58,7 @@ import fr.gouv.stopc.robertserver.database.model.EpochExposition;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
 import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyBundleDto;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyDto;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
-import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 import fr.gouv.stopc.robertserver.ws.utils.UriConstants;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import lombok.extern.slf4j.Slf4j;
@@ -68,516 +66,524 @@ import lombok.extern.slf4j.Slf4j;
 @DirtiesContext(classMode = ClassMode.BEFORE_CLASS)
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = {
-		RobertServerWsRestApplication.class }, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+        RobertServerWsRestApplication.class }, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource("classpath:application.properties")
 @Slf4j
 public class StatusControllerWsRestTest {
-	@Value("${controller.path.prefix}")
-	private String pathPrefix;
+    @Value("${controller.path.prefix}")
+    private String pathPrefix;
 
-	@Inject
-	private TestRestTemplate restTemplate;
+    @Inject
+    private TestRestTemplate restTemplate;
 
-	HttpEntity<StatusVo> requestEntity;
+    HttpEntity<StatusVo> requestEntity;
 
-	private URI targetUrl;
+    private URI targetUrl;
 
-	private StatusVo statusBody;
+    private StatusVo statusBody;
 
-	private HttpHeaders headers;
+    private HttpHeaders headers;
 
-	@MockBean
-	private RegistrationService registrationService;
+    @MockBean
+    private RegistrationService registrationService;
 
-	@Autowired
-	private CryptoService cryptoService;
+    @Autowired
+    private CryptoService cryptoService;
 
-	@MockBean
-	private ICryptoServerGrpcClient cryptoServerClient;
+    @MockBean
+    private ICryptoServerGrpcClient cryptoServerClient;
 
-	@MockBean
-	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
+    @Autowired
+    private IServerConfigurationService serverConfigurationService;
 
-	@Autowired
-	private IServerConfigurationService serverConfigurationService;
+    private int currentEpoch;
 
-	private int currentEpoch;
+    private EncryptedEphemeralTupleResponse encryptedTupleResponse;
 
-	@BeforeEach
-	public void before() {
-//		MockitoAnnotations.initMocks(this);
-		assert (this.restTemplate != null);
-		this.headers = new HttpHeaders();
-		this.headers.setContentType(MediaType.APPLICATION_JSON);
-		this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.STATUS).build().encode().toUri();
+    private String expectedServerPublicKeyForTuples;
 
-		this.currentEpoch = this.getCurrentEpoch();
-	}
+    @BeforeEach
+    public void before() {
 
-	@Test
-	public void testBadHttpVerb() {
-		this.statusBody = StatusVo.builder().ebid(Base64.encode(new byte[4])).build();
+        assert (this.restTemplate != null);
+        this.headers = new HttpHeaders();
+        this.headers.setContentType(MediaType.APPLICATION_JSON);
+        this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.STATUS).build().encode().toUri();
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        this.currentEpoch = this.getCurrentEpoch();
 
-		ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.GET,
-				this.requestEntity, String.class);
+        encryptedTupleResponse = EncryptedEphemeralTupleResponse.newBuilder()
+                .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
+                .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
+                .build();
 
-		log.info("******* Bad HTTP Verb Payload: {}", response.getBody());
 
-		assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
-	}
+        expectedServerPublicKeyForTuples = Base64.encode(encryptedTupleResponse.getServerPublicKeyForTuples().toByteArray());
+    }
 
-	@Test
-	public void testBadEBIDSize() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+    @Test
+    public void testBadHttpVerb() {
+        this.statusBody = StatusVo.builder().ebid(Base64.encode(new byte[4])).build();
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.GET,
+                this.requestEntity, String.class);
 
-		statusBody = StatusVo.builder().ebid(Base64.encode("ABC".getBytes())).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        log.info("******* Bad HTTP Verb Payload: {}", response.getBody());
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
+    }
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+    @Test
+    public void testBadEBIDSize() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-	@Test
-	public void testAcceptsOldEBIDValueEpoch() {
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		// Mess up with the epoch used to create the EBID
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch - 10);
-		Registration reg = Registration.builder()
-				.permanentIdentifier(idA)
-				.sharedKey(kA)
-				.atRisk(true)
-				.isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode("ABC".getBytes()))
+                .time(Base64.encode(reqContent[1]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .mac(Base64.encode(reqContent[2])).build();
 
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-				.epochId(120L)
-				.key(EpochKeyDto.builder()
-						.ebid(Base64.encode(
-								"12345678".getBytes()))
-						.ecc(Base64.encode(
-								"1".getBytes()))
-						.build())
-				.build();
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch  - 10), 1, decryptedEbid, 0, 3);
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+    @Test
+    public void testAcceptsOldEBIDValueEpoch() {
 
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        // Mess up with the epoch used to create the EBID
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch - 10);
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .sharedKey(kA)
+                .atRisk(true)
+                .isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		doReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build())).when(this.cryptoServerClient).generateEphemeralTuple(any());
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch  - 10), 1, decryptedEbid, 0, 3);
 
-		doReturn(Arrays.asList(epochKeyDto)). when(this.epochKeyBundleDtoMapper).convert(anyList());
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        doReturn(Optional.of(this.encryptedTupleResponse)).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(1)).saveRegistration(reg);
-	}
 
-	@Test
-	public void testBadEBIDValueId() {
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .mac(Base64.encode(reqContent[2])).build();
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		// Use unknown Id when creating the EBID
-		byte[] modifiedIdA = new byte[5];
-		System.arraycopy(idA, 0, modifiedIdA, 0, 5);
-		modifiedIdA[4] = 0x00;
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		byte[][] reqContent = createEBIDTimeMACFor(modifiedIdA, kA, currentEpoch);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(1)).saveRegistration(reg);
+    }
 
-		when(this.cryptoServerClient.decryptEBID(any())).thenReturn(
-				"12345678".getBytes());
-		when(this.registrationService.findById(modifiedIdA)).thenReturn(Optional.empty());
+    @Test
+    public void testBadEBIDValueId() {
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        // Use unknown Id when creating the EBID
+        byte[] modifiedIdA = new byte[5];
+        System.arraycopy(idA, 0, modifiedIdA, 0, 5);
+        modifiedIdA[4] = 0x00;
 
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        byte[][] reqContent = createEBIDTimeMACFor(modifiedIdA, kA, currentEpoch);
 
-		// Then
-		assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        when(this.cryptoServerClient.decryptEBID(any())).thenReturn(
+                "12345678".getBytes());
+        when(this.registrationService.findById(modifiedIdA)).thenReturn(Optional.empty());
 
-	@Test
-	public void testBadTimeFuture() {
+        statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch, 0 - (this.serverConfigurationService.getRequestTimeDeltaTolerance() + 1));
+        // Then
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+    @Test
+    public void testBadTimeFuture() {
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch, 0 - (this.serverConfigurationService.getRequestTimeDeltaTolerance() + 1));
 
-	@Test
-	public void testBadTimePast() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch, 0 - (this.serverConfigurationService.getRequestTimeDeltaTolerance() + 1));
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+    @Test
+    public void testBadTimePast() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch, 0 - (this.serverConfigurationService.getRequestTimeDeltaTolerance() + 1));
 
-	@Test
-	public void testBadTimeSize() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode("AB".getBytes()))
-				.mac(Base64.encode(reqContent[2])).build();
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+    @Test
+    public void testBadTimeSize() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-	@Test
-	public void testBadMACSize() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode("AB".getBytes()))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode("ABC".getBytes())).build();
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+    @Test
+    public void testBadMACSize() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-	@Test
-	public void testBadMAC() {
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode("ABC".getBytes()))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 
-		when(this.cryptoServerClient.decryptEBID(any())).thenReturn(reqContent[0]);
+    @Test
+    public void testBadMAC() {
 
-		// Mess up with MAC
-		reqContent[2][3] = 0x00;
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        when(this.cryptoServerClient.decryptEBID(any())).thenReturn(reqContent[0]);
 
-		// Given
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        // Mess up with MAC
+        reqContent[2][3] = 0x00;
 
-	public byte[] generateKA() {
-		byte[] ka = null;
+        statusBody = StatusVo.builder().
+                ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
+
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+
+        // Given
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
+
+    public byte[] generateKA() {
+        byte[] ka = null;
+
+        try {
+            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
+
+            // Creating a SecureRandom object
+            SecureRandom secRandom = new SecureRandom();
+
+            // Initializing the KeyGenerator
+            keyGen.init(secRandom);
+
+            // Creating/Generating a key
+            Key key = keyGen.generateKey();
+            ka = key.getEncoded();
+
+        } catch (NoSuchAlgorithmException e) {
+            log.info("Problem generating KA");
+        }
+        return ka;
+    }
 
-		try {
-			KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
+    public byte[] generateKey(final int nbOfbytes) {
+        byte[] rndBytes = new byte[nbOfbytes];
+        SecureRandom sr = new SecureRandom();
+        sr.nextBytes(rndBytes);
+        return rndBytes;
+    }
 
-			// Creating a SecureRandom object
-			SecureRandom secRandom = new SecureRandom();
+    private int getCurrentEpoch() {
+        long tpStartInSecondsNTP = this.serverConfigurationService.getServiceTimeStart();
+        return TimeUtils.getCurrentEpochFrom(tpStartInSecondsNTP);
+    }
 
-			// Initializing the KeyGenerator
-			keyGen.init(secRandom);
+    private byte[] generateTime32(int adjustTimeInSeconds) {
+        long tsInSeconds = TimeUtils.convertUnixMillistoNtpSeconds(System.currentTimeMillis());
+        tsInSeconds += adjustTimeInSeconds;
+        byte[] tsInSecondsB = ByteUtils.longToBytes(tsInSeconds);
+        byte[] time = new byte[4];
 
-			// Creating/Generating a key
-			Key key = keyGen.generateKey();
-			ka = key.getEncoded();
+        System.arraycopy(tsInSecondsB, 4, time, 0, 4);
+
+        return time;
+    }
 
-		} catch (NoSuchAlgorithmException e) {
-			log.info("Problem generating KA");
-		}
-		return ka;
-	}
+    private byte[] generateHMAC(final CryptoHMACSHA256 cryptoHMACSHA256S, final byte[] argument, final DigestSaltEnum salt)
+            throws Exception {
+
+        final byte[] prefix = new byte[] { salt.getValue() };
+
+        // HMAC-SHA256 processing
+        byte[] generatedSHA256 = cryptoHMACSHA256S.encrypt(ByteUtils.addAll(prefix, argument));
 
-	public byte[] generateKey(final int nbOfbytes) {
-		byte[] rndBytes = new byte[nbOfbytes];
-		SecureRandom sr = new SecureRandom();
-		sr.nextBytes(rndBytes);
-		return rndBytes;
-	}
+        return generatedSHA256;
+    }
+
+    private byte[] generateMACforESR(byte[] ebid, byte[] time, byte[] ka) {
+        // Merge arrays
+        // HMAC-256
+        // return hash
+        byte[] agg = new byte[8 + 4];
+        System.arraycopy(ebid, 0, agg, 0, ebid.length);
+        System.arraycopy(time, 0, agg, ebid.length, time.length);
 
-	private int getCurrentEpoch() {
-		long tpStartInSecondsNTP = this.serverConfigurationService.getServiceTimeStart();
-		return TimeUtils.getCurrentEpochFrom(tpStartInSecondsNTP);
-	}
+        byte[] mac = new byte[32];
+        try {
+            mac = this.generateHMAC(new CryptoHMACSHA256(ka), agg, DigestSaltEnum.STATUS);
+        } catch (Exception e) {
+            log.info("Problem generating SHA256");
+        }
+        return mac;
+    }
 
-	private byte[] generateTime32(int adjustTimeInSeconds) {
-		long tsInSeconds = TimeUtils.convertUnixMillistoNtpSeconds(System.currentTimeMillis());
-		tsInSeconds += adjustTimeInSeconds;
-		byte[] tsInSecondsB = ByteUtils.longToBytes(tsInSeconds);
-		byte[] time = new byte[4];
+    private byte[][] createEBIDTimeMACFor(byte[] id, byte[] ka, int currentEpoch) {
+        return this.createEBIDTimeMACFor(id, ka, currentEpoch, 0);
+    }
 
-		System.arraycopy(tsInSecondsB, 4, time, 0, 4);
+    private byte[][] createEBIDTimeMACFor(byte[] id, byte[] ka, int currentEpoch, int adjustTimeBySeconds) {
+        byte[][] res = new byte[3][];
+        try {
+            res[0] = this.cryptoService.generateEBID(new Crypto3DES(this.serverConfigurationService.getServerKey()),
+                    currentEpoch, id);
+            res[1] = this.generateTime32(adjustTimeBySeconds);
+            res[2] = this.generateMACforESR(res[0], res[1], ka);
+        } catch (Exception e) {
+            log.info("Problem creating EBID, Time and MAC for test");
+        }
+        return res;
+    }
 
-		return time;
-	}
+    @Test
+    public void testStatusRequestSuccessAtRisk() {
 
-	private byte[] generateHMAC(final CryptoHMACSHA256 cryptoHMACSHA256S, final byte[] argument, final DigestSaltEnum salt)
-			throws Exception {
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA)
+                .sharedKey(kA).atRisk(true).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		final byte[] prefix = new byte[] { salt.getValue() };
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-		// HMAC-SHA256 processing
-		byte[] generatedSHA256 = cryptoHMACSHA256S.encrypt(ByteUtils.addAll(prefix, argument));
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		return generatedSHA256;
-	}
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
 
-	private byte[] generateMACforESR(byte[] ebid, byte[] time, byte[] ka) {
-		// Merge arrays
-		// HMAC-256
-		// return hash
-		byte[] agg = new byte[8 + 4];
-		System.arraycopy(ebid, 0, agg, 0, ebid.length);
-		System.arraycopy(time, 0, agg, ebid.length, time.length);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		byte[] mac = new byte[32];
-		try {
-			mac = this.generateHMAC(new CryptoHMACSHA256(ka), agg, DigestSaltEnum.STATUS);
-		} catch (Exception e) {
-			log.info("Problem generating SHA256");
-		}
-		return mac;
-	}
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
 
-	private byte[][] createEBIDTimeMACFor(byte[] id, byte[] ka, int currentEpoch) {
-		return this.createEBIDTimeMACFor(id, ka, currentEpoch, 0);
-	}
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
-	private byte[][] createEBIDTimeMACFor(byte[] id, byte[] ka, int currentEpoch, int adjustTimeBySeconds) {
-		byte[][] res = new byte[3][];
-		try {
-			res[0] = this.cryptoService.generateEBID(new Crypto3DES(this.serverConfigurationService.getServerKey()),
-					currentEpoch, id);
-			res[1] = this.generateTime32(adjustTimeBySeconds);
-			res[2] = this.generateMACforESR(res[0], res[1], ka);
-		} catch (Exception e) {
-			log.info("Problem creating EBID, Time and MAC for test");
-		}
-		return res;
-	}
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-	@Test
-	public void testStatusRequestSuccessAtRisk() {
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA)
-				.sharedKey(kA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+        doReturn(Optional.of(this.encryptedTupleResponse)).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().isAtRisk());
+        assertNotNull(response.getBody().getTuples());
+        assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
+        assertTrue(reg.isNotified());
+        assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
+    }
 
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+    @Test
+    public void testStatusRequestSuccessNotAtRisk() {
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .mac(Base64.encode(reqContent[2])).build();
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
 
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-				.epochId(120L)
-				.key(EpochKeyDto.builder()
-						.ebid(Base64.encode(
-								"12345678".getBytes()))
-						.ecc(Base64.encode(
-								"1".getBytes()))
-						.build())
-				.build();
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		doReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build())).when(this.cryptoServerClient).generateEphemeralTuple(any());
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
 
-		doReturn(Arrays.asList(epochKeyDto)).when(this.epochKeyBundleDtoMapper).convert(anyList());
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.of(this.encryptedTupleResponse));
 
-		// Then
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		assertTrue(response.getBody().isAtRisk());
-		assertNotNull(response.getBody().getIdsForEpochs());
-		assertTrue(response.getBody().getIdsForEpochs().size() > 0);
-		assertTrue(reg.isNotified());
-		assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(1)).saveRegistration(reg);
-	}
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-	@Test
-	public void testStatusRequestSuccessNotAtRisk() {
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(!response.getBody().isAtRisk());
+        assertNotNull(response.getBody().getTuples());
+        assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
+        assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
+    }
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
-
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
-
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
-
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
-
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
-
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
-
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
-
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-				.epochId(120L)
-				.key(EpochKeyDto.builder()
-						.ebid(Base64.encode(
-								"12345678".getBytes()))
-						.ecc(Base64.encode(
-								"1".getBytes()))
-						.build())
-				.build();
-
-		when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build()));
-		when(this.epochKeyBundleDtoMapper.convert(anyList())).thenReturn(Arrays.asList(epochKeyDto));
-
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
-
-		// Then
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		assertTrue(!response.getBody().isAtRisk());
-		assertNotNull(response.getBody().getIdsForEpochs());
-		assertTrue(response.getBody().getIdsForEpochs().size() > 0);
-		assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(1)).saveRegistration(reg);
-	}
-
-	/*
-	 ** Test not relevant anymore since ESR are now allowed after a notification
+    /*
+     ** Test not relevant anymore since ESR are now allowed after a notification
 	@Test
 	public void testStatusRequestAlreadyNotified() {
 
@@ -594,8 +600,8 @@ public class StatusControllerWsRestTest {
 		System.arraycopy(reqContent[0], 3, idA, 0, 5);
 		System.arraycopy(reqContent[0], 0, ebid, 0, 8);
 
-		doReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build())).when(this.cryptoServerClient).generateEphemeralTuple(any());
+		doReturn(Arrays.asList( EncryptedEphemeralTupleResponse
+				.newBuilder().build())).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
 		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
 		doReturn(ebid).when(this.cryptoServerClient).decryptEBID(any());
@@ -624,206 +630,190 @@ public class StatusControllerWsRestTest {
 		verify(this.registrationService, times(0)).saveRegistration(reg);
 	}*/
 
-	@Test
-	public void testStatusRequestNoNewRiskSinceLastNotif() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
+    @Test
+    public void testStatusRequestNoNewRiskSinceLastNotif() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
 
-		List<EpochExposition> epochExpositions = new ArrayList<>();
+        List<EpochExposition> epochExpositions = new ArrayList<>();
 
-		// Before latest notification
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 9)
-				.expositionScores(Arrays.asList(3.00, 4.30))
-				.build());
+        // Before latest notification
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 9)
+                .expositionScores(Arrays.asList(3.00, 4.30))
+                .build());
 
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 4)
-				.expositionScores(Arrays.asList(0.076, 0.15))
-				.build());
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 4)
+                .expositionScores(Arrays.asList(0.076, 0.15))
+                .build());
 
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 3)
-				.expositionScores(Arrays.asList(0.052, 0.16))
-				.build());
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 3)
+                .expositionScores(Arrays.asList(0.052, 0.16))
+                .build());
 
-		Registration reg = Registration.builder()
-				.permanentIdentifier(idA)
-				.sharedKey(kA)
-				.atRisk(true)
-				.isNotified(true)
-				.lastStatusRequestEpoch(currentEpoch - 3)
-				.lastNotificationEpoch(currentEpoch - 8)
-				.exposedEpochs(epochExpositions)
-				.build();
-
-
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
-
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
-
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
-
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
-
-		doReturn(Optional.of(reg)).when(this.registrationService).saveRegistration(reg);
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-				.epochId(120L)
-				.key(EpochKeyDto.builder()
-						.ebid(Base64.encode(
-								"12345678".getBytes()))
-						.ecc(Base64.encode(
-								"1".getBytes()))
-						.build())
-				.build();
-
-		doReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build())).when(this.cryptoServerClient).generateEphemeralTuple(any());
-		doReturn(Arrays.asList(epochKeyDto)).when(this.epochKeyBundleDtoMapper).convert(anyList());
-
-		statusBody = StatusVo.builder()
-				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2]))
-				.build();
-
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
-
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
-
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
-		assertEquals(false, response.getBody().isAtRisk());
-		assertNotNull(response.getBody().getIdsForEpochs());
-		assertEquals(true, reg.isAtRisk());
-		assertEquals(true, reg.isNotified());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(1)).saveRegistration(reg);
-	}
-
-	@Test
-	public void testStatusRequestNewRiskSinceLastNotif() {
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-
-		List<EpochExposition> epochExpositions = new ArrayList<>();
-
-		// Before latest notification
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 7)
-				.expositionScores(Arrays.asList(3.00, 4.30))
-				.build());
-
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 4)
-				.expositionScores(Arrays.asList(0.076, 0.15))
-				.build());
-
-		epochExpositions.add(EpochExposition.builder()
-				.epochId(currentEpoch - 3)
-				.expositionScores(Arrays.asList(0.052, 0.16))
-				.build());
-
-		Registration reg = Registration.builder()
-				.permanentIdentifier(idA)
-				.sharedKey(kA)
-				.atRisk(true)
-				.isNotified(true)
-				.lastStatusRequestEpoch(currentEpoch - 3)
-				.lastNotificationEpoch(currentEpoch - 8)
-				.exposedEpochs(epochExpositions)
-				.build();
-
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
-
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
-
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
-
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
-
-		EpochKeyBundleDto epochKeyDto = EpochKeyBundleDto.builder()
-				.epochId(120L)
-				.key(EpochKeyDto.builder()
-						.ebid(Base64.encode(
-								"12345678".getBytes()))
-						.ecc(Base64.encode(
-								"1".getBytes()))
-						.build())
-				.build();
-
-		doReturn(Arrays.asList( EphemeralTupleResponse
-				.newBuilder().build())).when(this.cryptoServerClient).generateEphemeralTuple(any());
-		doReturn(Arrays.asList(epochKeyDto)).when(this.epochKeyBundleDtoMapper).convert(anyList());
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .sharedKey(kA)
+                .atRisk(true)
+                .isNotified(true)
+                .lastStatusRequestEpoch(currentEpoch - 3)
+                .lastNotificationEpoch(currentEpoch - 8)
+                .exposedEpochs(epochExpositions)
+                .build();
 
 
-		statusBody = StatusVo.builder()
-				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2]))
-				.build();
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
 
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
-		assertEquals(true, response.getBody().isAtRisk());
-		assertNotNull(response.getBody().getIdsForEpochs());
-		assertEquals(true, reg.isAtRisk());
-		assertEquals(true, reg.isNotified());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(1)).saveRegistration(reg);
-	}
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
 
-	@Test
-	public void testStatusRequestESRThrottle() {
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch).build();
+        doReturn(Optional.of(reg)).when(this.registrationService).saveRegistration(reg);
+
+        doReturn(Optional.of(this.encryptedTupleResponse)).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
+
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
+
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
+        assertEquals(false, response.getBody().isAtRisk());
+        assertNotNull(response.getBody().getTuples());
+        assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
+        assertEquals(true, reg.isAtRisk());
+        assertEquals(true, reg.isNotified());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
+    }
+
+    @Test
+    public void testStatusRequestNewRiskSinceLastNotif() {
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+
+        List<EpochExposition> epochExpositions = new ArrayList<>();
+
+        // Before latest notification
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 7)
+                .expositionScores(Arrays.asList(3.00, 4.30))
+                .build());
+
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 4)
+                .expositionScores(Arrays.asList(0.076, 0.15))
+                .build());
+
+        epochExpositions.add(EpochExposition.builder()
+                .epochId(currentEpoch - 3)
+                .expositionScores(Arrays.asList(0.052, 0.16))
+                .build());
+
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .sharedKey(kA)
+                .atRisk(true)
+                .isNotified(true)
+                .lastStatusRequestEpoch(currentEpoch - 3)
+                .lastNotificationEpoch(currentEpoch - 8)
+                .exposedEpochs(epochExpositions)
+                .build();
+
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+
+        doReturn(Optional.of(this.encryptedTupleResponse)).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
 
 
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .build();
 
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
+        assertEquals(true, response.getBody().isAtRisk());
+        assertNotNull(response.getBody().getTuples());
+        assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
+        assertEquals(true, reg.isAtRisk());
+        assertEquals(true, reg.isNotified());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
+    }
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+    @Test
+    public void testStatusRequestESRThrottle() {
 
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch).build();
 
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .time(Base64.encode(reqContent[1]))
+                .clientPublicECDHKey(Base64.encode(ByteUtils.generateRandom(91)))
+                .mac(Base64.encode(reqContent[2])).build();
+
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+
+        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+
+        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
 
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
 
-		// Then
-		// TODO: should maybe have a different HTTP error code?
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+        // Then
+        // TODO: should maybe have a different HTTP error code?
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
 }
