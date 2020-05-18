@@ -3,6 +3,7 @@ package test.fr.gouv.stopc.robert.server.crypto.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -193,17 +194,35 @@ class CryptoServiceImplTest {
     
 
    @Test
-   public void testAESEncrypt() {
+   public void testEncryptWithAES() {
 
        // Given
-       byte [] toEncrypt = ByteUtils.generate(16);
- 
+       byte [] toEncrypt = ByteUtils.generateRandom(16);
+
        // When
-       byte [] encrypted = cryptoService.aesEncrypt(toEncrypt, ByteUtils.generate(32));
- 
+       byte [] encrypted = cryptoService.encryptWithAES(toEncrypt, ByteUtils.generateRandom(32));
+
        // Then
        assertNotNull(encrypted);
        assertEquals(32, encrypted.length);
        assertFalse(Arrays.equals(encrypted, toEncrypt));
+   }
+
+   @Test
+   public void testDecryptWithAES() {
+
+       // Given
+       byte [] toEncrypt = ByteUtils.generateRandom(16);
+       byte [] key = ByteUtils.generateRandom(32);
+       byte [] encrypted = cryptoService.encryptWithAES(toEncrypt, key);
+       assertNotNull(encrypted);
+
+       // When
+       byte [] decrypted = cryptoService.decryptWithAES(encrypted, key  );
+
+       // Then
+       assertNotNull(decrypted);
+       assertEquals(16, decrypted.length);
+       assertTrue(Arrays.equals(decrypted, toEncrypt));
    }
 }

@@ -2,16 +2,14 @@ package fr.gouv.stopc.robert.server.crypto.service.impl;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.spec.ECGenParameterSpec;
 import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.stereotype.Service;
@@ -29,6 +27,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class CryptoServiceImpl implements CryptoService {
+
+    private static byte[] iv = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
     @Override
     public EphemeralTuple generateEphemeralTuple(
             final Crypto3DES crypto3DES,
@@ -170,20 +171,20 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] aesEncrypt(byte[] toEncrypt, byte[] key) {
+    public byte[] encryptWithAES(byte[] toEncrypt, byte[] key) {
 
         try {
-
+            IvParameterSpec ivspec = new IvParameterSpec(iv);
             SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
 
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-            cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+            cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivspec);
 
             return cipher.doFinal(toEncrypt);
 
         } catch (NoSuchPaddingException |  NoSuchAlgorithmException |
                 InvalidKeyException |
-                IllegalBlockSizeException | BadPaddingException e) {
+                IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
 
             log.error("Unable to encrypt with AES cryptographic algorithm due to {}", e.getMessage());
         }
@@ -191,20 +192,24 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] generateECDHPublicKey() {
+    public byte[] decryptWithAES(byte[] toDecrypt, byte[] key) {
+
         try {
-            // Generate ephemeral ECDH keypair
-            KeyPairGenerator kpg;
-            kpg = KeyPairGenerator.getInstance("EC");
-            kpg.initialize(new ECGenParameterSpec("secp256r1"));
-            KeyPair keyPair = kpg.generateKeyPair();
 
-            return keyPair.getPublic().getEncoded();
+            IvParameterSpec ivspec = new IvParameterSpec(iv);
+            SecretKeySpec skeySpec = new SecretKeySpec(key, "AES");
 
-        } catch (NoSuchAlgorithmException | IllegalStateException | InvalidAlgorithmParameterException e) {
-            log.error("Unable to generate ECDH public key", e.getMessage());
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+            cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
+
+            return cipher.doFinal(toDecrypt);
+
+        } catch (NoSuchPaddingException |  NoSuchAlgorithmException |
+                InvalidKeyException |
+                IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
+
+            log.error("Unable to decrypt with AES cryptographic algorithm due to {}", e);
         }
-
         return null;
     }
 

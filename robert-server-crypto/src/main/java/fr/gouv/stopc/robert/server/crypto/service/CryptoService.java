@@ -1,13 +1,11 @@
 package fr.gouv.stopc.robert.server.crypto.service;
 
-import java.security.KeyPair;
-
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
+import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
-import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
-import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 
 /**
  * Service centralizing crypto operations required to generate or validate crypto tokens
@@ -111,18 +109,9 @@ public interface CryptoService {
                                  final byte[] macToVerify,
                                  final DigestSaltEnum salt) throws Exception;
 
-    /**
-     * Encrypt data using the cryptographic AES algorithm
-     * @param toEncrypt
-     * @param key
-     * @return encrypted
-     */
-    byte[] aesEncrypt(byte [] toEncrypt, byte[] key);
 
-    /**
-     *
-     * @return
-     */
-    public byte[] generateECDHPublicKey();
+    byte[] encryptWithAES(byte [] toEncrypt, byte[] key);
+
+    byte[] decryptWithAES(byte[] toDecrypt, byte[] key);
 
 }
