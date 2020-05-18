@@ -16,23 +16,23 @@ import javax.validation.constraints.Size;
 @Data
 @Builder
 public class StatusResponseDto {
-	@NotNull
-	private boolean atRisk;
+    @NotNull
+    private boolean atRisk;
 
-	private long lastExposureTimeframe;
-	private String message;
+    private long lastExposureTimeframe;
+    private String message;
 
-	@NotNull
+    @NotNull
     private String tuples;
 
-	@NotNull
-	@Singular
-	@Size(min = 1)
-	private List<EpochKeyBundleDto> idsForEpochs;
-	
-	@Singular("filteringAlgoConfig")
-	private List<AlgoConfigDto> filteringAlgoConfig;
+    @NotNull
+    @Singular
+    @Size(min = 1)
+    private List<EpochKeyBundleDto> idsForEpochs;
 
-	@NotNull
+    @Singular("filteringAlgoConfig")
+    private List<AlgoConfigDto> filteringAlgoConfig;
+
+    @NotNull
     private String serverPublicECDHKeyForTuples;
 }

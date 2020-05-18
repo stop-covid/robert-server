@@ -62,7 +62,7 @@ public class ECDHKeyServiceImplTest {
     }
 
     @Test
-    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasRightSizeSucceeds() {
+    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasCorrectSizeSucceeds() {
 
         // Given
         byte [] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();

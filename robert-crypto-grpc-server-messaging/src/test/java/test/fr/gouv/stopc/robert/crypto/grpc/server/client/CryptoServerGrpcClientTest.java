@@ -74,7 +74,7 @@ public class CryptoServerGrpcClientTest {
     }
 
     @Test
-    public void testGenerateEphemeraTuple() {
+    public void testGenerateEphemeralTuple() {
 
         // Given
         EphemeralTupleRequest request = EphemeralTupleRequest.newBuilder()
