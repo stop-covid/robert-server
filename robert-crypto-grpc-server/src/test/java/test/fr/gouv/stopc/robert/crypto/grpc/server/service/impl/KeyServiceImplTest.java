@@ -18,6 +18,7 @@ import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.KeyServiceImpl;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
+import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
 @ExtendWith(SpringExtension.class)
 public class KeyServiceImplTest {
@@ -33,7 +34,7 @@ public class KeyServiceImplTest {
     }
 
     @Test
-    public void testGenerateECHKeysForEncryptionWhenClientPublicKeyIsNull() {
+    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyIsNullFails() {
  
         // Given
         byte [] clientPublicKey = null;
@@ -47,10 +48,10 @@ public class KeyServiceImplTest {
     }
 
     @Test
-    public void testGenerateECHKeysForEncryptionWhenClientPublicKeyHasWrongSize() {
+    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasWrongSizeFails() {
 
         // Given
-        byte [] clientPublicKey = ByteUtils.generate(50);
+        byte [] clientPublicKey = ByteUtils.generateRandom(50);
  
         // When
         Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
@@ -61,11 +62,11 @@ public class KeyServiceImplTest {
     }
 
     @Test
-    public void testGenerateECHKeysForEncryptionWhenClientPublicKeyHasRightSize() {
+    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasRightSizeSucceeds() {
 
         // Given
-        byte [] clientPublicKey = this.cryptoService.generateECDHPublicKey();
- 
+        byte [] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();
+
         // When
         Optional<ClientECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
 
