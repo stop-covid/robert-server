@@ -15,12 +15,15 @@ import java.util.Optional;
 
 import javax.crypto.KeyAgreement;
 
+import org.springframework.stereotype.Service;
+
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Service
 public class KeyServiceImpl implements IKeyService {
 
     @Override
