@@ -73,7 +73,7 @@ public class RegisterControllerImpl implements IRegisterController {
         //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         //        }
 
-        // TODO: Unable this when the key sharing is enabled
+        // TODO: Unable this when the  ECDH Public Key sharing is enabled
         //        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
         //            log.error("The client ECDH public is required.");
         //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
