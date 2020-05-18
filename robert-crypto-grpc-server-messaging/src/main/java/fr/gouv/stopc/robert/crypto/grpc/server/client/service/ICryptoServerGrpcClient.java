@@ -4,8 +4,8 @@ import java.util.Optional;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
@@ -30,6 +30,6 @@ public interface ICryptoServerGrpcClient {
 	
 	Optional<GenerateIdentityResponse> generateIdentity(GenerateIdentityRequest request);
 
-	Optional<EncryptedEphemeralTupleResponse> generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request);
+	Optional<EncryptedEphemeralTupleBundleResponse> generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest request);
 
 }

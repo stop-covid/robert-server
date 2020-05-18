@@ -20,8 +20,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
@@ -246,8 +246,8 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     }
 
-    public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request,
-            io.grpc.stub.StreamObserver<EncryptedEphemeralTupleResponse> responseObserver) {
+    public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest request,
+            io.grpc.stub.StreamObserver<EncryptedEphemeralTupleBundleResponse> responseObserver) {
 
         Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(
                 request.getClientPublicKey().toByteArray());
@@ -273,7 +273,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                     byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(ephemeralTuples);
                     byte[] encryptedTuples = this.cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, tuplesAsBytes,  keys.get().getGeneratedSharedSecret());
 
-                    responseObserver.onNext(EncryptedEphemeralTupleResponse.newBuilder()
+                    responseObserver.onNext(EncryptedEphemeralTupleBundleResponse.newBuilder()
                             .setEncryptedTuples(ByteString.copyFrom(encryptedTuples))
                             .setServerPublicKeyForTuples(ByteString.copyFrom(keys.get().getServerPublicKey()))
                             .build());

@@ -42,7 +42,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -233,7 +233,7 @@ public class RegisterControllerWsRestTest {
 
         when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
 
-        when(this.cryptoServerClient.generateEphemeralTuple(any())).thenReturn(Collections.emptyList());
+        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.empty());
 
         when(this.registrationService.saveRegistration(any())).thenReturn(Optional.empty());
         // When
@@ -316,7 +316,7 @@ public class RegisterControllerWsRestTest {
 
 		when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
 
-		EncryptedEphemeralTupleResponse encryptedTupleResponse = EncryptedEphemeralTupleResponse.newBuilder()
+		EncryptedEphemeralTupleBundleResponse encryptedTupleResponse = EncryptedEphemeralTupleBundleResponse.newBuilder()
                 .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
                 .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
                 .build();
@@ -330,7 +330,7 @@ public class RegisterControllerWsRestTest {
 		
 		String expectedServerPublicKeyForTuples = Base64.encode(encryptedTupleResponse.getServerPublicKeyForTuples().toByteArray());
 
-		
+
 		ResponseEntity<RegisterResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
 				HttpMethod.POST, this.requestEntity, RegisterResponseDto.class);
 

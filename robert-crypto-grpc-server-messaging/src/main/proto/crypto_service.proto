@@ -33,7 +33,7 @@ service CryptoGrpcServiceImpl {
   rpc validateMacEsr(MacEsrValidationRequest) returns (MacValidationResponse){}
   rpc validateMacForType(MacValidationForTypeRequest) returns (MacValidationResponse){}
   rpc generateIdentity(GenerateIdentityRequest) returns (GenerateIdentityResponse){}
-  rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest) returns (EncryptedEphemeralTupleResponse){}
+  rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest) returns (EncryptedEphemeralTupleBundleResponse){}
 }
 
 
@@ -137,7 +137,7 @@ message GenerateIdentityResponse {
 	bytes serverPublicKeyForKey = 3;
 }
 
-message EncryptedEphemeralTupleRequest {
+message EncryptedEphemeralTupleBundleRequest {
 	// byte[] IDA of Registration
 	// int currentEpochID
 	// int numberOfEpochsToGenerate
@@ -151,7 +151,7 @@ message EncryptedEphemeralTupleRequest {
 	
 }
 
- message EncryptedEphemeralTupleResponse {
+ message EncryptedEphemeralTupleBundleResponse {
 	// byte [] encryptedTuples;
 	// byte serverPublicKeyForTuple
 	bytes encryptedTuples = 1;

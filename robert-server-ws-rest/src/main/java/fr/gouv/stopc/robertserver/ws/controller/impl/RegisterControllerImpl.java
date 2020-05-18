@@ -16,8 +16,8 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
@@ -135,7 +135,7 @@ public class RegisterControllerImpl implements IRegisterController {
 
         byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
 
-        EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+        EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
                 .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
                 .setFromEpoch(currentEpochId)
                 .setIdA(ByteString.copyFrom(identity.getIdA().toByteArray()))
@@ -144,7 +144,7 @@ public class RegisterControllerImpl implements IRegisterController {
                 .build();
 
 
-        Optional<EncryptedEphemeralTupleResponse> encryptedTuple = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
+        Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuple = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
 
         if (!encryptedTuple.isPresent()) {
             log.warn("Could not generate encrypted (EBID, ECC) tuples");

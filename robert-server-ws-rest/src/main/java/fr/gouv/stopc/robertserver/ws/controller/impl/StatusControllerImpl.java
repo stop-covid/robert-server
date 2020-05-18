@@ -17,8 +17,8 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
@@ -202,7 +202,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
 
-			EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+			EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
 					.setCountryCode(ByteString.copyFrom(new byte[] { countryCode }))
 					.setFromEpoch(currentEpochId)
 					.setIdA(ByteString.copyFrom(user.getPermanentIdentifier()))
@@ -210,7 +210,7 @@ public class StatusControllerImpl implements IStatusController {
 					.setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
 					.build();
 
-			Optional<EncryptedEphemeralTupleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
+			Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
 
 			if(!encryptedTuples.isPresent()) {
 				log.error("Could not generate encrypted (EBID, ECC) tuples");

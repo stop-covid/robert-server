@@ -1,7 +1,6 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,7 +8,6 @@ import static org.mockito.Mockito.verify;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.util.CollectionUtils;
 
 import com.google.protobuf.ByteString;
 
@@ -28,10 +25,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeReque
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
@@ -285,7 +280,7 @@ public class CryptoServerGrpcClientTest {
     public void testGenerateEncryptedEphemeralTuple() {
 
         // Given
-        EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+        EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(generate(32)))
                 .setIdA(ByteString.copyFrom(generate(5)))
                 .setCountryCode(ByteString.copyFrom(generate(1)))
@@ -293,15 +288,15 @@ public class CryptoServerGrpcClientTest {
                 .setNumberOfEpochsToGenerate(1)
                 .build();
 
-        EncryptedEphemeralTupleResponse response = EncryptedEphemeralTupleResponse.newBuilder()
+        EncryptedEphemeralTupleBundleResponse response = EncryptedEphemeralTupleBundleResponse.newBuilder()
                 .setEncryptedTuples(ByteString.copyFrom(generate(52)))
                 .setServerPublicKeyForTuples(ByteString.copyFrom(generate(32)))
                 .build();
 
         CryptoGrpcServiceImplImplBase genereateIdentity = new CryptoGrpcServiceImplImplBase() {
             @Override
-            public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleRequest request,
-                    StreamObserver<EncryptedEphemeralTupleResponse> responseObserver) {
+            public void generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest request,
+                    StreamObserver<EncryptedEphemeralTupleBundleResponse> responseObserver) {
                 responseObserver.onNext(response);
 
                 responseObserver.onCompleted();
@@ -311,7 +306,7 @@ public class CryptoServerGrpcClientTest {
         serviceRegistry.addService(genereateIdentity);
 
         // When
-        Optional<EncryptedEphemeralTupleResponse> expectedResponse = this.client.generateEncryptedEphemeralTuple(request);
+        Optional<EncryptedEphemeralTupleBundleResponse> expectedResponse = this.client.generateEncryptedEphemeralTuple(request);
 
         // Then
         assertTrue(expectedResponse.isPresent());

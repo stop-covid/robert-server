@@ -46,7 +46,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -98,7 +98,7 @@ public class StatusControllerWsRestTest {
 
     private int currentEpoch;
 
-    private EncryptedEphemeralTupleResponse encryptedTupleResponse;
+    private EncryptedEphemeralTupleBundleResponse encryptedTupleResponse;
 
     private String expectedServerPublicKeyForTuples;
 
@@ -112,7 +112,7 @@ public class StatusControllerWsRestTest {
 
         this.currentEpoch = this.getCurrentEpoch();
 
-        encryptedTupleResponse = EncryptedEphemeralTupleResponse.newBuilder()
+        encryptedTupleResponse = EncryptedEphemeralTupleBundleResponse.newBuilder()
                 .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
                 .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
                 .build();
@@ -600,7 +600,7 @@ public class StatusControllerWsRestTest {
 		System.arraycopy(reqContent[0], 3, idA, 0, 5);
 		System.arraycopy(reqContent[0], 0, ebid, 0, 8);
 
-		doReturn(Arrays.asList( EncryptedEphemeralTupleResponse
+		doReturn(Arrays.asList( EncryptedEphemeralTupleBundleResponse
 				.newBuilder().build())).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
 		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
 

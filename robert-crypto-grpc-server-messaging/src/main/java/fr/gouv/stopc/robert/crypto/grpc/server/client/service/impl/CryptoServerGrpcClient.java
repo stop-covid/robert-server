@@ -15,8 +15,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeReque
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
@@ -182,11 +182,11 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
     }
 
     @Override
-    public Optional<EncryptedEphemeralTupleResponse> generateEncryptedEphemeralTuple(
-            EncryptedEphemeralTupleRequest request) {
+    public Optional<EncryptedEphemeralTupleBundleResponse> generateEncryptedEphemeralTuple(
+            EncryptedEphemeralTupleBundleRequest request) {
 
         try {
-            EncryptedEphemeralTupleResponse response = this.blockingStub.generateEncryptedEphemeralTuple(request);
+            EncryptedEphemeralTupleBundleResponse response = this.blockingStub.generateEncryptedEphemeralTuple(request);
             if (Objects.nonNull(this.testHelper)) {
                 this.testHelper.onMessage(response);
             }

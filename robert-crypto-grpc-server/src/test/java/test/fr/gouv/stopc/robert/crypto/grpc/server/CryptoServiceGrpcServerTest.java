@@ -31,10 +31,8 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptCountryCodeResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EphemeralTupleResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateEBIDRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
@@ -631,7 +629,7 @@ public class CryptoServiceGrpcServerTest {
     public void testGenerateEncryptedEphemeralTupleWhenBadClientPublicKey() {
 
         // Given
-        EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+        EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
                 .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
                 .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
@@ -645,10 +643,10 @@ public class CryptoServiceGrpcServerTest {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        StreamObserver<EncryptedEphemeralTupleResponse> responseObserver =
-                new StreamObserver<EncryptedEphemeralTupleResponse>() {
+        StreamObserver<EncryptedEphemeralTupleBundleResponse> responseObserver =
+                new StreamObserver<EncryptedEphemeralTupleBundleResponse>() {
             @Override
-            public void onNext(EncryptedEphemeralTupleResponse value) {
+            public void onNext(EncryptedEphemeralTupleBundleResponse value) {
                 fail();
             }
 
@@ -679,7 +677,7 @@ public class CryptoServiceGrpcServerTest {
         try {
             // Given
             byte[] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();
-            EncryptedEphemeralTupleRequest request = EncryptedEphemeralTupleRequest.newBuilder()
+            EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
                     .setClientPublicKey(ByteString.copyFrom(clientPublicKey))
                     .setIdA(ByteString.copyFrom(ByteUtils.generateRandom(5)))
                     .setCountryCode(ByteString.copyFrom(ByteUtils.generateRandom(1)))
@@ -689,15 +687,15 @@ public class CryptoServiceGrpcServerTest {
 
             CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
 
-            List<EncryptedEphemeralTupleResponse> response = new ArrayList<>();
+            List<EncryptedEphemeralTupleBundleResponse> response = new ArrayList<>();
 
             final CountDownLatch latch = new CountDownLatch(1);
 
-            StreamObserver<EncryptedEphemeralTupleResponse> responseObserver =
-                    new StreamObserver<EncryptedEphemeralTupleResponse>() {
+            StreamObserver<EncryptedEphemeralTupleBundleResponse> responseObserver =
+                    new StreamObserver<EncryptedEphemeralTupleBundleResponse>() {
 
                 @Override
-                public void onNext(EncryptedEphemeralTupleResponse value) {
+                public void onNext(EncryptedEphemeralTupleBundleResponse value) {
                     response.add(value);
                 }
 
