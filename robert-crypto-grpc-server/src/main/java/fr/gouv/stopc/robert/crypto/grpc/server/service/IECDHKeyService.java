@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 
-public interface IKeyService {
+public interface IECDHKeyService {
     
     Optional<ClientECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey);
 }

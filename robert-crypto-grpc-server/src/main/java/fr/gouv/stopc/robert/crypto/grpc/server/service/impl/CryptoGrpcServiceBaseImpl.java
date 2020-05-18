@@ -36,7 +36,7 @@ import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
@@ -55,13 +55,13 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     private final ICryptoServerConfigurationService serverConfigurationService;
     private final CryptoService cryptoService;
-    private final IKeyService keyService;
+    private final IECDHKeyService keyService;
     private final IClientKeyStorageService clientStorageService;
 
     @Inject
     public CryptoGrpcServiceBaseImpl(final ICryptoServerConfigurationService serverConfigurationService,
             final CryptoService cryptoService,
-            final IKeyService keyService,
+            final IECDHKeyService keyService,
             final IClientKeyStorageService clientStorageService) {
 
         this.serverConfigurationService = serverConfigurationService;

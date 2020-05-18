@@ -13,18 +13,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientECDHBundle;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.KeyServiceImpl;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ECDHKeyServiceImpl;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
 @ExtendWith(SpringExtension.class)
-public class KeyServiceImplTest {
+public class ECDHKeyServiceImplTest {
     
     
-    IKeyService keyService = new KeyServiceImpl();
+    IECDHKeyService keyService = new ECDHKeyServiceImpl();
     
     CryptoService cryptoService = new CryptoServiceImpl();
 

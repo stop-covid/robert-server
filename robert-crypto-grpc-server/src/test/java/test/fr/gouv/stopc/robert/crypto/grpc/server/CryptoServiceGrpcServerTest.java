@@ -46,11 +46,11 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeReq
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IKeyService;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceBaseImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoServerConfigurationServiceImpl;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.KeyServiceImpl;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ECDHKeyServiceImpl;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
@@ -78,7 +78,7 @@ public class CryptoServiceGrpcServerTest {
 
     private CryptoService cryptoService;
 
-    private IKeyService keyService;
+    private IECDHKeyService keyService;
 
     private IClientKeyStorageService clientStorageService;
 
@@ -89,7 +89,7 @@ public class CryptoServiceGrpcServerTest {
 
         cryptoService=  new CryptoServiceImpl();
 
-        keyService = new KeyServiceImpl();
+        keyService = new ECDHKeyServiceImpl();
 
         clientStorageService = new ClientKeyStorageService();
 
