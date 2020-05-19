@@ -18,9 +18,12 @@ import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IUnregisterController;
 import fr.gouv.stopc.robertserver.ws.dto.UnregisterResponseDto;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
+import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.UnregisterRequestVo;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 @Service
 public class UnregisterControllerImpl implements IUnregisterController {
 
@@ -58,7 +61,8 @@ public class UnregisterControllerImpl implements IUnregisterController {
         				.build();
                 res = this.cryptoServerClient.validateMacForType(request);
             } catch (Exception e) {
-                res = false;
+            	log.error(e.getMessage());
+				res = false;
             }
             return res;
         }
@@ -75,7 +79,7 @@ public class UnregisterControllerImpl implements IUnregisterController {
             // Unregister by deleting
             registrationService.delete(record);
 
-            UnregisterResponseDto statusResponse = UnregisterResponseDto.builder().success(true).build();
+            UnregisterResponseDto statusResponse = UnregisterResponseDto.builder().success(true).message(MessageConstants.SUCCESSFUL_OPERATION.getValue()).build();
 
             return Optional.of(ResponseEntity.ok(statusResponse));
         }

@@ -124,6 +124,8 @@ public class RegisterControllerImpl implements IRegisterController {
                 this.epochKeyBundleDtoMapper.convert(tupleResponse.get().getTupleList()));
 
         registerResponseDto.setKey(Base64.encode(registration.getSharedKey()));
+        registerResponseDto.setMessage(MessageConstants.SUCCESSFUL_OPERATION.getValue());
+        
         return registerResponseDto;
     }
 

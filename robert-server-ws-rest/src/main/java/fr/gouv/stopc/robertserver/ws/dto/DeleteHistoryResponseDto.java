@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.dto;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
@@ -12,8 +13,11 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class DeleteHistoryResponseDto {
+
 	@NotNull
 	private Boolean success;
+
+	@NotBlank
 	private String message;
 
 }

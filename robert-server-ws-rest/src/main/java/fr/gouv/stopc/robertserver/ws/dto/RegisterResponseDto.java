@@ -3,6 +3,7 @@ package fr.gouv.stopc.robertserver.ws.dto;
 import java.util.List;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
@@ -17,9 +18,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @Data
 @Builder
-public class RegisterResponseDto
- {
-	
+public class RegisterResponseDto {
+
 	@NotNull
 	@ToString.Exclude
 	private String key;
@@ -29,6 +29,7 @@ public class RegisterResponseDto
 	@Singular
 	private List<EpochKeyBundleDto> idsForEpochs;
 
+	@NotBlank
 	private String message;
 
 	@Singular("filteringAlgoConfig")
