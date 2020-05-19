@@ -10,16 +10,16 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.inject.Inject;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -39,6 +39,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
 import fr.gouv.stopc.robertserver.ws.dto.ReportBatchResponseDto;
+import fr.gouv.stopc.robertserver.ws.dto.VerifyResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.ApiError;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.ContactDtoService;
@@ -54,7 +55,7 @@ import fr.gouv.stopc.robertserver.ws.vo.ReportBatchRequestVo;
 @TestPropertySource("classpath:application.properties")
 public class ReportControllerWsRestTest {
 
-	@Inject
+	@Autowired
 	private TestRestTemplate testRestTemplate;
 
 	private HttpEntity<ReportBatchRequestVo> requestEntity;
@@ -186,6 +187,8 @@ public class ReportControllerWsRestTest {
 			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token("23DC4B32-7552-44C1-B98A-DDE5F75B1729").contacts(this.contacts).build();
 
 			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+			
+			when(this.restTemplate.getForEntity(any(), any())).thenReturn(ResponseEntity.ok(VerifyResponseDto.builder().valid(true).build()));
 
 			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST, this.requestEntity, ReportBatchResponseDto.class);
 
@@ -208,6 +211,8 @@ public class ReportControllerWsRestTest {
 		try {
 			// Given
 			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+
+			when(this.restTemplate.getForEntity(any(), any())).thenReturn(ResponseEntity.ok(VerifyResponseDto.builder().valid(true).build()));
 
 			// When
 			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST, this.requestEntity, ReportBatchResponseDto.class);
@@ -314,6 +319,8 @@ public class ReportControllerWsRestTest {
 
 		// Given
 		this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+		
+		when(this.restTemplate.getForEntity(any(), any())).thenReturn(ResponseEntity.ok(VerifyResponseDto.builder().valid(true).build()));
 
 		doThrow(new RobertServerException(MessageConstants.ERROR_OCCURED)).when(this.contactDtoService).saveContacts(any());
 
