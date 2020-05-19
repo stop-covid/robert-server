@@ -6,17 +6,19 @@ import java.util.Optional;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 
 public interface IRegistrationService {
-	
+
 	Optional<Registration> createRegistration();
-	
+
 	Optional<Registration> findById(byte[] id);
 
 	Optional<Registration> saveRegistration(Registration registration);
+
+	void saveRegistrations(List<Registration> registrations);
 
 	void delete(Registration registration);
 
 	void deleteAll();
 
 	List<Registration> findAll();
-	
+
 }

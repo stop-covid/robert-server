@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,10 +82,13 @@ public class ContactProcessorTest {
 	private ScoringStrategyService scoringStrategyService;
 
 	private byte[] serverKey;
+
 	private byte[] federationKey;
+
 	private byte countryCode;
 
 	private long epochDuration;
+
 	private long serviceTimeStart;
 
 	@BeforeEach
@@ -96,12 +98,9 @@ public class ContactProcessorTest {
 		this.federationKey = this.serverConfigurationService.getFederationKey();
 		this.countryCode = this.serverConfigurationService.getServerCountryCode();
 
-		this.contactProcessor = new ContactProcessor(
-				serverConfigurationService,
-				registrationService,
-				contactService,
-				cryptoServerClient,
-				scoringStrategyService);
+		this.contactProcessor = new ContactProcessor(this.serverConfigurationService, this.registrationService,
+													 this.contactService, this.cryptoServerClient,
+													 this.scoringStrategyService);
 
 		this.epochDuration = this.serverConfigurationService.getEpochDurationSecs();
 		this.serviceTimeStart = this.serverConfigurationService.getServiceTimeStart();
@@ -112,7 +111,11 @@ public class ContactProcessorTest {
 
 		// Create a fake Encrypted Country Code (ECC)
 		byte[] encryptedCountryCode = new byte[] { (byte) 0xff };
-		Contact contact = Contact.builder().ebid(new byte[8]).ecc(encryptedCountryCode).messageDetails(new ArrayList<>()).build();
+		Contact contact = Contact.builder()
+								 .ebid(new byte[8])
+								 .ecc(encryptedCountryCode)
+								 .messageDetails(new ArrayList<>())
+								 .build();
 
 		this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -121,10 +124,10 @@ public class ContactProcessorTest {
 
 		try {
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 
 		} catch (Exception e) {
@@ -142,8 +145,10 @@ public class ContactProcessorTest {
 
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId, this.generateIdA());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.generateIdA());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 
 			byte[] time = new byte[2];
 
@@ -158,12 +163,16 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 
-			Contact contact = Contact.builder().ebid(ebid).ecc(encryptedCountryCode).messageDetails(new ArrayList<>()).build();
+			Contact contact = Contact.builder()
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(new ArrayList<>())
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -171,10 +180,10 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 			verify(this.cryptoServerClient).decryptCountryCode(any());
 			verify(this.cryptoServerClient).decryptEBID(any());
@@ -185,7 +194,8 @@ public class ContactProcessorTest {
 		}
 	}
 
-	private HelloMessageDetail generateHelloMessageFor(byte[] ebid, byte[] encryptedCountryCode, long t, int rssi) throws Exception {
+	private HelloMessageDetail generateHelloMessageFor(byte[] ebid, byte[] encryptedCountryCode, long t, int rssi)
+			throws Exception {
 		byte[] time = new byte[2];
 
 		// Get timestamp on sixteen bits
@@ -209,32 +219,15 @@ public class ContactProcessorTest {
 		System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 		System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-		byte[] mac = this.cryptoService
-				.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+		byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()),
+														 helloMessage);
 
 		return HelloMessageDetail.builder()
-				.timeFromHelloMessage(timeHello)
-				.timeCollectedOnDevice((long)timeReceived)
-				.rssiCalibrated(rssi)
-				.mac(mac)
-				.build();
-	}
-
-
-	private List<HelloMessageDetail> generateHelloMessagesFor(byte[] ebid, byte[] encryptedCountryCode, int currentEpoch) throws Exception {
-		List<HelloMessageDetail> messages = new ArrayList<>();
-
-		Random random = new Random();
-		int nbOfHellos = random.nextInt(5) + 1;
-		long t = currentEpoch * this.epochDuration + this.serviceTimeStart + 15L;
-
-		for (int i = 0; i < nbOfHellos; i++) {
-			int rssi = -30 - random.nextInt(90);
-			t += random.nextInt(30) + 5;
-			messages.add(generateHelloMessageFor(ebid, encryptedCountryCode, t, rssi));
-		}
-
-		return messages;
+								 .timeFromHelloMessage(timeHello)
+								 .timeCollectedOnDevice((long) timeReceived)
+								 .rssiCalibrated(rssi)
+								 .mac(mac)
+								 .build();
 	}
 
 	@Test
@@ -254,24 +247,25 @@ public class ContactProcessorTest {
 			// Setup id with an existing score below threshold
 			Registration registrationWithEE = this.registration.get();
 			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
-					.epochId(previousEpoch)
-					.expositionScores(Arrays.asList(3.0))
-					.build(), 
-					EpochExposition.builder()
-					.epochId(currentEpochId)
-					.expositionScores(Arrays.asList(4.3))
-					.build()));
+																			 .epochId(previousEpoch)
+																			 .expositionScores(Arrays.asList(3.0))
+																			 .build(),
+															  EpochExposition.builder()
+																			 .epochId(currentEpochId)
+																			 .expositionScores(Arrays.asList(4.3))
+																			 .build()));
 
 			this.registrationService.saveRegistration(registrationWithEE);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
 
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 			when(this.cryptoServerClient.validateMacHello(any())).thenReturn(true);
 
@@ -282,11 +276,7 @@ public class ContactProcessorTest {
 			messages.add(generateHelloMessageFor(ebid, encryptedCountryCode, t + 165L, -50));
 			messages.add(generateHelloMessageFor(ebid, encryptedCountryCode, t + 300L, -35));
 
-			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(messages)
-					.build();
+			Contact contact = Contact.builder().ebid(ebid).ecc(encryptedCountryCode).messageDetails(messages).build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -294,13 +284,12 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
-			Optional<Registration> expectedRegistration = this.registrationService
-					.findById(registrationWithEE.getPermanentIdentifier());
+			Optional<Registration> expectedRegistration = this.registrationService.findById(registrationWithEE.getPermanentIdentifier());
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertTrue(expectedRegistration.get().getExposedEpochs().size() == 2);
@@ -328,22 +317,23 @@ public class ContactProcessorTest {
 			// Setup id with an existing score below threshold
 			Registration registrationWithEE = this.registration.get();
 			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
-					.epochId(previousEpoch)
-					.expositionScores(Arrays.asList(1.0))
-					.build(),
-					EpochExposition.builder()
-					.epochId(currentEpochId)
-					.expositionScores(Arrays.asList(2.3))
-					.build()));
+																			 .epochId(previousEpoch)
+																			 .expositionScores(Arrays.asList(1.0))
+																			 .build(),
+															  EpochExposition.builder()
+																			 .epochId(currentEpochId)
+																			 .expositionScores(Arrays.asList(2.3))
+																			 .build()));
 
 			this.registrationService.saveRegistration(registrationWithEE);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 			when(this.cryptoServerClient.validateMacHello(any())).thenReturn(true);
 
@@ -353,11 +343,7 @@ public class ContactProcessorTest {
 			messages.add(generateHelloMessageFor(ebid, encryptedCountryCode, t, -78));
 			messages.add(generateHelloMessageFor(ebid, encryptedCountryCode, t + 165L, -50));
 
-			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(messages)
-					.build();
+			Contact contact = Contact.builder().ebid(ebid).ecc(encryptedCountryCode).messageDetails(messages).build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -365,13 +351,12 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
-			Optional<Registration> expectedRegistration = this.registrationService
-					.findById(registrationWithEE.getPermanentIdentifier());
+			Optional<Registration> expectedRegistration = this.registrationService.findById(registrationWithEE.getPermanentIdentifier());
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertTrue(expectedRegistration.get().getExposedEpochs().size() == 2);
@@ -400,10 +385,11 @@ public class ContactProcessorTest {
 
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
 
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 			byte[] time = new byte[2];
 
 			byte[] timeOfDevice = new byte[4];
@@ -423,28 +409,28 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 
-
-			byte[] mac = this.cryptoService
-					.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+			byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get()
+																								   .getSharedKey()),
+															 helloMessage);
 
 			HelloMessageDetail helloMessageDetail = HelloMessageDetail.builder()
-					.mac(mac)
-					.timeFromHelloMessage(timeHello)
-					.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
-					.rssiCalibrated(-70)
-					.build();
+																	  .mac(mac)
+																	  .timeFromHelloMessage(timeHello)
+																	  .timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
+																	  .rssiCalibrated(-70)
+																	  .build();
 
 			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(Arrays.asList(helloMessageDetail))
-					.build();
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(Arrays.asList(helloMessageDetail))
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -452,10 +438,10 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 
 			verify(this.cryptoServerClient).decryptCountryCode(any());
@@ -489,9 +475,10 @@ public class ContactProcessorTest {
 
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on 16 bits
@@ -516,27 +503,28 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 
-			byte[] mac = this.cryptoService
-					.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+			byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get()
+																								   .getSharedKey()),
+															 helloMessage);
 
 			HelloMessageDetail helloMessageDetail = HelloMessageDetail.builder()
-					.mac(mac)
-					.timeFromHelloMessage(timeHello)
-					.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
-					.rssiCalibrated(-70)
-					.build();
+																	  .mac(mac)
+																	  .timeFromHelloMessage(timeHello)
+																	  .timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
+																	  .rssiCalibrated(-70)
+																	  .build();
 
 			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(Arrays.asList(helloMessageDetail))
-					.build();
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(Arrays.asList(helloMessageDetail))
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -544,10 +532,10 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 
 			verify(this.cryptoServerClient).decryptCountryCode(any());
@@ -572,9 +560,10 @@ public class ContactProcessorTest {
 
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on sixteen bits
@@ -597,29 +586,30 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 
 			when(this.cryptoServerClient.validateMacHello(any())).thenReturn(false);
 
-			byte[] mac = this.cryptoService
-					.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+			byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get()
+																								   .getSharedKey()),
+															 helloMessage);
 
 			HelloMessageDetail helloMessageDetail = HelloMessageDetail.builder()
-					.mac(mac)
-					.timeFromHelloMessage(timeHello)
-					.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
-					.rssiCalibrated(-70)
-					.build();
+																	  .mac(mac)
+																	  .timeFromHelloMessage(timeHello)
+																	  .timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
+																	  .rssiCalibrated(-70)
+																	  .build();
 
 			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(Arrays.asList(helloMessageDetail))
-					.build();
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(Arrays.asList(helloMessageDetail))
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -627,10 +617,10 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 
 			verify(this.cryptoServerClient).decryptCountryCode(any());
@@ -658,26 +648,27 @@ public class ContactProcessorTest {
 
 			Registration registrationWithEE = this.registration.get();
 			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
-					.epochId(previousEpoch)
-					.expositionScores(Arrays.asList(0.0))
-					.build(),
-					EpochExposition.builder()
-					.epochId(currentEpochId)
-					.expositionScores(Arrays.asList(0.0))
-					.build()));
+																			 .epochId(previousEpoch)
+																			 .expositionScores(Arrays.asList(0.0))
+																			 .build(),
+															  EpochExposition.builder()
+																			 .epochId(currentEpochId)
+																			 .expositionScores(Arrays.asList(0.0))
+																			 .build()));
 
 			int nbOfExposedEpochs = registrationWithEE.getExposedEpochs().size();
 
 			this.registrationService.saveRegistration(registrationWithEE);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 			byte[] time = new byte[2];
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
 
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 			when(this.cryptoServerClient.validateMacHello(any())).thenReturn(true);
 
@@ -701,21 +692,22 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] mac = this.cryptoService
-					.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+			byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get()
+																								   .getSharedKey()),
+															 helloMessage);
 
 			HelloMessageDetail helloMessageDetail = HelloMessageDetail.builder()
-					.mac(mac)
-					.timeFromHelloMessage(timeHello)
-					.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
-					.rssiCalibrated(-70)
-					.build();
+																	  .mac(mac)
+																	  .timeFromHelloMessage(timeHello)
+																	  .timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
+																	  .rssiCalibrated(-70)
+																	  .build();
 
 			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(Arrays.asList(helloMessageDetail))
-					.build();
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(Arrays.asList(helloMessageDetail))
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -723,13 +715,12 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			assertNull(processedContact);
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
-			Optional<Registration> expectedRegistration = this.registrationService
-					.findById(registrationWithEE.getPermanentIdentifier());
+			Optional<Registration> expectedRegistration = this.registrationService.findById(registrationWithEE.getPermanentIdentifier());
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertEquals(nbOfExposedEpochs, expectedRegistration.get().getExposedEpochs().size());
@@ -761,19 +752,19 @@ public class ContactProcessorTest {
 			val++;
 			int tooOldEpochId = currentEpochId - val;
 			Registration registrationWithEE = this.registration.get();
-			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition
-					.builder()
-					.epochId(tooOldEpochId)
-					.expositionScores(Arrays.asList(0.0))
-					.build()));
+			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
+																			 .epochId(tooOldEpochId)
+																			 .expositionScores(Arrays.asList(0.0))
+																			 .build()));
 
 			int nbOfExposedEpochsBefore = registrationWithEE.getExposedEpochs().size();
 
 			this.registrationService.saveRegistration(registrationWithEE);
 
-			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
-					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(this.serverKey), currentEpochId,
+														  this.registration.get().getPermanentIdentifier());
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(this.federationKey), ebid,
+																				this.countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on 16 bits
@@ -796,27 +787,28 @@ public class ContactProcessorTest {
 			System.arraycopy(ebid, 0, helloMessage, encryptedCountryCode.length, ebid.length);
 			System.arraycopy(time, 0, helloMessage, encryptedCountryCode.length + ebid.length, time.length);
 
-			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
-			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
+			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(this.serverKey), ebid);
+			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(this.countryCode);
 
 			when(this.cryptoServerClient.decryptEBID(any())).thenReturn(decryptedEbid);
 			when(this.cryptoServerClient.validateMacHello(any())).thenReturn(true);
 
-			byte[] mac = this.cryptoService
-					.generateMACHello(new CryptoHMACSHA256(this.registration.get().getSharedKey()), helloMessage);
+			byte[] mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(this.registration.get()
+																								   .getSharedKey()),
+															 helloMessage);
 
 			HelloMessageDetail helloMessageDetail = HelloMessageDetail.builder()
-					.mac(mac)
-					.timeFromHelloMessage(timeHello)
-					.timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
-					.rssiCalibrated(-70)
-					.build();
+																	  .mac(mac)
+																	  .timeFromHelloMessage(timeHello)
+																	  .timeCollectedOnDevice(Integer.toUnsignedLong(timeReceived))
+																	  .rssiCalibrated(-70)
+																	  .build();
 
 			Contact contact = Contact.builder()
-					.ebid(ebid)
-					.ecc(encryptedCountryCode)
-					.messageDetails(Arrays.asList(helloMessageDetail))
-					.build();
+									 .ebid(ebid)
+									 .ecc(encryptedCountryCode)
+									 .messageDetails(Arrays.asList(helloMessageDetail))
+									 .build();
 
 			this.contactService.saveContacts(Arrays.asList(contact));
 
@@ -824,12 +816,11 @@ public class ContactProcessorTest {
 			assertEquals(1, this.contactService.findAll().size());
 
 			// When
-			Contact processedContact = this.contactProcessor.process(contact);
+			Registration processedOutput = this.contactProcessor.process(contact);
 
 			// Then
-			Optional<Registration> expectedRegistration = this.registrationService
-					.findById(registrationWithEE.getPermanentIdentifier());
-			assertNull(processedContact);
+			Optional<Registration> expectedRegistration = this.registrationService.findById(registrationWithEE.getPermanentIdentifier());
+			assertNull(processedOutput);
 			assertTrue(CollectionUtils.isEmpty(this.contactService.findAll()));
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));

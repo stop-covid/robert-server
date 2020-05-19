@@ -12,7 +12,6 @@ import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.repository.ContactRepository;
 import fr.gouv.stopc.robertserver.database.service.ContactService;
 
-
 @Service
 @Transactional
 public class ContactServiceImpl implements ContactService {
@@ -28,7 +27,7 @@ public class ContactServiceImpl implements ContactService {
 	@Override
 	public void saveContacts(List<Contact> contacts) {
 
-		contactRepository.saveAll(contacts);
+		this.contactRepository.saveAll(contacts);
 	}
 
 	@Override
