@@ -30,9 +30,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ReportControllerImpl implements IReportController {
 
-	private ContactDtoService contactDtoService;
+	private final static String HEADER_APIKEY = "apikey";
 
-	private RestTemplate restTemplate;
+	@Value("${submission.code.server.apikey}")
+	private String submissionCodeServerApiKey;
 
 	@Value("${submission.code.server.host}")
 	private String serverCodeHost;
@@ -42,6 +43,10 @@ public class ReportControllerImpl implements IReportController {
 
 	@Value("${submission.code.server.verify.path}")
 	private String serverCodeVerificationUri;
+
+	private ContactDtoService contactDtoService;
+
+	private RestTemplate restTemplate;
 
 	@Inject
 	public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate) {
@@ -115,13 +120,14 @@ public class ReportControllerImpl implements IReportController {
 
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.set(HEADER_APIKEY, submissionCodeServerApiKey);
 
 		return new HttpEntity(new VerifyRequestVo(token, getCodeType(token)), headers);
 	}
 
 	private String constructUri() {
 
-		return UriComponentsBuilder.newInstance().scheme("http").host(serverCodeHost).port(serverCodePort).path(serverCodeVerificationUri).build().toString();
+		return UriComponentsBuilder.newInstance().scheme("https").host(serverCodeHost).port(serverCodePort).path(serverCodeVerificationUri).build().toString();
 	}
 
 	@NoArgsConstructor
