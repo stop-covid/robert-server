@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package robert.server.contacts;
+
+option java_package = "fr.gouv.stopc.robertserver.ws.proto";
+option java_outer_classname = "ProtoStorage";
+
+message IdProto {
+    int64 timeCollectedOnDevice = 1;
+    int32 timeFromHelloMessage = 2;
+    string mac = 3;
+    int32 rssiRaw = 4;
+    int32 rssiCalibrated = 5;
+}
+
+message ContactProto {
+    string ebid = 1;
+    string ecc = 2;
+    repeated IdProto ids = 3;
+}
+
+message ContactAsBinaryProto {
+    repeated ContactProto contacts = 1;
+}

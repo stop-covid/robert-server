@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -41,6 +42,9 @@ import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
 import fr.gouv.stopc.robertserver.ws.dto.ReportBatchResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.ApiError;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
+import fr.gouv.stopc.robertserver.ws.proto.ProtoStorage.ContactAsBinaryProto;
+import fr.gouv.stopc.robertserver.ws.proto.ProtoStorage.ContactProto;
+import fr.gouv.stopc.robertserver.ws.proto.ProtoStorage.IdProto;
 import fr.gouv.stopc.robertserver.ws.service.ContactDtoService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.utils.UriConstants;
@@ -74,11 +78,13 @@ public class ReportControllerWsRestTest {
 
 	private final String token = "23DC4B32-7552-44C1-B98A-DDE5F75B1729";
 
-	private final String contactsAsBinary = "contactsAsBinary";
+	private String contactsAsBinary;
 
 	private List<GroupedHellosReportVo> contacts;
 
 	private ReportBatchRequestVo reportBatchRequestVo;
+
+	private ContactAsBinaryProto contactAsBinaryProto;
 
 	private static final String EXCEPTION_FAIL_MESSAGE = "Should not fail with exception";
 
@@ -90,6 +96,7 @@ public class ReportControllerWsRestTest {
 
 		this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.REPORT).build().encode().toUri();
 
+		// Construction of the plain text contact list
 		DistinctiveHelloInfoWithinEpochForSameEBIDVo info = DistinctiveHelloInfoWithinEpochForSameEBIDVo.builder() //
 			.timeCollectedOnDevice(1L) //
 			.timeFromHelloMessage(1) //
@@ -98,11 +105,31 @@ public class ReportControllerWsRestTest {
 			.rssiCalibrated(20) //
 			.build();
 
-		GroupedHellosReportVo contact = GroupedHellosReportVo.builder().ecc("FR").ebid("ABCDEFGH").ids(Arrays.asList(info)).build();
-
+		GroupedHellosReportVo contact = GroupedHellosReportVo.builder() //
+				.ecc("FR") //
+				.ebid("ABCDEFGH") //
+				.ids(Arrays.asList(info)) //
+				.build();
+		
 		this.contacts = Arrays.asList(contact);
-
+		
 		this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contacts(this.contacts).build();
+
+		// Construction of the Protobuf version of the contacts list
+		IdProto idProto = IdProto.newBuilder() //
+				.setTimeCollectedOnDevice(1L) //
+				.setTimeFromHelloMessage(1).setMac("1") //
+				.setRssiRaw(20) //
+				.setRssiCalibrated(20) //
+				.build();
+
+		ContactProto contactProto = ContactProto.newBuilder() //
+				.setEcc("FR") //
+				.setEbid("ABCDEFGH") //
+				.addIds(idProto) //
+				.build();
+		
+		this.contactAsBinaryProto = ContactAsBinaryProto.newBuilder().addContacts(contactProto).build();
 	}
 
 	@Test
@@ -227,16 +254,19 @@ public class ReportControllerWsRestTest {
 	}
 
 	@Test
-	public void testReportContacWhenContactsProvidedTwice() {
+	public void testReportContactWhenContactsProvidedTwice() {
 
 		try {
 			// Given
-			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contacts(this.contacts).contactsAsBinary(this.contactsAsBinary).build();
+			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contacts(this.contacts)
+					.contactsAsBinary(this.contactsAsBinary).build();
 
 			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
 
 			// When
-			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST, this.requestEntity, ReportBatchResponseDto.class);
+			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST,
+					this.requestEntity, ReportBatchResponseDto.class);
 
 			// Then
 			assertNotNull(response);
@@ -249,7 +279,7 @@ public class ReportControllerWsRestTest {
 	}
 
 	@Test
-	public void testReportContacWhenContactsNotProvided() {
+	public void testReportContactWhenContactsNotProvided() {
 
 		try {
 			// Given
@@ -270,6 +300,102 @@ public class ReportControllerWsRestTest {
 		}
 	}
 
+	@Test
+	public void testReportContactWhenContactsAsBinaryIsCorrect() {
+
+		try {
+			// Given
+			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contactsAsBinary(this.contactsAsBinary).build();
+
+			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+
+			// When
+			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST,
+					this.requestEntity, ReportBatchResponseDto.class);
+
+			// Then
+			assertNotNull(response);
+			assertEquals(HttpStatus.OK, response.getStatusCode());
+
+			verify(this.contactDtoService, atLeastOnce()).saveProtoContacts(any());
+		} catch (RobertServerException e) {
+			fail(EXCEPTION_FAIL_MESSAGE);
+		}
+	}
+	
+	@Test
+	public void testReportContactWhenContactsIsCorrect() {
+
+		try {
+			// Given
+			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contacts(this.contacts).build();
+
+			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+
+			// When
+			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST,
+					this.requestEntity, ReportBatchResponseDto.class);
+
+			// Then
+			assertNotNull(response);
+			assertEquals(HttpStatus.OK, response.getStatusCode());
+
+			verify(this.contactDtoService, atLeastOnce()).saveContacts(any());
+		} catch (RobertServerException e) {
+			fail(EXCEPTION_FAIL_MESSAGE);
+		}
+	}
+	
+	@Test
+	public void testReportContactWhenContactsAsBinaryHasNoContacts() {
+
+		try {
+			// Given
+			this.contactAsBinaryProto = ContactAsBinaryProto.newBuilder().build();
+			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contactsAsBinary(this.contactsAsBinary).build();
+
+			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+
+			// When
+			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST,
+					this.requestEntity, ReportBatchResponseDto.class);
+
+			// Then
+			assertNotNull(response);
+			assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+
+			verify(this.contactDtoService, never()).saveProtoContacts(any());
+		} catch (RobertServerException e) {
+			fail(EXCEPTION_FAIL_MESSAGE);
+		}
+	}
+	
+	@Test
+	public void testReportContactWhenContactsAsBinaryIsInvalid() {
+
+		try {
+			// Given
+			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray()).substring(10);
+			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contactsAsBinary(this.contactsAsBinary).build();
+
+			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
+
+			// When
+			ResponseEntity<ReportBatchResponseDto> response = this.testRestTemplate.exchange(targetUrl, HttpMethod.POST,
+					this.requestEntity, ReportBatchResponseDto.class);
+
+			// Then
+			assertNotNull(response);
+			assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+
+			verify(this.contactDtoService, never()).saveContacts(any());
+		} catch (RobertServerException e) {
+			fail(EXCEPTION_FAIL_MESSAGE);
+		}
+	}
+	
 	@Test
 	public void testReportWhenTokenNotProvided() {
 

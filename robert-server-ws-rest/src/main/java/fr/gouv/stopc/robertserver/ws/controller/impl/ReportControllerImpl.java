@@ -1,7 +1,5 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
-import javax.inject.Inject;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,11 +10,14 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import fr.gouv.stopc.robertserver.ws.controller.IReportController;
 import fr.gouv.stopc.robertserver.ws.dto.ReportBatchResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerBadRequestException;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerUnauthorizedException;
+import fr.gouv.stopc.robertserver.ws.proto.ProtoStorage.ContactAsBinaryProto;
 import fr.gouv.stopc.robertserver.ws.service.ContactDtoService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.ReportBatchRequestVo;
@@ -30,9 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ReportControllerImpl implements IReportController {
 
-	private ContactDtoService contactDtoService;
+	private final ContactDtoService contactDtoService;
 
-	private RestTemplate restTemplate;
+	private final RestTemplate restTemplate;
 
 	@Value("${submission.code.server.host}")
 	private String serverCodeHost;
@@ -43,45 +44,87 @@ public class ReportControllerImpl implements IReportController {
 	@Value("${submission.code.server.verify.path}")
 	private String serverCodeVerificationUri;
 
-	@Inject
+	/**
+	 * Spring Injection controller
+	 * 
+	 * @param contactDtoService the <code>ContactDtoService</code> bean to inject
+	 * @param restTemplate the <code>RestTemplate</code> bean to inject
+	 */
 	public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate) {
-
 		this.contactDtoService = contactDtoService;
 		this.restTemplate = restTemplate;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public ResponseEntity<ReportBatchResponseDto> reportContactHistory(ReportBatchRequestVo reportBatchRequestVo)
+			throws RobertServerException {
+
+		// Check the content of contactsAsBinary and contacts fields. Only one must be
+		// present.
+		if (areBothFieldsPresent(reportBatchRequestVo)) {
+			log.warn("contacts and contactsAsBinary are both present");
+			return ResponseEntity.badRequest().build();
+		} else if (areBothFieldsAbsent(reportBatchRequestVo)) {
+			log.warn("contacts and contactsAsBinary are absent");
+			return ResponseEntity.badRequest().build();
+		}
+
+		// Check the validity of the authentication token
+		checkValidityToken(reportBatchRequestVo.getToken());
+
+		if (CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())) {
+			// Case of a list of contact provided in contactsAsBinary
+			try {
+				// First decode the protobuf binary string
+				ContactAsBinaryProto contactsProto = ContactAsBinaryProto
+						.parseFrom(reportBatchRequestVo.getContactsAsBinary().getBytes());
+				// List of contacts must not be empty
+				if (CollectionUtils.isEmpty(contactsProto.getContactsList())) {
+					log.warn("Contact list is empty in contactsAsBinary");
+					return ResponseEntity.badRequest().build();
+				}
+				// Save the contact list
+				contactDtoService.saveProtoContacts(contactsProto.getContactsList());
+			} catch (InvalidProtocolBufferException e) {
+				// Invalid content : malformed varint or negative byte length.
+				log.warn("contactsAsBinary content is invalid : ", e);
+				return ResponseEntity.badRequest().build();
+			}
+		} else {
+			// Case of a list of contact provided in contacts
+			contactDtoService.saveContacts(reportBatchRequestVo.getContacts());
+		}
+		// Build the response body
+		ReportBatchResponseDto reportBatchResponseDto = ReportBatchResponseDto.builder()
+				.message(MessageConstants.SUCCESSFUL_OPERATION.getValue()).success(Boolean.TRUE).build();
+		return ResponseEntity.ok(reportBatchResponseDto);
+	}
+	
+	/**
+	 * Function checking if contacts and contactsAsBinary are present in a given
+	 * <code>ReportBatchRequestVo</code>
+	 * 
+	 * @param reportBatchRequestVo the <code>ReportBatchRequestVo</code> to check
+	 * @return true if both field are present else false
+	 */
 	private boolean areBothFieldsPresent(ReportBatchRequestVo reportBatchRequestVo) {
 		return !CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())
 				&& StringUtils.isNotEmpty(reportBatchRequestVo.getContactsAsBinary());
 	}
-
+	
+	/**
+	 * Function checking if contacts and contactsAsBinary are missing in a given
+	 * <code>ReportBatchRequestVo</code>
+	 * 
+	 * @param reportBatchRequestVo the <code>ReportBatchRequestVo</code> to check
+	 * @return true if both field are missing else false
+	 */
 	private boolean areBothFieldsAbsent(ReportBatchRequestVo reportBatchRequestVo) {
 		return CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())
 				&& StringUtils.isEmpty(reportBatchRequestVo.getContactsAsBinary());
-	}
-
-	@Override
-	public ResponseEntity<ReportBatchResponseDto> reportContactHistory(ReportBatchRequestVo reportBatchRequestVo) throws RobertServerException {
-
-		if (CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())) {
-			log.warn("No contacts in request");
-			return ResponseEntity.badRequest().build();
-		}
-
-		if (areBothFieldsPresent(reportBatchRequestVo)) {
-			log.warn("Contacts and ContactsAsBinary are both present");
-			return ResponseEntity.badRequest().build();
-		} else if (areBothFieldsAbsent(reportBatchRequestVo)) {
-			log.warn("Contacts and ContactsAsBinary are absent");
-			return ResponseEntity.badRequest().build();
-		}
-
-		checkValidityToken(reportBatchRequestVo.getToken());
-
-		contactDtoService.saveContacts(reportBatchRequestVo.getContacts());
-
-		ReportBatchResponseDto reportBatchResponseDto = ReportBatchResponseDto.builder().message(MessageConstants.SUCCESSFUL_OPERATION.getValue()).success(Boolean.TRUE).build();
-		return ResponseEntity.ok(reportBatchResponseDto);
 	}
 
 	private void checkValidityToken(String token) throws RobertServerException {

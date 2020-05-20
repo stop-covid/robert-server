@@ -24,7 +24,7 @@ public class ReportBatchRequestVo {
 	private String token;
 
 	@Builder.Default
-	@Size(min = 1)
+	@Size(min = 0)
 	private List<GroupedHellosReportVo> contacts = new ArrayList<>();
 
 	private String contactsAsBinary;
