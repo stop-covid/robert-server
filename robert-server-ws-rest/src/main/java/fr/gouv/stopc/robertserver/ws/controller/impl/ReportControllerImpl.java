@@ -1,19 +1,12 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
-import java.util.Objects;
+import java.util.Optional;
 
 import javax.inject.Inject;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import fr.gouv.stopc.robertserver.ws.controller.IReportController;
 import fr.gouv.stopc.robertserver.ws.dto.ReportBatchResponseDto;
@@ -22,36 +15,26 @@ import fr.gouv.stopc.robertserver.ws.exception.RobertServerBadRequestException;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerUnauthorizedException;
 import fr.gouv.stopc.robertserver.ws.service.ContactDtoService;
+import fr.gouv.stopc.robertserver.ws.service.IRestApiService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.ReportBatchRequestVo;
 import io.micrometer.core.instrument.util.StringUtils;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class ReportControllerImpl implements IReportController {
 
-    private ContactDtoService contactDtoService;
+    private final ContactDtoService contactDtoService;
 
-    private RestTemplate restTemplate;
+    private final IRestApiService restApiService;
 
-    @Value("${submission.code.server.host}")
-    private String serverCodeHost;
-
-    @Value("${submission.code.server.port}")
-    private String serverCodePort;
-
-    @Value("${submission.code.server.verify.path}")
-    private String serverCodeVerificationUri;
 
     @Inject
-    public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate) {
+    public ReportControllerImpl(final ContactDtoService contactDtoService, final IRestApiService restApiService) {
 
         this.contactDtoService = contactDtoService;
-        this.restTemplate = restTemplate;
+        this.restApiService = restApiService;
     }
 
     private boolean areBothFieldsPresent(ReportBatchRequestVo reportBatchRequestVo) {
@@ -100,19 +83,13 @@ public class ReportControllerImpl implements IReportController {
             throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
         }
 
-        ResponseEntity<VerifyResponseDto> response = null;
-        try {
-            response = restTemplate.getForEntity(constructUri(token), VerifyResponseDto.class);
-        } catch (RestClientException e) {
-            log.error("Unable to verify the token due to {}", e.getMessage());
-            throw new RobertServerBadRequestException(MessageConstants.ERROR_OCCURED.getValue());
-        }
+        Optional<VerifyResponseDto> response = this.restApiService.verifyReportToken(token, getCodeType(token));
 
-        if (Objects.isNull(response) ||  !response.getBody().isValid()) {
+        if (!response.isPresent() ||  !response.get().isValid()) {
             log.warn("Verifying the token failed");
             throw new RobertServerUnauthorizedException(MessageConstants.INVALID_AUTHENTICATION.getValue());
         }
-        
+
         log.info("Verifying the token succeeded");
     }
 
@@ -120,25 +97,4 @@ public class ReportControllerImpl implements IReportController {
 
         return token.length() == 6 ? "2" : "1";
     }
-
-    private String constructUri(String token) {
-
-        return UriComponentsBuilder.newInstance().scheme("http").host(serverCodeHost).port(serverCodePort)
-                .path(serverCodeVerificationUri)
-                .queryParam("code", token)
-                .queryParam("type", getCodeType(token))
-                .build().toString();
-    }
-
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Data
-    class VerifyRequestVo {
-
-        private String code;
-
-        private String type;
-
-    }
-
 }
