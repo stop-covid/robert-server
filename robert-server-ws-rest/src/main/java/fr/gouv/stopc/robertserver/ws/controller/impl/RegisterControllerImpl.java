@@ -48,7 +48,7 @@ public class RegisterControllerImpl implements IRegisterController {
     private final CaptchaService captchaService;
 
     private  final ICryptoServerGrpcClient cryptoServerClient;
-
+ 
     @Inject
     public RegisterControllerImpl(final IRegistrationService registrationService,
             final IServerConfigurationService serverConfigurationService,
@@ -94,6 +94,7 @@ public class RegisterControllerImpl implements IRegisterController {
         if(!response.isPresent()) {
             log.error("Unable to generate an identity for the client");
             throw new RobertServerException(MessageConstants.ERROR_OCCURED);
+ 
         }
 
         GenerateIdentityResponse identity = response.get();
@@ -130,7 +131,7 @@ public class RegisterControllerImpl implements IRegisterController {
         final int numberOfEpochs = 4 * 24 * 4;
 
         final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
-
+        
         registerResponseDto.setTimeStart(tpstStart);
 
         byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
@@ -158,6 +159,7 @@ public class RegisterControllerImpl implements IRegisterController {
                 encryptedTuple.get().getEncryptedTuples().toByteArray()));
 
         registerResponseDto.setServerPublicECDHKeyForKey(Base64.encode(identity.getServerPublicKeyForKey().toByteArray()));
+
 
         registerResponseDto.setKey(Base64.encode(identity.getEncryptedSharedKey().toByteArray()));
         return registerResponseDto;

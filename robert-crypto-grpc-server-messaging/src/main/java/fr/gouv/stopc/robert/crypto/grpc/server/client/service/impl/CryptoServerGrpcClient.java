@@ -62,9 +62,9 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
 
     @Override
     public byte[] decryptEBID(DecryptEBIDRequest request) {
-        try {
 
             EBIDResponse response = this.blockingStub.decryptEBID(request);
+        try {
 
             if (this.testHelper != null) {
                 this.testHelper.onMessage(response);
@@ -119,7 +119,6 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
         }
         return false;
     }
-
 
     @Override
     public boolean validateMacHello(MacHelloValidationRequest request) {

@@ -102,6 +102,7 @@ public class StatusControllerWsRestTest {
 
     private String expectedServerPublicKeyForTuples;
 
+
     @BeforeEach
     public void before() {
 
@@ -327,6 +328,7 @@ public class StatusControllerWsRestTest {
 
         ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
                 HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(this.registrationService, times(0)).findById(ArgumentMatchers.any());

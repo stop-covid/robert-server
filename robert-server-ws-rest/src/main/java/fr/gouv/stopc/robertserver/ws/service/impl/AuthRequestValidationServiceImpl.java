@@ -90,7 +90,7 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
             System.arraycopy(decrytedEbid, epochId.length - 1, idA, 0, idA.length);
             ByteBuffer wrapped = ByteBuffer.wrap(epochId);
             int epoch = wrapped.getInt();
-
+            
             // Step #4: Get record from database
             Optional<Registration> record = this.registrationService.findById(idA);
 

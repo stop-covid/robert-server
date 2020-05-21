@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -324,6 +323,7 @@ public class RegisterControllerWsRestTest {
 		when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.of(encryptedTupleResponse));
 				
 		when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
+
 		when(this.captchaService.verifyCaptcha(this.body)).thenReturn(true);
 
 		String expectedServerPublicKeyForKey = Base64.encode(identityResponse.getServerPublicKeyForKey().toByteArray());

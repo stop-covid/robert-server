@@ -51,7 +51,6 @@ public class StatusControllerImpl implements IStatusController {
 
 	private final ICryptoServerGrpcClient cryptoServerClient;
 
-
 	@Inject
 	public StatusControllerImpl(
 			final IServerConfigurationService serverConfigurationService,
@@ -83,6 +82,7 @@ public class StatusControllerImpl implements IStatusController {
 		} else {
 			return ResponseEntity.badRequest().build();
 		}
+		 
 	}
 
 	private class StatusMacValidator implements AuthRequestValidationService.IMacValidator {

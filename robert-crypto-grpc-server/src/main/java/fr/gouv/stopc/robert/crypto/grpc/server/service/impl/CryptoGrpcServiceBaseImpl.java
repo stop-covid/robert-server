@@ -69,6 +69,8 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         this.clientStorageService = clientStorageService;
     }
 
+
+
     @Override
     public void generateEBID(GenerateEBIDRequest request,
             StreamObserver<EBIDResponse> responseObserver) {

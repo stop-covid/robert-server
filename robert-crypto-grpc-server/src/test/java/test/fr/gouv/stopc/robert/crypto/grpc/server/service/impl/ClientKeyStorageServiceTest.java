@@ -1,15 +1,19 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ClientKeyStorageService;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Arrays;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.Arrays;
-
-import static org.junit.jupiter.api.Assertions.*;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ClientKeyStorageService;
 
 @ExtendWith(SpringExtension.class)
 public class ClientKeyStorageServiceTest {

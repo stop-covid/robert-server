@@ -79,6 +79,7 @@ public class CryptoServerGrpcClientTest {
                 .setEbid(ByteString.copyFrom(generate(8)))
                 .build();
 
+
         CryptoGrpcServiceImplImplBase decryptEBID = new CryptoGrpcServiceImplImplBase() {
             @Override
             public void decryptEBID(DecryptEBIDRequest request,

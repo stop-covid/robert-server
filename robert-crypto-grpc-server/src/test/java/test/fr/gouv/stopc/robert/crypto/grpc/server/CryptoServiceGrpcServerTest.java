@@ -61,7 +61,6 @@ import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
-
 @ExtendWith(SpringExtension.class)
 public class CryptoServiceGrpcServerTest {
 

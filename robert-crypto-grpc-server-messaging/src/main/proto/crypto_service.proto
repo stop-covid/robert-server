@@ -23,7 +23,6 @@ package robert.server.crypto;
 
 // The greeting service definition.
 service CryptoGrpcServiceImpl {
-
   rpc generateEBID(GenerateEBIDRequest) returns (EBIDResponse){}
   rpc decryptEBID(DecryptEBIDRequest) returns (EBIDResponse){}
   rpc encryptCountryCode(EncryptCountryCodeRequest) returns (EncryptCountryCodeResponse){}
