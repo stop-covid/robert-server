@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,6 @@ import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.EpochExposition;
@@ -143,7 +143,7 @@ public class ContactProcessorTest {
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId, this.generateIdA());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 
 			byte[] time = new byte[2];
 
@@ -268,7 +268,7 @@ public class ContactProcessorTest {
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
 
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 
 			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
 
@@ -341,7 +341,7 @@ public class ContactProcessorTest {
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
 
 			when(this.cryptoServerClient.decryptCountryCode(any())).thenReturn(countryCode);
@@ -404,7 +404,7 @@ public class ContactProcessorTest {
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
 
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] time = new byte[2];
 
 			byte[] timeOfDevice = new byte[4];
@@ -492,7 +492,7 @@ public class ContactProcessorTest {
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on 16 bits
@@ -575,7 +575,7 @@ public class ContactProcessorTest {
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on sixteen bits
@@ -673,7 +673,7 @@ public class ContactProcessorTest {
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] time = new byte[2];
 
 			byte[] decryptedEbid = this.cryptoService.decryptEBID(new Crypto3DES(serverKey), ebid);
@@ -774,7 +774,7 @@ public class ContactProcessorTest {
 
 			byte[] ebid = this.cryptoService.generateEBID(new Crypto3DES(serverKey), currentEpochId,
 					this.registration.get().getPermanentIdentifier());
-			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAES(federationKey), ebid, countryCode);
+			byte[] encryptedCountryCode = this.cryptoService.encryptCountryCode(new CryptoAESOFB(federationKey), ebid, countryCode);
 			byte[] time = new byte[2];
 
 			// Get timestamp on 16 bits

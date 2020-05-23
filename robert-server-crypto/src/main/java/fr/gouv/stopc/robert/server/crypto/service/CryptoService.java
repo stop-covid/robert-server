@@ -3,8 +3,7 @@ package fr.gouv.stopc.robert.server.crypto.service;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 
 /**
@@ -26,8 +25,8 @@ public interface CryptoService {
      * @throws RobertServerCryptoException
      */
     EphemeralTuple generateEphemeralTuple(
-            Crypto3DES crypto3DES,
-            CryptoAES cryptoAES,
+            CryptoCipherStructureAbstract crypto3DES,
+            CryptoCipherStructureAbstract cryptoAES,
             int epochId, byte[] idA, byte countryCode) throws RobertServerCryptoException;
 
     /**
@@ -37,7 +36,7 @@ public interface CryptoService {
      * @return return encrypted epochId idA as EBID with TripleDES algorithm
      * @throws RobertServerCryptoException
      */
-    byte[] generateEBID(Crypto3DES crypto3DES, int epochId, byte[] idA) throws RobertServerCryptoException;
+    byte[] generateEBID(CryptoCipherStructureAbstract crypto3DES, int epochId, byte[] idA) throws RobertServerCryptoException;
 
     /**
      * Decrypt an EBID
@@ -46,7 +45,7 @@ public interface CryptoService {
      * @return
      * @throws RobertServerCryptoException
      */
-    byte[] decryptEBID(Crypto3DES crypto3DES, byte[] ebid) throws RobertServerCryptoException;
+    byte[] decryptEBID(CryptoCipherStructureAbstract crypto3DES, byte[] ebid) throws RobertServerCryptoException;
 
     /**
      * @param cryptoAES instance of TripleDES initialize with the KS key
@@ -55,7 +54,7 @@ public interface CryptoService {
      * @return return encrypted countryCode and EBID as ECC with MSB method specified in ROBert documentation.
      * @throws RobertServerCryptoException
      */
-    byte[] encryptCountryCode(CryptoAES cryptoAES, byte[] ebid, byte countryCode) throws RobertServerCryptoException;
+    byte[] encryptCountryCode(CryptoCipherStructureAbstract cryptoAES, byte[] ebid, byte countryCode) throws RobertServerCryptoException;
 
     /**
      * Decrypt an encrypted country code
@@ -65,7 +64,7 @@ public interface CryptoService {
      * @return
      * @throws RobertServerCryptoException
      */
-     byte[] decryptCountryCode(CryptoAES cryptoAES, byte[] ebid, byte encryptedCountryCode) throws RobertServerCryptoException;
+     byte[] decryptCountryCode(CryptoCipherStructureAbstract cryptoAES, byte[] ebid, byte encryptedCountryCode) throws RobertServerCryptoException;
 
     /**
      *

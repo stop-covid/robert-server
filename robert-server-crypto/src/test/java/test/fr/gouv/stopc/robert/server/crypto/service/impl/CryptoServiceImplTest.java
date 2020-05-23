@@ -12,6 +12,8 @@ import java.util.Random;
 
 import javax.crypto.Cipher;
 
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -22,7 +24,6 @@ import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 
 
@@ -143,7 +144,7 @@ class CryptoServiceImplTest {
         final byte[] hello = ByteUtils.addAll(referenceET.getEncryptedCountryCode(), ByteUtils.addAll(referenceET.getEbid(), ByteUtils.addAll(referenceTime, referenceMAC)));
 
         final Crypto3DES crypto3DES = new Crypto3DES(serverKey);
-        final CryptoAES cryptoAES = new CryptoAES(federationKey);
+        final CryptoAES cryptoAES = new CryptoAESOFB(federationKey);
 
         //Verify that the message has the right length :
         assert hello.length == (8 + 64 + 16 + 40) / 8;

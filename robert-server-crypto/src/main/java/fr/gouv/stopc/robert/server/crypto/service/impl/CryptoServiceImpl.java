@@ -12,6 +12,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
@@ -19,8 +20,6 @@ import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,8 +31,8 @@ public class CryptoServiceImpl implements CryptoService {
 
     @Override
     public EphemeralTuple generateEphemeralTuple(
-            final Crypto3DES crypto3DES,
-            final CryptoAES cryptoAES,
+            final CryptoCipherStructureAbstract crypto3DES,
+            final CryptoCipherStructureAbstract cryptoAES,
             final int epochId,
             final byte[] idA,
             final byte countryCode) throws RobertServerCryptoException {
@@ -47,7 +46,7 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] generateEBID(final Crypto3DES crypto3DES, final int epochId, final byte[] idA) throws RobertServerCryptoException {
+    public byte[] generateEBID(final CryptoCipherStructureAbstract crypto3DES, final int epochId, final byte[] idA) throws RobertServerCryptoException {
         byte[] epoch =  ByteUtils.intToBytes(epochId);
         byte[] truncatedEpoch = new byte[] { epoch[epoch.length - 3], epoch[epoch.length - 2], epoch[epoch.length - 1] };
         this.assertLength("IDa", 40, idA);
@@ -59,14 +58,14 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] decryptEBID(final Crypto3DES crypto3DES, final byte[] ebid) throws RobertServerCryptoException {
+    public byte[] decryptEBID(final CryptoCipherStructureAbstract crypto3DES, final byte[] ebid) throws RobertServerCryptoException {
 
         this.assertLength("ebid", 64, ebid);
         return crypto3DES.decrypt(ebid);
     }
 
     @Override
-    public byte[] encryptCountryCode(final CryptoAES cryptoAES, final byte[] ebid, final byte countryCode) throws RobertServerCryptoException {
+    public byte[] encryptCountryCode(final CryptoCipherStructureAbstract cryptoAES, final byte[] ebid, final byte countryCode) throws RobertServerCryptoException {
         this.assertLength("ebid", 64, ebid);
         this.assertLength("country code", 8, countryCode);
 
@@ -84,7 +83,7 @@ public class CryptoServiceImpl implements CryptoService {
     }
 
     @Override
-    public byte[] decryptCountryCode(final CryptoAES cryptoAES, final byte[] ebid, final byte encryptedCountryCode) throws RobertServerCryptoException {
+    public byte[] decryptCountryCode(final CryptoCipherStructureAbstract cryptoAES, final byte[] ebid, final byte encryptedCountryCode) throws RobertServerCryptoException {
         this.assertLength("ebid", 64, ebid);
         this.assertLength("encrypted country code", 8, encryptedCountryCode);
 

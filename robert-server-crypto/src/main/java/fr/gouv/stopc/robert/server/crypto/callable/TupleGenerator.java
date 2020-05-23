@@ -2,10 +2,12 @@ package fr.gouv.stopc.robert.server.crypto.callable;
 
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -22,8 +24,8 @@ public class TupleGenerator {
 
     private final byte[] federationKey;
 
-    private final CryptoStructureConcurrentArray<Crypto3DES> cryptoStructure3DESList;
-    private final CryptoStructureConcurrentArray<CryptoAES> cryptoStructureAESList;
+    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructure3DESList;
+    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureAESList;
 
     private ThreadPoolExecutor threadExecutor;
     private final CryptoService cryptoService;
@@ -40,12 +42,12 @@ public class TupleGenerator {
         this.threadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
         // Generate [ #numberOfThreads * tripleDES ]
-        final Crypto3DES[] availableCrypto3DES = new Crypto3DES[this.numberOfThreads];
-        final CryptoAES[] availableCryptoAES = new CryptoAES[this.numberOfThreads];
+        final CryptoCipherStructureAbstract[] availableCrypto3DES = new Crypto3DES[this.numberOfThreads];
+        final CryptoCipherStructureAbstract[] availableCryptoAES = new CryptoAESOFB[this.numberOfThreads];
 
         for (int i = 0; i < this.numberOfThreads; i++) {
-            final Crypto3DES crypto3DES = new Crypto3DES(this.serverKey);
-            final CryptoAES cryptoAES = new CryptoAES(this.federationKey);
+            final CryptoCipherStructureAbstract crypto3DES = new Crypto3DES(this.serverKey);
+            final CryptoCipherStructureAbstract cryptoAES = new CryptoAESOFB(this.federationKey);
 
             availableCrypto3DES[i] = crypto3DES;
             availableCryptoAES[i] = cryptoAES;

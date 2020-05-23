@@ -26,7 +26,7 @@ public class Registration {
 	
 	private int lastStatusRequestEpoch;
 
-	private int lastNotificationEpoch;
+	private int latestRiskEpoch;
 	
 	private List<EpochExposition> exposedEpochs;
 	

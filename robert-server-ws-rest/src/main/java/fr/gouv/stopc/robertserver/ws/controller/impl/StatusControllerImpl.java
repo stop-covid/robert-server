@@ -1,10 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -118,6 +114,18 @@ public class StatusControllerImpl implements IStatusController {
 	    @Setter
 	    byte[] clientPublicECDHKey;
 
+        /**
+         * Sort list of epochs and get last
+         * @param exposedEpochs
+         * @return
+         */
+	    private int findLastExposedEpoch(List<EpochExposition> exposedEpochs) {
+            List<EpochExposition> sortedEpochs = exposedEpochs.stream()
+                    .sorted((a, b) -> new Integer(a.getEpochId()).compareTo(b.getEpochId()))
+                    .collect(Collectors.toList());
+            return sortedEpochs.get(sortedEpochs.size() - 1).getEpochId();
+        }
+
 		@Override
 		public Optional<ResponseEntity> validate(Registration record, int epoch) throws RobertServerException {
 			if (Objects.isNull(record)) {
@@ -140,42 +148,42 @@ public class StatusControllerImpl implements IStatusController {
 			// Request is valid
 			// (now iterating through steps from section "If the ESR_REQUEST_A,i is valid, the server:", p11 of spec)
 			// Step #1: Set SRE with current epoch number
-			int latestNotifEpoch = record.getLastNotificationEpoch();
 			setLastEpochReqRegistration(record, epoch);
 
-			// Step #2: "Score" was already processed during batch, simple lookup
+			// Step #2: Risk and score were processed during batch, simple lookup
 			boolean atRisk = record.isAtRisk();
+			boolean newRiskDetected = false;
 
 			if (!record.isNotified()) {
 				// Step #3: Set UserNotified to true if at risk
+                // If was never notified and batch flagged a risk, notify
+                // and remember last exposed epoch as new starting point for subsequent risk notifications
 				if (atRisk) {
+                    newRiskDetected = true;
+                    record.setAtRisk(false);
 					record.setNotified(true);
-					record.setLastNotificationEpoch(currentEpoch);
+					int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+					record.setLatestRiskEpoch(lastExposedEpoch);
 				}
 			} else {
 				// Has already been notified he was at risk
-				// Reassess new risk since latestEpochOfESR
 
-				// Filter epoch exposition list to match latest ESR epoch
-				List<EpochExposition> exposedEpochs = record.getExposedEpochs();
-				List<EpochExposition> epochsToKeep = CollectionUtils.isEmpty(exposedEpochs) ?
-						new ArrayList<>()
-						: exposedEpochs.stream()
-						.filter(ep -> ep.getEpochId() > latestNotifEpoch)
-						.collect(Collectors.toList());
-
-				// Sum all risk scores for all the remaining epochs
-				Double totalRisk = epochsToKeep.stream()
-						.map(item -> item.getExpositionScores())
-						.map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
-						.reduce(0.0, (a,b) -> a + b);
-
-				atRisk = totalRisk > serverConfigurationService.getRiskThreshold();
+                // Batch marked a new risk since latestRiskEpoch
+                // Update latestRiskEpoch to latest exposed epoch
+                if (atRisk) {
+                    newRiskDetected = true;
+                    record.setAtRisk(false);
+                    int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+                    record.setLatestRiskEpoch(lastExposedEpoch);
+                }
 			}
 
 			// Include new EBIDs and ECCs for next M epochs
-			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
+			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(newRiskDetected).build();
 			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4, this.clientPublicECDHKey);
+
+			// Save changes to the record
+			registrationService.saveRegistration(record);
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
 		}

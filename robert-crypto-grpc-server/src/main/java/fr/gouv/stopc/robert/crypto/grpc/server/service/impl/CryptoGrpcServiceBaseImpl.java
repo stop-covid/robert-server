@@ -7,6 +7,7 @@ import java.util.Optional;
 import javax.crypto.Cipher;
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -42,7 +43,6 @@ import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
@@ -109,7 +109,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         try {
             responseObserver.onNext(EncryptCountryCodeResponse.newBuilder()
                     .setEncryptedCountryCode(ByteString.copyFrom(this.cryptoService.encryptCountryCode(
-                            new CryptoAES(this.serverConfigurationService.getFederationKey()),
+                            new CryptoAESOFB(this.serverConfigurationService.getFederationKey()),
                             request.getEbid().toByteArray(),
                             request.getCountryCode().byteAt(0))))
                     .build());
@@ -125,7 +125,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         try {
             responseObserver.onNext(DecryptCountryCodeResponse.newBuilder()
                     .setCountryCode(ByteString.copyFrom(this.cryptoService.decryptCountryCode(
-                            new CryptoAES(this.serverConfigurationService.getFederationKey()),
+                            new CryptoAESOFB(this.serverConfigurationService.getFederationKey()),
                             request.getEbid().toByteArray(),
                             request.getEncryptedCountryCode().byteAt(0))))
                     .build());

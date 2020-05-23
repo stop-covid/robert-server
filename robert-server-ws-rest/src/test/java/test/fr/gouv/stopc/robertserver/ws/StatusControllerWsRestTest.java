@@ -661,7 +661,7 @@ public class StatusControllerWsRestTest {
                 .atRisk(true)
                 .isNotified(true)
                 .lastStatusRequestEpoch(currentEpoch - 3)
-                .lastNotificationEpoch(currentEpoch - 8)
+                .latestRiskEpoch(currentEpoch - 8)
                 .exposedEpochs(epochExpositions)
                 .build();
 
@@ -734,7 +734,7 @@ public class StatusControllerWsRestTest {
                 .atRisk(true)
                 .isNotified(true)
                 .lastStatusRequestEpoch(currentEpoch - 3)
-                .lastNotificationEpoch(currentEpoch - 8)
+                .latestRiskEpoch(currentEpoch - 8)
                 .exposedEpochs(epochExpositions)
                 .build();
 

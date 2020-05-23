@@ -71,14 +71,22 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
         }
 
         Registration registrationRecord = registration.get();
-        List<EpochExposition> epochsToKeep = step9AddContactInListOfExposedEpochs(contact, epochId, registrationRecord);
 
-        Double totalRisk = epochsToKeep.stream()
+        List<EpochExposition> epochsToKeep = step9AddContactInListOfExposedEpochs(contact, epochId, registrationRecord);
+        int latestRiskEpoch = registrationRecord.getLatestRiskEpoch();
+
+        // Only consider epochs that are after the last notification for scoring
+        List<EpochExposition> scoresSinceLastNotif = CollectionUtils.isEmpty(epochsToKeep) ?
+                new ArrayList<>()
+                : epochsToKeep.stream()
+                .filter(ep -> ep.getEpochId() > latestRiskEpoch)
+                .collect(Collectors.toList());
+
+        Double totalRisk = scoresSinceLastNotif.stream()
                 .map(EpochExposition::getExpositionScores)
                 .map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
                 .reduce(0.0, (a,b) -> a + b);
 
-        // User has been exposed, set flag to true
         registrationRecord.setAtRisk(totalRisk > this.serverConfigurationService.getRiskThreshold());
 
         this.registrationService.saveRegistration(registrationRecord);
@@ -203,10 +211,8 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
         List<EpochExposition> exposedEpochs = registrationRecord.getExposedEpochs();
         final int epochIdFromEBID = ByteUtils.convertEpoch24bitsToInt(epochId);
 
-        List<EpochExposition> epochsToKeep = getExposedEpochsWithoutEpochsOlderThanContagiousPeriod(exposedEpochs, epochIdFromEBID);
-
         // Add EBID's epoch to exposed epochs list
-        Optional<EpochExposition> epochToAddTo = epochsToKeep.stream()
+        Optional<EpochExposition> epochToAddTo = exposedEpochs.stream()
                 .filter(item -> item.getEpochId() == epochIdFromEBID)
                 .findFirst();
 
@@ -215,23 +221,33 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
             List<Double> epochScores = epochToAddTo.get().getExpositionScores();
             epochScores.add(scoredRisk);
         } else {
-            epochsToKeep.add(EpochExposition.builder()
+            exposedEpochs.add(EpochExposition.builder()
                     .expositionScores(Arrays.asList(scoredRisk))
                     .epochId(epochIdFromEBID)
                     .build());
         }
+
+        List<EpochExposition> epochsToKeep = getExposedEpochsWithoutEpochsOlderThanContagiousPeriod(exposedEpochs);
         registrationRecord.setExposedEpochs(epochsToKeep);
         return epochsToKeep;
     }
 
-    private List<EpochExposition> getExposedEpochsWithoutEpochsOlderThanContagiousPeriod(List<EpochExposition> exposedEpochs, int epochIdFromEBID) {
+    /**
+     * Keep epochs within the contagious period
+     * @param exposedEpochs
+     * @param epochIdFromEBID
+     * @return
+     */
+    private List<EpochExposition> getExposedEpochsWithoutEpochsOlderThanContagiousPeriod(List<EpochExposition> exposedEpochs) {
+        int currentEpochId = TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart());
+
         // Purge exposed epochs list from epochs older than contagious period (C_T)
         return CollectionUtils.isEmpty(exposedEpochs) ?
                 new ArrayList<>()
                 : exposedEpochs.stream().filter(epoch -> {
-            int val = (this.serverConfigurationService.getContagiousPeriod() * 24 * 3600)
+            int nbOfEpochsToKeep = (this.serverConfigurationService.getContagiousPeriod() * 24 * 3600)
                     / this.serverConfigurationService.getEpochDurationSecs();
-            return (epochIdFromEBID - epoch.getEpochId()) < val;
+            return (currentEpochId - epoch.getEpochId()) <= nbOfEpochsToKeep;
         }).collect(Collectors.toList());
     }
 
