@@ -35,7 +35,9 @@ public class CaptchaServiceImpl implements CaptchaService {
 	private PropertyLoader propertyLoader;
 
 	@Inject
-	public CaptchaServiceImpl(RestTemplate restTemplate, IServerConfigurationService serverConfigurationService, PropertyLoader propertyLoader) {
+	public CaptchaServiceImpl(RestTemplate restTemplate,
+							  IServerConfigurationService serverConfigurationService,
+							  PropertyLoader propertyLoader) {
 
 		this.restTemplate = restTemplate;
 		this.serverConfigurationService = serverConfigurationService;
@@ -45,27 +47,31 @@ public class CaptchaServiceImpl implements CaptchaService {
 	@Override
 	public boolean verifyCaptcha(final RegisterVo registerVo) {
 
-		// TODO: Remove this forced returned value until reCATPCHA service is really
-		// used but method verifyCaptcha
-		// must be called for test
-		return true || Optional.ofNullable(registerVo).map(item -> {
+		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 
-			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.propertyLoader.getCaptchaSecret()).toString(), initHttpHeaders());
+			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(captcha,
+																		  this.propertyLoader.getCaptchaSecret()).toString(),
+															initHttpHeaders());
 			Date sendingDate = new Date();
 
 			ResponseEntity<CaptchaDto> response = null;
 			try {
-				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request, CaptchaDto.class);
-			} catch(RestClientException e) {
+				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request,
+														   CaptchaDto.class);
+			} catch (RestClientException e) {
 				log.error(e.getMessage());
 				return false;
 			}
 
-			return Optional.ofNullable(response).map(ResponseEntity::getBody).filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp())).map(captchaDto -> {
+			return Optional.ofNullable(response)
+						   .map(ResponseEntity::getBody)
+						   .filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp()))
+						   .map(captchaDto -> {
 
-				log.info("Result of CAPTCHA verification: {}", captchaDto);
-				return isSuccess(captchaDto, sendingDate);
-			}).orElse(false);
+							   log.info("Result of CAPTCHA verification: {}", captchaDto);
+							   return isSuccess(captchaDto, sendingDate);
+						   })
+						   .orElse(false);
 
 		}).orElse(false);
 	}
@@ -80,8 +86,11 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 	private boolean isSuccess(CaptchaDto captchaDto, Date sendingDate) {
 
-		return this.propertyLoader.getCaptchaHostname().equals(captchaDto.getHostname()) && Math
-				.abs(sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance() * 1000L;
+		return this.propertyLoader.getCaptchaHostname().equals(captchaDto.getHostname())
+				&& Math.abs(sendingDate.getTime()
+						- captchaDto.getChallengeTimestamp()
+									.getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()
+											* 1000L;
 	}
 
 	@NoArgsConstructor
