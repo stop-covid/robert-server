@@ -43,4 +43,12 @@ public class PropertyLoader {
 	@Value("${captcha.hostname}")
 	private String captchaHostname;
 
+    @Value("${submission.code.server.host}")
+    private String serverCodeHost;
+
+    @Value("${submission.code.server.port}")
+    private String serverCodePort;
+
+    @Value("${submission.code.server.verify.path}")
+    private String serverCodeVerificationPath;
 }
