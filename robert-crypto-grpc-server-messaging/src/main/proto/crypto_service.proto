@@ -23,29 +23,102 @@ package robert.server.crypto;
 
 // The greeting service definition.
 service CryptoGrpcServiceImpl {
-  rpc generateEBID(GenerateEBIDRequest) returns (EBIDResponse){}
-  rpc decryptEBID(DecryptEBIDRequest) returns (EBIDResponse){}
-  rpc encryptCountryCode(EncryptCountryCodeRequest) returns (EncryptCountryCodeResponse){}
-  rpc decryptCountryCode(DecryptCountryCodeRequest) returns (DecryptCountryCodeResponse){}
-  rpc generateMacHello(MacHelloGenerationRequest) returns (MacHelloGenerationResponse){}
-  rpc validateMacHello(MacHelloValidationRequest) returns (MacValidationResponse){}
-  rpc validateMacEsr(MacEsrValidationRequest) returns (MacValidationResponse){}
-  rpc validateMacForType(MacValidationForTypeRequest) returns (MacValidationResponse){}
-  rpc generateIdentity(GenerateIdentityRequest) returns (GenerateIdentityResponse){}
-  rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest) returns (EncryptedEphemeralTupleBundleResponse){}
+	rpc createRegistration(CreateRegistrationRequest) returns (CreateRegistrationResponse){}
+	rpc getIdFromAuth(GetIdFromAuthRequest) returns (GetIdFromAuthResponse){}
+	rpc getIdFromStatus(GetIdFromStatusRequest) returns (GetIdFromStatusResponse){}
+	rpc getInfoFromHelloMessage(GetInfoFromHelloMessageRequest) returns (GetInfoFromHelloMessageResponse){}
+	rpc deleteId(DeleteIdRequest) returns (DeleteIdResponse){}
+
+	//---- OLD
+	rpc generateEBID(GenerateEBIDRequest) returns (EBIDResponse){}
+	rpc decryptEBID(DecryptEBIDRequest) returns (EBIDResponse){}
+	rpc encryptCountryCode(EncryptCountryCodeRequest) returns (EncryptCountryCodeResponse){}
+	rpc decryptCountryCode(DecryptCountryCodeRequest) returns (DecryptCountryCodeResponse){}
+	rpc generateMacHello(MacHelloGenerationRequest) returns (MacHelloGenerationResponse){}
+	rpc validateMacHello(MacHelloValidationRequest) returns (MacValidationResponse){}
+	rpc validateMacEsr(MacEsrValidationRequest) returns (MacValidationResponse){}
+	rpc validateMacForType(MacValidationForTypeRequest) returns (MacValidationResponse){}
+	rpc generateIdentity(GenerateIdentityRequest) returns (GenerateIdentityResponse){}
+	rpc generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest) returns (EncryptedEphemeralTupleBundleResponse){}
 }
 
+message CreateRegistrationRequest {
+	bytes clientPublicKey = 1;
+	int32 numberOfEpochBundles = 2; // the number of epoch for which ephemeral bundles must be generated
+}
+
+message CreateRegistrationResponse {
+	bytes idA = 1;
+	bytes tuples = 2;
+}
+
+message EpochBundle {
+	int32 epochId = 1;
+	bytes ebid = 2;
+	bytes ecc = 3;
+}
+
+message GetIdFromAuthRequest {
+	bytes ebid = 1;
+	int32 epochId = 2;
+	int64 time = 3;
+	bytes mac = 4;
+	int32 requestType = 5;
+}
+
+message GetIdFromAuthResponse {
+	bytes idA = 1;
+	int32 epochId = 2;
+}
+
+message GetIdFromStatusRequest {
+	bytes ebid = 1;
+	int32 epochId = 2;
+	int64 time = 3;
+	bytes mac = 4;
+}
+
+message GetIdFromStatusResponse {
+	bytes idA = 1;
+	int32 epochId = 2;
+	bytes tuples = 3;
+}
+
+message GetInfoFromHelloMessageRequest {
+	bytes hello = 1;
+	int32 time = 2; // time hello message was received on device (32 bits)
+	bytes serverCountryCode = 3; // the country code configured on the server, verified against decrypted ecc from hello
+}
+
+message GetInfoFromHelloMessageResponse {
+	bool countryCodeMatches = 1; // true if the country code in hello matches the one provided in request
+	bytes idA = 2;
+	int32 epochId = 3;
+	int32 time = 4; // time contained in hello message (16 bits)
+}
+
+message DeleteIdRequest {
+	bytes ebid = 1;
+	int32 epochId = 2;
+	int64 time = 3;
+	bytes mac = 4;
+}
+
+message DeleteIdResponse {
+	bytes idA = 2;
+}
+
+
+//---- OLD MESSAGES
 
 message GenerateEBIDRequest {
 	// byte[] IDA of Registration
 	// int currentEpochID
 	bytes idA = 1;
 	int32 epochId = 2;
-	
 }
 
 message EBIDResponse {
-
 	bytes ebid = 1;
 }
 

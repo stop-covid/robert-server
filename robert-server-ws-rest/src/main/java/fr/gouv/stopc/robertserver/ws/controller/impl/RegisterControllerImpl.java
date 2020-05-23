@@ -27,7 +27,7 @@ import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.IApplicationConfigService;
 import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IRegisterController;
-import fr.gouv.stopc.robertserver.ws.dto.AlgoConfigDto;
+import fr.gouv.stopc.robertserver.ws.dto.ClientConfigDto;
 import fr.gouv.stopc.robertserver.ws.dto.RegisterResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
@@ -122,7 +122,7 @@ public class RegisterControllerImpl implements IRegisterController {
             registerResponseDto.setFilteringAlgoConfig(Collections.emptyList());
         } else {
             registerResponseDto
-            .setFilteringAlgoConfig(serverConf.stream().map(item -> AlgoConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
+            .setFilteringAlgoConfig(serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
         }
 
         final byte countrycode = this.serverConfigurationService.getServerCountryCode();
@@ -151,9 +151,6 @@ public class RegisterControllerImpl implements IRegisterController {
             log.warn("Could not generate encrypted (EBID, ECC) tuples");
             throw new RobertServerException(MessageConstants.ERROR_OCCURED);
         }
-
-        registerResponseDto.setServerPublicECDHKeyForTuples(Base64.encode(
-                encryptedTuple.get().getServerPublicKeyForTuples().toByteArray()));
 
         registerResponseDto.setTuples(Base64.encode(
                 encryptedTuple.get().getEncryptedTuples().toByteArray()));

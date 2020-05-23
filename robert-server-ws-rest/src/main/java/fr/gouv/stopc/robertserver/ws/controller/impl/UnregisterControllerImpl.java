@@ -19,6 +19,7 @@ import fr.gouv.stopc.robertserver.ws.controller.IUnregisterController;
 import fr.gouv.stopc.robertserver.ws.dto.UnregisterResponseDto;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
 import fr.gouv.stopc.robertserver.ws.vo.UnregisterRequestVo;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 
 @Service
@@ -65,6 +66,11 @@ public class UnregisterControllerImpl implements IUnregisterController {
     }
 
     private class UnregisterAuthenticatedRequestHandler implements AuthRequestValidationService.IAuthenticatedRequestHandler {
+
+        @Override
+        public void setEpochBundles(byte[] epochBundles) {
+            throw new NotImplementedException();
+        }
 
         @Override
         public Optional<ResponseEntity> validate(Registration record, int epoch) {

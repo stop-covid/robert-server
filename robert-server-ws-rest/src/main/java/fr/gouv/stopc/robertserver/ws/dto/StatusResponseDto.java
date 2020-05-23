@@ -19,20 +19,13 @@ public class StatusResponseDto {
     @NotNull
     private boolean atRisk;
 
-    private long lastExposureTimeframe;
-    private String message;
-
     @NotNull
     private String tuples;
 
-    @NotNull
-    @Singular
-    @Size(min = 1)
-    private List<EpochKeyBundleDto> idsForEpochs;
+    @Singular("config")
+    private List<ClientConfigDto> config;
 
-    @Singular("filteringAlgoConfig")
-    private List<AlgoConfigDto> filteringAlgoConfig;
+    private long lastExposureTimeframe;
 
-    @NotNull
-    private String serverPublicECDHKeyForTuples;
+    private String message;
 }

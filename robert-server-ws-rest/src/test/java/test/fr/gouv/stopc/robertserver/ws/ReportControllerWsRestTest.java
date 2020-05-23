@@ -44,8 +44,8 @@ import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.ContactDtoService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.utils.UriConstants;
-import fr.gouv.stopc.robertserver.ws.vo.DistinctiveHelloInfoWithinEpochForSameEBIDVo;
-import fr.gouv.stopc.robertserver.ws.vo.GroupedHellosReportVo;
+import fr.gouv.stopc.robertserver.ws.vo.HelloMessageDetailVo;
+import fr.gouv.stopc.robertserver.ws.vo.ContactVo;
 import fr.gouv.stopc.robertserver.ws.vo.ReportBatchRequestVo;
 
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
@@ -76,7 +76,7 @@ public class ReportControllerWsRestTest {
 
 	private final String contactsAsBinary = "contactsAsBinary";
 
-	private List<GroupedHellosReportVo> contacts;
+	private List<ContactVo> contacts;
 
 	private ReportBatchRequestVo reportBatchRequestVo;
 
@@ -90,15 +90,14 @@ public class ReportControllerWsRestTest {
 
 		this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.REPORT).build().encode().toUri();
 
-		DistinctiveHelloInfoWithinEpochForSameEBIDVo info = DistinctiveHelloInfoWithinEpochForSameEBIDVo.builder() //
+		HelloMessageDetailVo info = HelloMessageDetailVo.builder() //
 			.timeCollectedOnDevice(1L) //
 			.timeFromHelloMessage(1) //
 			.mac("1") //
-			.rssiRaw(-20) //
 			.rssiCalibrated(20) //
 			.build();
 
-		GroupedHellosReportVo contact = GroupedHellosReportVo.builder().ecc("FR").ebid("ABCDEFGH").ids(Arrays.asList(info)).build();
+		ContactVo contact = ContactVo.builder().ecc("FR").ebid("ABCDEFGH").ids(Arrays.asList(info)).build();
 
 		this.contacts = Arrays.asList(contact);
 
@@ -174,12 +173,12 @@ public class ReportControllerWsRestTest {
 	@Test
 	public void testReportLargePayload() {
 		try {
-			DistinctiveHelloInfoWithinEpochForSameEBIDVo info = DistinctiveHelloInfoWithinEpochForSameEBIDVo.builder() //
+			HelloMessageDetailVo info = HelloMessageDetailVo.builder() //
 				.timeCollectedOnDevice(3797833665L) //
 				.timeFromHelloMessage(22465) //
-				.mac("MEjHn3mWfhGNhbAooSiVBbVoNayotrLhMPDI8l3tum0=").rssiRaw(0).rssiCalibrated(0).build();
+				.mac("MEjHn3mWfhGNhbAooSiVBbVoNayotrLhMPDI8l3tum0=").rssiCalibrated(0).build();
 
-			GroupedHellosReportVo contact = GroupedHellosReportVo.builder().ecc("2g==").ebid("GTr1XTqVS5g=").ids(Arrays.asList(info)).build();
+			ContactVo contact = ContactVo.builder().ecc("2g==").ebid("GTr1XTqVS5g=").ids(Arrays.asList(info)).build();
 
 			this.contacts = Arrays.asList(contact);
 

@@ -3,26 +3,14 @@ package fr.gouv.stopc.robert.crypto.grpc.server.client.service.impl;
 import java.util.Objects;
 import java.util.Optional;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import org.springframework.stereotype.Service;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplBlockingStub;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EBIDResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
@@ -61,9 +49,84 @@ public class CryptoServerGrpcClient implements ICryptoServerGrpcClient {
     }
 
     @Override
+    public Optional<GetIdFromStatusResponse> getIdFromStatus(GetIdFromStatusRequest request) {
+        try {
+            GetIdFromStatusResponse response = this.blockingStub.getIdFromStatus(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<GetIdFromAuthResponse> getIdFromAuth(GetIdFromAuthRequest request) {
+        try {
+            GetIdFromAuthResponse response = this.blockingStub.getIdFromAuth(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<CreateRegistrationResponse> createRegistration(CreateRegistrationRequest request) {
+        try {
+            CreateRegistrationResponse response = this.blockingStub.createRegistration(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<GetInfoFromHelloMessageResponse> getInfoFromHelloMessage(GetInfoFromHelloMessageRequest request) {
+        try {
+            GetInfoFromHelloMessageResponse response = this.blockingStub.getInfoFromHelloMessage(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<DeleteIdResponse> deleteId(DeleteIdRequest request) {
+        try {
+            DeleteIdResponse response = this.blockingStub.deleteId(request);
+            if (Objects.nonNull(this.testHelper)) {
+                this.testHelper.onMessage(response);
+            }
+
+            return Optional.ofNullable(response);
+        } catch (StatusRuntimeException ex) {
+            log.error(ERROR_MESSAGE, ex.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public byte[] decryptEBID(DecryptEBIDRequest request) {
 
-            EBIDResponse response = this.blockingStub.decryptEBID(request);
+        EBIDResponse response = this.blockingStub.decryptEBID(request);
         try {
 
             if (this.testHelper != null) {

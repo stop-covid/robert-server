@@ -2,16 +2,7 @@ package fr.gouv.stopc.robert.crypto.grpc.server.client.service;
 
 import java.util.Optional;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptCountryCodeRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DecryptEBIDRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacHelloValidationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacValidationForTypeRequest;
-
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 
 
 public interface ICryptoServerGrpcClient {
@@ -32,4 +23,13 @@ public interface ICryptoServerGrpcClient {
 
 	Optional<EncryptedEphemeralTupleBundleResponse> generateEncryptedEphemeralTuple(EncryptedEphemeralTupleBundleRequest request);
 
+	Optional<GetIdFromStatusResponse> getIdFromStatus(GetIdFromStatusRequest request);
+
+	Optional<GetIdFromAuthResponse> getIdFromAuth(GetIdFromAuthRequest request);
+
+	Optional<CreateRegistrationResponse> createRegistration(CreateRegistrationRequest request);
+
+	Optional<GetInfoFromHelloMessageResponse> getInfoFromHelloMessage(GetInfoFromHelloMessageRequest request);
+
+	Optional<DeleteIdResponse> deleteId(DeleteIdRequest request);
 }

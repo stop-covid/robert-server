@@ -20,6 +20,7 @@ import fr.gouv.stopc.robertserver.ws.dto.DeleteHistoryResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
 import fr.gouv.stopc.robertserver.ws.vo.DeleteHistoryRequestVo;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 @Service
 public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
@@ -77,6 +78,11 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 
 	private class DeleteHistoryAuthenticatedRequestHandler
 			implements AuthRequestValidationService.IAuthenticatedRequestHandler {
+
+		@Override
+		public void setEpochBundles(byte[] epochBundles) {
+			throw new NotImplementedException();
+		}
 
 		@Override
 		public Optional<ResponseEntity> validate(Registration record, int epoch) {

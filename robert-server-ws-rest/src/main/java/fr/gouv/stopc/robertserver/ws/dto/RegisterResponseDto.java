@@ -28,8 +28,8 @@ public class RegisterResponseDto
 
 	private String message;
 
-	@Singular("filteringAlgoConfig")
-	private List<AlgoConfigDto> filteringAlgoConfig;
+	@Singular("config")
+	private List<ClientConfigDto> filteringAlgoConfig;
 
 	@Min(3797858242L)
 	private long timeStart;

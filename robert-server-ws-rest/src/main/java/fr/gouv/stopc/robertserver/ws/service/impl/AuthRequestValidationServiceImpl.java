@@ -7,6 +7,8 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusResponse;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -34,7 +36,6 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
 
     private final ICryptoServerGrpcClient cryptoServerClient;
 
-
     @Inject
     public AuthRequestValidationServiceImpl(
                                             final IServerConfigurationService serverConfigurationService,
@@ -43,6 +44,21 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
         this.serverConfigurationService = serverConfigurationService;
         this.registrationService = registrationService;
         this.cryptoServerClient = cryptoServerClient;
+    }
+
+    private Optional<ResponseEntity> createErrorIdNotFound() {
+        log.info("Discarding authenticated request because id unknown (fake or was deleted)");
+        return Optional.of(ResponseEntity.notFound().build());
+    }
+
+    private Optional<ResponseEntity> createErrorValidationFailed() {
+        log.info("Discarding authenticated request because validation failed");
+        return Optional.of(ResponseEntity.badRequest().build());
+    }
+
+    private Optional<ResponseEntity> createErrorTechnicalIssue() {
+        log.info("Technical issue managing authenticated request");
+        return Optional.of(ResponseEntity.badRequest().build());
     }
 
     @Override
@@ -80,49 +96,74 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
         }
 
         try {
-            // Step #3: retrieve id_A and epoch from EBID
-            DecryptEBIDRequest request = DecryptEBIDRequest.newBuilder().setEbid(ByteString.copyFrom(ebid)).build();
-            byte[] decrytedEbid = this.cryptoServerClient.decryptEBID(request);
 
-            byte[] epochId = new byte[4];
-            byte[] idA = new byte[5];
-            System.arraycopy(decrytedEbid, 0, epochId, 1, epochId.length - 1);
-            System.arraycopy(decrytedEbid, epochId.length - 1, idA, 0, idA.length);
-            ByteBuffer wrapped = ByteBuffer.wrap(epochId);
-            int epoch = wrapped.getInt();
-            
-            // Step #4: Get record from database
-            Optional<Registration> record = this.registrationService.findById(idA);
+            GetIdFromStatusRequest request = GetIdFromStatusRequest.newBuilder()
+                    .setEbid(ByteString.copyFrom(ebid))
+                    .setEpochId(authRequestVo.getEpochId())
+                    .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(time)))
+                    .setMac(ByteString.copyFrom(mac))
+                    .build();
 
-            if (record.isPresent()) {
-                byte[] ka = record.get().getSharedKey();
+            Optional<GetIdFromStatusResponse> response = this.cryptoServerClient.getIdFromStatus(request);
 
-                // Step #5: Verify MAC
-                byte[] toCheck = new byte[12];
-                System.arraycopy(ebid, 0, toCheck, 0, 8);
-                System.arraycopy(time, 0, toCheck, 8, 4);
+            if (response.isPresent()) {
+                Optional<Registration> record = this.registrationService.findById(response.get().getIdA().toByteArray());
+                if (record.isPresent()) {
+                    otherValidator.setEpochBundles(response.get().getTuples().toByteArray());
+                    Optional<ResponseEntity> responseEntity = otherValidator.validate(record.get(), response.get().getEpochId());
 
-                boolean isMacValid = macValidator.validate(ka, toCheck, mac);
-
-                if (!isMacValid) {
-                    log.info("Discarding authenticated request because MAC is invalid");
-                    return Optional.of(ResponseEntity.badRequest().build());
+                    if (responseEntity.isPresent()) {
+                        return responseEntity;
+                    }
+                } else {
+                    return createErrorIdNotFound();
                 }
-
-                Optional<ResponseEntity> response = otherValidator.validate(record.get(), epoch);
-
-                if (response.isPresent()) {
-                    return response;
-                }
-
-                System.arraycopy(record.get().getSharedKey(), 0, ka, 0, 32);
             } else {
-                log.info("Discarding authenticated request because id unknown (fake or was deleted)");
-                return Optional.of(ResponseEntity.notFound().build());
+                return createErrorValidationFailed();
             }
+
+//            // Step #3: retrieve id_A and epoch from EBID
+//            DecryptEBIDRequest request = DecryptEBIDRequest.newBuilder().setEbid(ByteString.copyFrom(ebid)).build();
+//            byte[] decrytedEbid = this.cryptoServerClient.decryptEBID(request);
+//
+//            byte[] epochId = new byte[4];
+//            byte[] idA = new byte[5];
+//            System.arraycopy(decrytedEbid, 0, epochId, 1, epochId.length - 1);
+//            System.arraycopy(decrytedEbid, epochId.length - 1, idA, 0, idA.length);
+//            ByteBuffer wrapped = ByteBuffer.wrap(epochId);
+//            int epoch = wrapped.getInt();
+//
+//            // Step #4: Get record from database
+//            Optional<Registration> record = this.registrationService.findById(idA);
+//
+//            if (record.isPresent()) {
+//                byte[] ka = record.get().getSharedKey();
+//
+//                // Step #5: Verify MAC
+//                byte[] toCheck = new byte[12];
+//                System.arraycopy(ebid, 0, toCheck, 0, 8);
+//                System.arraycopy(time, 0, toCheck, 8, 4);
+//
+//                boolean isMacValid = macValidator.validate(ka, toCheck, mac);
+//
+//                if (!isMacValid) {
+//                    log.info("Discarding authenticated request because MAC is invalid");
+//                    return Optional.of(ResponseEntity.badRequest().build());
+//                }
+//
+//                Optional<ResponseEntity> response = otherValidator.validate(record.get(), epoch);
+//
+//                if (response.isPresent()) {
+//                    return response;
+//                }
+//
+//                System.arraycopy(record.get().getSharedKey(), 0, ka, 0, 32);
+//            } else {
+//                log.info("Discarding authenticated request because id unknown (fake or was deleted)");
+//                return Optional.of(ResponseEntity.notFound().build());
+//            }
         } catch (Exception e1) {
-            log.info("Technical issue managing authenticated request");
-            return Optional.of(ResponseEntity.badRequest().build());
+            return createErrorTechnicalIssue();
         }
 
         return Optional.empty();

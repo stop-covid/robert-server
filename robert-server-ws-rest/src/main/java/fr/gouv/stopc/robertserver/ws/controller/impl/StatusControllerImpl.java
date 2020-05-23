@@ -5,6 +5,9 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
+import fr.gouv.stopc.robertserver.ws.dto.EpochKeyBundleDto;
+import fr.gouv.stopc.robertserver.ws.dto.EpochKeyDto;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,9 +16,6 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.MacEsrValidationRequest;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robertserver.database.model.ApplicationConfigurationModel;
@@ -24,7 +24,7 @@ import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.IApplicationConfigService;
 import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IStatusController;
-import fr.gouv.stopc.robertserver.ws.dto.AlgoConfigDto;
+import fr.gouv.stopc.robertserver.ws.dto.ClientConfigDto;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
@@ -66,7 +66,6 @@ public class StatusControllerImpl implements IStatusController {
 	public ResponseEntity<StatusResponseDto> getStatus(StatusVo statusVo) {
 
 	    AuthenticatedRequestHandler authRequest =  new AuthenticatedRequestHandler();
-	    authRequest.setClientPublicECDHKey(Base64.decode(statusVo.getClientPublicECDHKey()));
 
 		Optional<ResponseEntity> entity = authRequestValidationService.validateRequestForAuth(
 				statusVo,
@@ -112,7 +111,7 @@ public class StatusControllerImpl implements IStatusController {
 	private class AuthenticatedRequestHandler implements AuthRequestValidationService.IAuthenticatedRequestHandler {
 
 	    @Setter
-	    byte[] clientPublicECDHKey;
+	    byte[] epochBundles;
 
         /**
          * Sort list of epochs and get last
@@ -120,6 +119,10 @@ public class StatusControllerImpl implements IStatusController {
          * @return
          */
 	    private int findLastExposedEpoch(List<EpochExposition> exposedEpochs) {
+	    	if (CollectionUtils.isEmpty(exposedEpochs)) {
+	    		return 0;
+			}
+
             List<EpochExposition> sortedEpochs = exposedEpochs.stream()
                     .sorted((a, b) -> new Integer(a.getEpochId()).compareTo(b.getEpochId()))
                     .collect(Collectors.toList());
@@ -148,7 +151,7 @@ public class StatusControllerImpl implements IStatusController {
 			// Request is valid
 			// (now iterating through steps from section "If the ESR_REQUEST_A,i is valid, the server:", p11 of spec)
 			// Step #1: Set SRE with current epoch number
-			setLastEpochReqRegistration(record, epoch);
+			record.setLastStatusRequestEpoch(epoch);
 
 			// Step #2: Risk and score were processed during batch, simple lookup
 			boolean atRisk = record.isAtRisk();
@@ -180,7 +183,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			// Include new EBIDs and ECCs for next M epochs
 			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(newRiskDetected).build();
-			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4, this.clientPublicECDHKey);
+			statusResponse.setTuples(Base64.encode(epochBundles));
 
 			// Save changes to the record
 			registrationService.saveRegistration(record);
@@ -189,52 +192,42 @@ public class StatusControllerImpl implements IStatusController {
 		}
 	}
 
-	private void includeEphemeralTuplesForNextMEpochs(final StatusResponseDto statusResponse,
-													  final Registration user,
-													  final int numberOfDays,
-													  byte[] clientPublicECDHKey) throws RobertServerException {
-
-		if (statusResponse != null && user != null) {
-			List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
-			if (CollectionUtils.isEmpty(serverConf)) {
-				statusResponse.setFilteringAlgoConfig(Collections.emptyList());
-			} else {
-				statusResponse.setFilteringAlgoConfig(
-						serverConf.stream().map(item -> AlgoConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
-			}
-
-			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
-
-			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-			final int numberOfEpochs = 4 * 24 * numberOfDays;
-
-			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
-
-			EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
-					.setCountryCode(ByteString.copyFrom(new byte[] { countryCode }))
-					.setFromEpoch(currentEpochId)
-					.setIdA(ByteString.copyFrom(user.getPermanentIdentifier()))
-					.setNumberOfEpochsToGenerate(numberOfEpochs)
-					.setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
-					.build();
-
-			Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
-
-			if(!encryptedTuples.isPresent()) {
-				log.error("Could not generate encrypted (EBID, ECC) tuples");
-				throw new RobertServerException(MessageConstants.ERROR_OCCURED);
-			}
-
-			statusResponse.setTuples(Base64.encode(encryptedTuples.get().getEncryptedTuples().toByteArray()));
-
-			statusResponse.setServerPublicECDHKeyForTuples(Base64.encode(
-			        encryptedTuples.get().getServerPublicKeyForTuples().toByteArray()));
-
-		}
-	}
-
-	private void setLastEpochReqRegistration(Registration user, int epoch) {
-		user.setLastStatusRequestEpoch(epoch);
-		registrationService.saveRegistration(user);
-	}
+//	private void includeEphemeralTuplesForNextMEpochs(final StatusResponseDto statusResponse,
+//													  final Registration user,
+//													  final int numberOfDays) throws RobertServerException {
+//
+//		if (statusResponse != null && user != null) {
+//			List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
+//			if (CollectionUtils.isEmpty(serverConf)) {
+//				statusResponse.setConfig(Collections.emptyList());
+//			} else {
+//				statusResponse.setConfig(
+//						serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
+//			}
+//
+//			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
+//
+//			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
+//			final int numberOfEpochs = 4 * 24 * numberOfDays;
+//
+//			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
+//
+//
+//			EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
+//					.setCountryCode(ByteString.copyFrom(new byte[] { countryCode }))
+//					.setFromEpoch(currentEpochId)
+//					.setIdA(ByteString.copyFrom(user.getPermanentIdentifier()))
+//					.setNumberOfEpochsToGenerate(numberOfEpochs)
+//					.build();
+//
+//			Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
+//
+//			if(!encryptedTuples.isPresent()) {
+//				log.error("Could not generate encrypted (EBID, ECC) tuples");
+//				throw new RobertServerException(MessageConstants.ERROR_OCCURED);
+//			}
+//
+//			statusResponse.setTuples(Base64.encode(encryptedTuples.get().getEncryptedTuples().toByteArray()));
+//		}
+//	}
 }

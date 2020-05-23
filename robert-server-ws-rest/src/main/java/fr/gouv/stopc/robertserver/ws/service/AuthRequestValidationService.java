@@ -20,6 +20,8 @@ public interface AuthRequestValidationService {
      * Perform further business validation of request and request handling
      */
     interface IAuthenticatedRequestHandler {
+        void setEpochBundles(byte[] epochBundles);
+
         Optional<ResponseEntity> validate(Registration record, int epoch) throws RobertServerException;
     }
 

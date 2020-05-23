@@ -8,16 +8,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 public class StatusVo extends AuthRequestVo {
-
-    @Getter
-    @Setter
-    @NotNull
-    @ToString.Exclude
-    private String clientPublicECDHKey;
-
     @Builder
-    public StatusVo(String ebid, String time, String mac, String clientPublicECDHKey) {
-        super(ebid, time, mac);
-        this.clientPublicECDHKey = clientPublicECDHKey;
+    public StatusVo(String ebid, Integer epochId, String time, String mac) {
+        super(ebid, epochId, time, mac);
     }
 }
