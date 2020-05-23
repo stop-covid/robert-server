@@ -50,7 +50,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 		// This part of the code should be removed before any public use. For security reason.
 		// TODO: remove this as far as it is no more needed for test.
-		if (this.isMagic(registerVo)) return true;
+		if (this.hasMagicNumber(registerVo)) return true;
 
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 
@@ -95,12 +95,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 	 * This part of the code should be removed before any public use. For security reason.
 	 * TODO: Remove this as far as it is no more needed for tests
 	 */
-	private boolean isMagic(RegisterVo registerVo) {
+	private boolean hasMagicNumber(RegisterVo registerVo) {
 
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(
-				anObject -> {
-					if(this.propertyLoader != null && !StringUtils.isEmpty(this.propertyLoader.getMagicNumber())) {
-						return this.propertyLoader.getMagicNumber().equals(anObject);
+				captcha -> {
+					if(!StringUtils.isEmpty(this.propertyLoader.getMagicNumber())) {
+						return this.propertyLoader.getMagicNumber().equals(captcha);
 					} else{
 						return false;
 					}
