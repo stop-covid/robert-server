@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -46,6 +47,10 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 	@Override
 	public boolean verifyCaptcha(final RegisterVo registerVo) {
+
+		// This part of the code should be removed before any public use. For security reason.
+		// TODO: remove this as far as it is no more needed for test.
+		if (this.hasMagicNumber(registerVo)) return true;
 
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 
@@ -84,6 +89,25 @@ public class CaptchaServiceImpl implements CaptchaService {
 		return headers;
 	}
 
+	/**
+	 *
+	 * Method checks if captcha in RegisterVo should be ignore.
+	 * This part of the code should be removed before any public use. For security reason.
+	 * TODO: Remove this as far as it is no more needed for tests
+	 */
+	private boolean hasMagicNumber(RegisterVo registerVo) {
+
+		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(
+				captcha -> {
+					if(!StringUtils.isEmpty(this.propertyLoader.getMagicNumber())) {
+						return this.propertyLoader.getMagicNumber().equals(captcha);
+					} else{
+						return false;
+					}
+				}
+		).orElse(false);
+	}
+
 	private boolean isSuccess(CaptchaDto captchaDto, Date sendingDate) {
 
 		return this.propertyLoader.getCaptchaHostname().equals(captchaDto.getHostname())
@@ -92,6 +116,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 									.getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()
 											* 1000L;
 	}
+
 
 	@NoArgsConstructor
 	@AllArgsConstructor

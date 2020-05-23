@@ -38,6 +38,13 @@ public class CaptchaServiceImplTest {
 	@Value("${captcha.hostname}")
 	private String captchaHostname;
 
+	/**
+	 *
+	 * TODO: Remove this as far as it is no more needed for tests
+	 */
+	@Value("${captcha.magicnumber}")
+	private String magicNumber;
+
 	@InjectMocks
 	private CaptchaServiceImpl captchaServiceImpl;
 
@@ -113,6 +120,45 @@ public class CaptchaServiceImplTest {
 
 		// When
 		boolean isVerified = this.captchaServiceImpl.verifyCaptcha(this.registerVo);
+
+		// Then
+		assertFalse(isVerified);
+	}
+
+	/**
+	 *
+	 * TODO: Remove this as far as it is no more needed for tests
+	 */
+	@Test
+	public void testIsMagicNumber() {
+
+		when(this.propertyLoader.getMagicNumber()).thenReturn(this.magicNumber);
+
+		// Given
+		final RegisterVo registerVo = RegisterVo.builder()
+				.captcha(this.magicNumber).build();
+		// When
+		final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
+
+		// Then
+		assertTrue(isVerified);
+	}
+
+	/**
+	 *
+	 * TODO: Remove this as far as it is no more needed for tests
+	 */
+	@Test
+	public void testIsMagicNumberButGotNoMagicNumberInProperties() {
+
+		final String fakeEmptyMagicNumberInProperties = "";
+		when(this.propertyLoader.getMagicNumber()).thenReturn(fakeEmptyMagicNumberInProperties);
+
+		// Given
+		final RegisterVo registerVo = RegisterVo.builder()
+				.captcha(fakeEmptyMagicNumberInProperties).build();
+		// When
+		final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
 
 		// Then
 		assertFalse(isVerified);

@@ -1,9 +1,8 @@
 package fr.gouv.stopc.robertserver.ws.utils;
 
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import lombok.Getter;
 
 @Getter
 @Component
@@ -14,6 +13,14 @@ public class PropertyLoader {
 
 	@Value("${robert.crypto.server.port}")
 	private String cryptoServerPort;
+
+	/**
+	 *
+	 * TODO: Remove before any public use.
+	 * This should remain only for development uses.
+	 */
+	@Value("${captcha.magicnumber}")
+	private String magicNumber;
 
 	/**
 	 * 
