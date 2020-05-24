@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.ws.dto.CaptchaDto;
@@ -65,23 +66,29 @@ public class CaptchaServiceImpl implements CaptchaService {
 		            .secret(this.propertyLoader.getCaptchaSecret())
 		            .response(captcha)
 		            .build();
-			HttpEntity<CaptchaVo> request = new HttpEntity(captchaVo, initHttpHeaders());
+			HttpEntity<CaptchaVo> request = new HttpEntity(initHttpHeaders());
 			Date sendingDate = new Date();
 
 			log.info("CAPTCH VO = {}", request.getBody());
-			CaptchaDto response = null;
+			ResponseEntity<CaptchaDto> response = null;
+			 URI verifyUri = UriComponentsBuilder.fromUriString(this.propertyLoader.getCaptchaVerificationUrl())
+			         .queryParam("secret", this.propertyLoader.getCaptchaSecret())
+			         .queryParam("response", captcha)
+			         .build()
+			         .encode()
+			         .toUri();
+			 log.info("CAPTCHA URI = {}", verifyUri.toString());
 			try {
-			    URI verifyUri = URI.create(String.format(
-			            "https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s&remoteip=%s",
-			            this.propertyLoader.getCaptchaSecret(), captcha, this.propertyLoader.getCaptchaHostname()));
-			    response  = restTemplate.getForObject(verifyUri, CaptchaDto.class);
-				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response);
+				response = this.restTemplate.exchange(verifyUri, HttpMethod.POST, request,
+													   CaptchaDto.class);
+				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response.getBody());
 			} catch (RestClientException e) {
 				log.error("XXXXXXX X X=>  {}",e.getMessage());
 				return false;
 			}
 
 			return Optional.ofNullable(response)
+						   .map(ResponseEntity::getBody)
 						   .filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp()))
 						   .map(captchaDto -> {
 
