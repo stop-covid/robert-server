@@ -45,6 +45,7 @@ service CryptoGrpcServiceImpl {
 message CreateRegistrationRequest {
 	bytes clientPublicKey = 1;
 	int32 numberOfEpochBundles = 2; // the number of epoch for which ephemeral bundles must be generated
+	bytes serverCountryCode = 3; // the country code configured on the server to be used when generating ECCs
 }
 
 message CreateRegistrationResponse {

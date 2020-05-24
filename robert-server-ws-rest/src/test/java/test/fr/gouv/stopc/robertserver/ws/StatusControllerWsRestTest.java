@@ -129,7 +129,10 @@ public class StatusControllerWsRestTest {
     public void testBadEBIDSizeFails() {
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -164,7 +167,6 @@ public class StatusControllerWsRestTest {
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, oldEpoch);
         Registration reg = Registration.builder()
                 .permanentIdentifier(idA)
-                .sharedKey(kA)
                 .atRisk(true)
                 .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
@@ -178,7 +180,7 @@ public class StatusControllerWsRestTest {
         doReturn(Optional.of(GetIdFromStatusResponse.newBuilder()
                 .setEpochId(oldEpoch)
                 .setIdA(ByteString.copyFrom(idA))
-                .setTuples(ByteString.copyFrom("Base64encodedEncryptedJSONStringWithTuples".getBytes()))
+                .setTuples(ByteString.copyFrom("EncryptedJSONStringWithTuples".getBytes()))
                 .build()))
                 .when(this.cryptoServerClient).getIdFromStatus(any());
 
@@ -244,7 +246,10 @@ public class StatusControllerWsRestTest {
 
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -272,7 +277,10 @@ public class StatusControllerWsRestTest {
     public void testBadTimePastFails() {
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -300,7 +308,10 @@ public class StatusControllerWsRestTest {
     public void testBadTimeSizeFails() {
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -329,7 +340,10 @@ public class StatusControllerWsRestTest {
     public void testBadMACSizeFails() {
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -359,7 +373,10 @@ public class StatusControllerWsRestTest {
         // Given
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
@@ -487,8 +504,10 @@ public class StatusControllerWsRestTest {
         // Given
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA)
-                .sharedKey(kA).atRisk(true).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
@@ -530,12 +549,15 @@ public class StatusControllerWsRestTest {
     }
 
     @Test
-    public void testStatusRequestSuccessNotAtRisk() {
+    public void testStatusRequestNotAtRiskSucceeds() {
 
         // Given
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(false)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch - 3).build();
 
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
@@ -573,7 +595,7 @@ public class StatusControllerWsRestTest {
         assertNotNull(response.getBody().getTuples());
         assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
         verify(this.registrationService, times(1)).findById(idA);
-        verify(this.registrationService, times(2)).saveRegistration(reg);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
     }
 
     /*
@@ -649,7 +671,6 @@ public class StatusControllerWsRestTest {
 
         Registration reg = Registration.builder()
                 .permanentIdentifier(idA)
-                .sharedKey(kA)
                 .atRisk(false)
                 .isNotified(true)
                 .lastStatusRequestEpoch(currentEpoch - 3)
@@ -698,7 +719,7 @@ public class StatusControllerWsRestTest {
     }
 
     @Test
-    public void testStatusRequestNewRiskSinceLastNotif() {
+    public void testStatusRequestNewRiskSinceLastNotifSucceeds() {
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
 
@@ -722,7 +743,6 @@ public class StatusControllerWsRestTest {
 
         Registration reg = Registration.builder()
                 .permanentIdentifier(idA)
-                .sharedKey(kA)
                 .atRisk(true)
                 .isNotified(true)
                 .lastStatusRequestEpoch(currentEpoch - 3)
@@ -768,14 +788,16 @@ public class StatusControllerWsRestTest {
     }
 
     @Test
-    public void testStatusRequestESRThrottle() {
+    public void testStatusRequestESRThrottleFails() {
 
         // Given
         byte[] idA = this.generateKey(5);
         byte[] kA = this.generateKA();
-        Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(false)
+                .isNotified(false)
                 .lastStatusRequestEpoch(currentEpoch).build();
-
 
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 

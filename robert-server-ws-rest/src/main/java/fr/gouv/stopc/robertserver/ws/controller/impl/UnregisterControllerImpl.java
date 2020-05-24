@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
+import fr.gouv.stopc.robertserver.ws.dto.DeleteHistoryResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -27,76 +29,39 @@ public class UnregisterControllerImpl implements IUnregisterController {
 
     private final IRegistrationService registrationService;
     private final AuthRequestValidationService authRequestValidationService;
-	private final ICryptoServerGrpcClient cryptoServerClient;
 
     @Inject
-    public UnregisterControllerImpl(final ICryptoServerGrpcClient cryptoServerClient,
-                                    final IRegistrationService registrationService,
+    public UnregisterControllerImpl(final IRegistrationService registrationService,
                                     final AuthRequestValidationService authRequestValidationService) {
 
-        this.cryptoServerClient = cryptoServerClient;
         this.registrationService = registrationService;
         this.authRequestValidationService = authRequestValidationService;
     }
 
-    private class UnregisterMacValidator implements AuthRequestValidationService.IMacValidator {
+    @Override
+    public ResponseEntity<UnregisterResponseDto> unregister(UnregisterRequestVo unregisterRequestVo) {
+        AuthRequestValidationService.ValidationResult<GetIdFromAuthResponse> validationResult =
+                authRequestValidationService.validateRequestForAuth(unregisterRequestVo);
 
-        private final ICryptoServerGrpcClient cryptoServerClient;
-
-        public UnregisterMacValidator(final ICryptoServerGrpcClient cryptoServerClient) {
-            this.cryptoServerClient = cryptoServerClient;
+        if (Objects.nonNull(validationResult.getError())) {
+            return ResponseEntity.badRequest().build();
         }
 
-        @Override
-        public boolean validate(byte[] key, byte[] toCheck, byte[] mac) {
-            boolean res;
-            try {
-            	MacValidationForTypeRequest request = MacValidationForTypeRequest.newBuilder()
-        				.setKa(ByteString.copyFrom(key))
-        				.setDataToValidate(ByteString.copyFrom(toCheck))
-        				.setMacToMatchWith(ByteString.copyFrom(mac))
-        				.setPrefixe(ByteString.copyFrom(new byte[] { DigestSaltEnum.UNREGISTER.getValue() }))
-        				.build();
-                res = this.cryptoServerClient.validateMacForType(request);
-            } catch (Exception e) {
-                res = false;
-            }
-            return res;
-        }
-    }
+        GetIdFromAuthResponse authResponse = validationResult.getResponse();
 
-    private class UnregisterAuthenticatedRequestHandler implements AuthRequestValidationService.IAuthenticatedRequestHandler {
+        Optional<Registration> registrationRecord = this.registrationService.findById(authResponse.getIdA().toByteArray());
 
-        @Override
-        public void setEpochBundles(byte[] epochBundles) {
-            throw new NotImplementedException();
-        }
-
-        @Override
-        public Optional<ResponseEntity> validate(Registration record, int epoch) {
-            if (Objects.isNull(record)) {
-                return Optional.of(ResponseEntity.notFound().build());
-            }
+        if (registrationRecord.isPresent()) {
+            Registration record = registrationRecord.get();
 
             // Unregister by deleting
             registrationService.delete(record);
 
-            UnregisterResponseDto statusResponse = UnregisterResponseDto.builder().success(true).build();
+            UnregisterResponseDto response = UnregisterResponseDto.builder().success(true).build();
 
-            return Optional.of(ResponseEntity.ok(statusResponse));
-        }
-    }
-
-    @Override
-    public ResponseEntity<UnregisterResponseDto> unregister(UnregisterRequestVo unregisterRequestVo) {
-        Optional<ResponseEntity> entity = authRequestValidationService.validateRequestForAuth(unregisterRequestVo,
-                new UnregisterMacValidator(this.cryptoServerClient),
-                new UnregisterAuthenticatedRequestHandler());
-
-        if (entity.isPresent()) {
-            return entity.get();
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 }

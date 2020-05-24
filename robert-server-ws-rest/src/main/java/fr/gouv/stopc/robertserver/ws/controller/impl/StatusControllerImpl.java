@@ -5,6 +5,9 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusResponse;
+import fr.gouv.stopc.robertserver.database.model.ApplicationConfigurationModel;
+import fr.gouv.stopc.robertserver.ws.dto.ClientConfigDto;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -39,138 +42,137 @@ public class StatusControllerImpl implements IStatusController {
 
 	private final AuthRequestValidationService authRequestValidationService;
 
-	private final ICryptoServerGrpcClient cryptoServerClient;
-
 	@Inject
 	public StatusControllerImpl(
 			final IServerConfigurationService serverConfigurationService,
 			final IRegistrationService registrationService,
 			final IApplicationConfigService applicationConfigService,
-			final AuthRequestValidationService authRequestValidationService,
-			final ICryptoServerGrpcClient cryptoServerClient
-	) {
+			final AuthRequestValidationService authRequestValidationService) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.registrationService = registrationService;
 		this.applicationConfigService = applicationConfigService;
 		this.authRequestValidationService = authRequestValidationService;
-		this.cryptoServerClient = cryptoServerClient;
 	}
 
 	@Override
 	public ResponseEntity<StatusResponseDto> getStatus(StatusVo statusVo) {
+		AuthRequestValidationService.ValidationResult<GetIdFromStatusResponse> validationResult =
+				this.authRequestValidationService.validateStatusRequest(statusVo);
 
-	    AuthenticatedRequestHandler authRequest =  new AuthenticatedRequestHandler();
-
-		Optional<ResponseEntity> entity = authRequestValidationService.validateRequestForAuth(
-				statusVo,
-				new StatusMacValidator(this.cryptoServerClient),
-				authRequest);
-
-		if (entity.isPresent()) {
-			return entity.get();
-		} else {
+		if (Objects.nonNull(validationResult.getError())) {
 			return ResponseEntity.badRequest().build();
 		}
-		 
-	}
 
-	private class StatusMacValidator implements AuthRequestValidationService.IMacValidator {
+		GetIdFromStatusResponse response = validationResult.getResponse();
 
-		private final ICryptoServerGrpcClient cryptoServerClient;
+		Optional<Registration> record = this.registrationService.findById(response.getIdA().toByteArray());
+		if (record.isPresent()) {
+			try {
+				Optional<ResponseEntity> responseEntity = validate(record.get(), response.getEpochId(), response.getTuples().toByteArray());
 
-		public StatusMacValidator(ICryptoServerGrpcClient cryptoServerClient) {
-			this.cryptoServerClient = cryptoServerClient;
-		}
-
-		@Override
-		public boolean validate(byte[] key, byte[] toCheck, byte[] mac) {
-			// TODO: refactor, now mac validation is performed by crypto BE
-			return true;
-		}
-	}
-
-
-	private class AuthenticatedRequestHandler implements AuthRequestValidationService.IAuthenticatedRequestHandler {
-
-	    @Setter
-	    byte[] epochBundles;
-
-        /**
-         * Sort list of epochs and get last
-         * @param exposedEpochs
-         * @return
-         */
-	    private int findLastExposedEpoch(List<EpochExposition> exposedEpochs) {
-	    	if (CollectionUtils.isEmpty(exposedEpochs)) {
-	    		return 0;
-			}
-
-            List<EpochExposition> sortedEpochs = exposedEpochs.stream()
-                    .sorted((a, b) -> new Integer(a.getEpochId()).compareTo(b.getEpochId()))
-                    .collect(Collectors.toList());
-            return sortedEpochs.get(sortedEpochs.size() - 1).getEpochId();
-        }
-
-		@Override
-		public Optional<ResponseEntity> validate(Registration record, int epoch) throws RobertServerException {
-			if (Objects.isNull(record)) {
-				return Optional.empty();
-			}
-
-			// Step #6: Check if user was already notified
-			// Not applicable anymore (spec update)
-
-			// Step #7: Check that epochs are not too distant
-			int currentEpoch = TimeUtils.getCurrentEpochFrom(serverConfigurationService.getServiceTimeStart());
-			int epochDistance = currentEpoch - record.getLastStatusRequestEpoch();
-			if(epochDistance < serverConfigurationService.getStatusRequestMinimumEpochGap()) {
-				log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
-						epochDistance,
-						serverConfigurationService.getStatusRequestMinimumEpochGap());
-				return Optional.of(ResponseEntity.badRequest().build());
-			}
-
-			// Request is valid
-			// (now iterating through steps from section "If the ESR_REQUEST_A,i is valid, the server:", p11 of spec)
-			// Step #1: Set SRE with current epoch number
-			record.setLastStatusRequestEpoch(epoch);
-
-			// Step #2: Risk and score were processed during batch, simple lookup
-			boolean atRisk = record.isAtRisk();
-			boolean newRiskDetected = false;
-
-			if (!record.isNotified()) {
-				// Step #3: Set UserNotified to true if at risk
-                // If was never notified and batch flagged a risk, notify
-                // and remember last exposed epoch as new starting point for subsequent risk notifications
-				if (atRisk) {
-                    newRiskDetected = true;
-                    record.setAtRisk(false);
-					record.setNotified(true);
-					int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
-					record.setLatestRiskEpoch(lastExposedEpoch);
+				if (responseEntity.isPresent()) {
+					return responseEntity.get();
+				} else {
+					return ResponseEntity.badRequest().build();
 				}
-			} else {
-				// Has already been notified he was at risk
-
-                // Batch marked a new risk since latestRiskEpoch
-                // Update latestRiskEpoch to latest exposed epoch
-                if (atRisk) {
-                    newRiskDetected = true;
-                    record.setAtRisk(false);
-                    int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
-                    record.setLatestRiskEpoch(lastExposedEpoch);
-                }
+			} catch (RobertServerException e) {
+				return ResponseEntity.badRequest().build();
 			}
+		} else {
+			log.info("Discarding authenticated request because id unknown (fake or was deleted)");
+			return ResponseEntity.notFound().build();
+		}
+	}
 
-			// Include new EBIDs and ECCs for next M epochs
-			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(newRiskDetected).build();
-			statusResponse.setTuples(Base64.encode(epochBundles));
+	/**
+	 * Sort list of epochs and get last
+	 * @param exposedEpochs
+	 * @return
+	 */
+	private int findLastExposedEpoch(List<EpochExposition> exposedEpochs) {
+		if (CollectionUtils.isEmpty(exposedEpochs)) {
+			return 0;
+		}
 
-			// Save changes to the record
-			registrationService.saveRegistration(record);
+		List<EpochExposition> sortedEpochs = exposedEpochs.stream()
+				.sorted((a, b) -> new Integer(a.getEpochId()).compareTo(b.getEpochId()))
+				.collect(Collectors.toList());
+		return sortedEpochs.get(sortedEpochs.size() - 1).getEpochId();
+	}
 
-			return Optional.of(ResponseEntity.ok(statusResponse));
+	public Optional<ResponseEntity> validate(Registration record, int epoch, byte[] tuples) throws RobertServerException {
+		if (Objects.isNull(record)) {
+			return Optional.empty();
+		}
+
+		// Step #6: Check if user was already notified
+		// Not applicable anymore (spec update)
+
+		// Step #7: Check that epochs are not too distant
+		int currentEpoch = TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart());
+		int epochDistance = currentEpoch - record.getLastStatusRequestEpoch();
+		if(epochDistance < this.serverConfigurationService.getStatusRequestMinimumEpochGap()) {
+			log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
+					epochDistance,
+					this.serverConfigurationService.getStatusRequestMinimumEpochGap());
+			return Optional.of(ResponseEntity.badRequest().build());
+		}
+
+		// Request is valid
+		// (now iterating through steps from section "If the ESR_REQUEST_A,i is valid, the server:", p11 of spec)
+		// Step #1: Set SRE with current epoch number
+		record.setLastStatusRequestEpoch(epoch);
+
+		// Step #2: Risk and score were processed during batch, simple lookup
+		boolean atRisk = record.isAtRisk();
+		boolean newRiskDetected = false;
+
+		if (!record.isNotified()) {
+			// Step #3: Set UserNotified to true if at risk
+			// If was never notified and batch flagged a risk, notify
+			// and remember last exposed epoch as new starting point for subsequent risk notifications
+			if (atRisk) {
+				newRiskDetected = true;
+				record.setAtRisk(false);
+				record.setNotified(true);
+				int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+				record.setLatestRiskEpoch(lastExposedEpoch);
+			}
+		} else {
+			// Has already been notified he was at risk
+
+			// Batch marked a new risk since latestRiskEpoch
+			// Update latestRiskEpoch to latest exposed epoch
+			if (atRisk) {
+				newRiskDetected = true;
+				record.setAtRisk(false);
+				int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+				record.setLatestRiskEpoch(lastExposedEpoch);
+			}
+		}
+
+		// Include new EBIDs and ECCs for next M epochs
+		StatusResponseDto statusResponse = StatusResponseDto.builder()
+				.atRisk(newRiskDetected)
+				.config(getClientConfig())
+				.tuples(Base64.encode(tuples))
+				.build();
+
+		// Save changes to the record
+		this.registrationService.saveRegistration(record);
+
+		return Optional.of(ResponseEntity.ok(statusResponse));
+	}
+
+	private List<ClientConfigDto> getClientConfig() {
+		List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
+		if (CollectionUtils.isEmpty(serverConf)) {
+			return Collections.emptyList();
+		} else {
+			return serverConf
+					.stream()
+					.map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build())
+					.collect(Collectors.toList());
 		}
 	}
 

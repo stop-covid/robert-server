@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationResponse;
 import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,10 +42,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robertserver.database.model.Registration;
@@ -176,7 +174,7 @@ public class RegisterControllerWsRestTest {
 	}
 
 	@Test
-    public void testRegisterFailsWhenIdentityGenerationFails() {
+    public void testRegisterFailsWhenRegistrationFails() {
 
 	    // Given
         this.body = RegisterVo.builder()
@@ -186,12 +184,11 @@ public class RegisterControllerWsRestTest {
 
         this.requestEntity = new HttpEntity<>(this.body, this.headers);
 
-        // Make it so that CAPTCHA verification fails (either incorrect token or too
-        // great a time
-        // difference between solving and the request)
+        // CAPTCHA passes
         doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
 
-        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.empty());
+        // Error creating registration
+        when(this.cryptoServerClient.createRegistration(any())).thenReturn(Optional.empty());
 
         // When
         ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
@@ -199,7 +196,7 @@ public class RegisterControllerWsRestTest {
 
         // Then
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        verify(this.cryptoServerClient).generateIdentity(any());
+        verify(this.cryptoServerClient).createRegistration(any());
         verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
         verify(this.registrationService, never()).saveRegistration(any());
     }
@@ -215,24 +212,18 @@ public class RegisterControllerWsRestTest {
 
         this.requestEntity = new HttpEntity<>(this.body, this.headers);
 
-        byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
         byte[] id = "12345".getBytes();
 
-        GenerateIdentityResponse identityResponse = GenerateIdentityResponse
+        CreateRegistrationResponse createRegistrationResponse = CreateRegistrationResponse
                 .newBuilder()
                 .setIdA(ByteString.copyFrom(id))
-                .setEncryptedSharedKey(ByteString.copyFrom(key))
-                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
+				.setTuples(ByteString.copyFrom("EncryptedJSONStringWithTuples".getBytes()))
                 .build();
 
-        // Make it so that CAPTCHA verification fails (either incorrect token or too
-        // great a time
-        // difference between solving and the request)
+        // CAPTCHA passes
         doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
 
-        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
-
-        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.empty());
+        when(this.cryptoServerClient.createRegistration(any())).thenReturn(Optional.of(createRegistrationResponse));
 
         when(this.registrationService.saveRegistration(any())).thenReturn(Optional.empty());
         // When
@@ -241,55 +232,10 @@ public class RegisterControllerWsRestTest {
 
         // Then
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        verify(this.cryptoServerClient).generateIdentity(any());
+        verify(this.cryptoServerClient).createRegistration(any());
         verify(this.registrationService).saveRegistration(any());
         verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
     }
-
-	@Test
-    public void testRegisterFailsWhenEphemeralTupleGenerationFails() {
-
-        // Given
-        this.body = RegisterVo.builder()
-                .captcha("TEST")
-                .clientPublicECDHKey(Base64.encode("an12kmdpsd".getBytes()))
-                .build();
-
-        this.requestEntity = new HttpEntity<>(this.body, this.headers);
-
-        byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
-        byte[] id = "12345".getBytes();
-
-        GenerateIdentityResponse identityResponse = GenerateIdentityResponse
-                .newBuilder()
-                .setIdA(ByteString.copyFrom(id))
-                .setEncryptedSharedKey(ByteString.copyFrom(key))
-                .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
-                .build();
-
-        Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
-                .isNotified(false).sharedKey(key).atRisk(false).build();
-        // Make it so that CAPTCHA verification fails (either incorrect token or too
-        // great a time
-        // difference between solving and the request)
-        doReturn(true).when(this.captchaService).verifyCaptcha(ArgumentMatchers.any());
-
-        when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
-
-        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.empty());
-
-        when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
-
-        // When
-        ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
-                this.requestEntity, String.class);
-
-        // Then
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        verify(this.cryptoServerClient).generateIdentity(any());
-        verify(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
-        verify(this.registrationService).saveRegistration(any());
-	}
 
 	@Test
 	public void testSuccess() {
@@ -300,47 +246,35 @@ public class RegisterControllerWsRestTest {
 
 		this.requestEntity = new HttpEntity<>(this.body, this.headers);
 
-		byte[] key = "0123456789ABCDEF0123456789ABCDEF".getBytes();
 		byte[] id = "12345".getBytes();
 		
-		Registration reg = Registration.builder().permanentIdentifier(id).exposedEpochs(new ArrayList<>())
-				.isNotified(false).sharedKey(key).atRisk(false).build();
+		Registration reg = Registration.builder()
+				.permanentIdentifier(id)
+				.exposedEpochs(new ArrayList<>())
+				.isNotified(false)
+				.atRisk(false)
+				.build();
 
-		GenerateIdentityResponse identityResponse = GenerateIdentityResponse
-		        .newBuilder()
+		CreateRegistrationResponse createRegistrationResponse = CreateRegistrationResponse
+				.newBuilder()
 		        .setIdA(ByteString.copyFrom(id))
-		        .setEncryptedSharedKey(ByteString.copyFrom(key))
-		        .setEncryptedSharedKey(ByteString.copyFrom(ByteUtils.generateRandom(32)))
+				.setTuples(ByteString.copyFrom("EncryptedJSONStringWithTuples".getBytes()))
 		        .build();
 
-		when(this.cryptoServerClient.generateIdentity(any())).thenReturn(Optional.of(identityResponse));
+		when(this.cryptoServerClient.createRegistration(any())).thenReturn(Optional.of(createRegistrationResponse));
 
-		EncryptedEphemeralTupleBundleResponse encryptedTupleResponse = EncryptedEphemeralTupleBundleResponse.newBuilder()
-                .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
-                .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
-                .build();
-
-		when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.of(encryptedTupleResponse));
-				
 		when(this.registrationService.saveRegistration(any())).thenReturn(Optional.of(reg));
 
 		when(this.captchaService.verifyCaptcha(this.body)).thenReturn(true);
-
-		String expectedServerPublicKeyForKey = Base64.encode(identityResponse.getServerPublicKeyForKey().toByteArray());
-		
-		String expectedServerPublicKeyForTuples = Base64.encode(encryptedTupleResponse.getServerPublicKeyForTuples().toByteArray());
-
 
 		ResponseEntity<RegisterResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
 				HttpMethod.POST, this.requestEntity, RegisterResponseDto.class);
 
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
 		assertNotNull(response.getBody().getConfig());
-		assertEquals(32, Base64.decode(response.getBody().getKey()).length);
-		assertEquals(expectedServerPublicKeyForKey, response.getBody().getServerPublicECDHKeyForKey());
-		assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());
 		assertNotNull(response.getBody().getTuples());
 		assertTrue(StringUtils.isNotEmpty(response.getBody().getTuples()));
+		verify(this.cryptoServerClient).createRegistration(any());
 		verify(this.registrationService).saveRegistration(any());
 	}
 

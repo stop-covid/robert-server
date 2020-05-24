@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import org.bson.internal.Base64;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +17,6 @@ import org.springframework.util.CollectionUtils;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GenerateIdentityResponse;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robertserver.database.model.ApplicationConfigurationModel;
@@ -34,6 +31,7 @@ import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -67,37 +65,38 @@ public class RegisterControllerImpl implements IRegisterController {
     @Override
     public ResponseEntity<RegisterResponseDto> register(RegisterVo registerVo) throws RobertServerException {
 
-        // TODO: Enable this when the capcha becomes
-        //        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
-        //            log.error("The 'captcha' is required.");
-        //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        //        }
+        if (StringUtils.isEmpty(registerVo.getCaptcha())) {
+            log.error("The captcha is required.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-        // TODO: Unable this when the  ECDH Public Key sharing is enabled
-        //        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
-        //            log.error("The client ECDH public is required.");
-        //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        //        }
+        if (StringUtils.isEmpty(registerVo.getClientPublicECDHKey())) {
+            log.error("The client ECDH public key is required.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
 
         if (!this.captchaService.verifyCaptcha(registerVo)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
+        byte[] serverCountryCode = new byte[1];
+        serverCountryCode[0] = this.serverConfigurationService.getServerCountryCode();
 
-        GenerateIdentityRequest request = GenerateIdentityRequest.newBuilder()
+        CreateRegistrationRequest request = CreateRegistrationRequest.newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
+                .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
+                .setServerCountryCode(ByteString.copyFrom(serverCountryCode))
                 .build();
 
-        Optional<GenerateIdentityResponse> response = this.cryptoServerClient.generateIdentity(request);
+        Optional<CreateRegistrationResponse> response = this.cryptoServerClient.createRegistration(request);
 
         if(!response.isPresent()) {
             log.error("Unable to generate an identity for the client");
             throw new RobertServerException(MessageConstants.ERROR_OCCURED);
- 
         }
 
-        GenerateIdentityResponse identity = response.get();
+        CreateRegistrationResponse identity = response.get();
 
         Registration registration = Registration.builder()
                 .permanentIdentifier(identity.getIdA().toByteArray())
@@ -105,61 +104,23 @@ public class RegisterControllerImpl implements IRegisterController {
 
         Optional<Registration> registered = this.registrationService.saveRegistration(registration);
 
-
         if (registered.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(processRegistration(registerVo, identity));
+            RegisterResponseDto registerResponseDto = new RegisterResponseDto();
+
+            List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
+            if (CollectionUtils.isEmpty(serverConf)) {
+                registerResponseDto.setConfig(Collections.emptyList());
+            } else {
+                registerResponseDto.setConfig(serverConf
+                        .stream()
+                        .map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build())
+                        .collect(Collectors.toList()));
+            }
+
+            registerResponseDto.setTuples(Base64.encode(identity.getTuples().toByteArray()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(registerResponseDto);
         }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
-
-    private RegisterResponseDto processRegistration(RegisterVo registerVo, GenerateIdentityResponse identity) throws RobertServerException {
-
-        RegisterResponseDto registerResponseDto = new RegisterResponseDto();
-
-        List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
-        if (CollectionUtils.isEmpty(serverConf)) {
-            registerResponseDto.setConfig(Collections.emptyList());
-        } else {
-            registerResponseDto
-            .setConfig(serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
-        }
-
-        final byte countrycode = this.serverConfigurationService.getServerCountryCode();
-
-        final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-        final int numberOfEpochs = 4 * 24 * 4;
-
-        final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
-        
-        registerResponseDto.setTimeStart(tpstStart);
-
-        byte[] clientPublicECDHKey = Base64.decode(registerVo.getClientPublicECDHKey());
-
-        EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
-                .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
-                .setFromEpoch(currentEpochId)
-                .setIdA(ByteString.copyFrom(identity.getIdA().toByteArray()))
-                .setNumberOfEpochsToGenerate(numberOfEpochs)
-                .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
-                .build();
-
-
-        Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuple = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
-
-        if (!encryptedTuple.isPresent()) {
-            log.warn("Could not generate encrypted (EBID, ECC) tuples");
-            throw new RobertServerException(MessageConstants.ERROR_OCCURED);
-        }
-
-        registerResponseDto.setTuples(Base64.encode(
-                encryptedTuple.get().getEncryptedTuples().toByteArray()));
-
-        registerResponseDto.setServerPublicECDHKeyForKey(Base64.encode(identity.getServerPublicKeyForKey().toByteArray()));
-
-
-        registerResponseDto.setKey(Base64.encode(identity.getEncryptedSharedKey().toByteArray()));
-        return registerResponseDto;
-    }
-
 }

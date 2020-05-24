@@ -1,6 +1,8 @@
 package test.fr.gouv.stopc.robertserver.ws;
 
+import com.google.protobuf.ByteString;
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -93,7 +95,7 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadHttpVerb() {
+	public void testBadHttpVerbFails() {
 		this.requestBody = UnregisterRequestVo.builder().ebid(Base64.encode(new byte[4])).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -108,14 +110,15 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadEBIDSize() {
+	public void testBadEBIDSizeFails() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode("ABC".getBytes()))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2]))
 				.build();
 
@@ -133,7 +136,7 @@ public class UnregisterControllerWsRestTest {
 	 * Business requirement: app can use an old EBID to perform its request
 	 */
 	@Test
-	public void testAcceptOldEBIDValueEpoch() {
+	public void testAcceptOldEBIDValueEpochSucceeds() {
 
 		// Given
 		byte[] idA = this.generateKey(5);
@@ -142,7 +145,6 @@ public class UnregisterControllerWsRestTest {
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch - 10);
 		Registration reg = Registration.builder()
 				.permanentIdentifier(idA)
-				.sharedKey(kA)
 				.atRisk(true)
 				.isNotified(false)
 				.lastStatusRequestEpoch(currentEpoch - 3).build();
@@ -153,14 +155,16 @@ public class UnregisterControllerWsRestTest {
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
+                .setEpochId(currentEpoch)
+                .setIdA(ByteString.copyFrom(idA))
+                .build()))
+                .when(this.cryptoServerClient).getIdFromAuth(any());
 
-		doReturn(true).when(this.cryptoServerClient).validateMacForType(any());
-
-
-		requestBody = UnregisterRequestVo.builder()
+		this.requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2]))
 				.build();
 
@@ -172,12 +176,13 @@ public class UnregisterControllerWsRestTest {
 
 		// Given
 		assertEquals(HttpStatus.OK, response.getStatusCode());
-		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
+        verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+        verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).delete(ArgumentMatchers.any());
 	}
 
 	@Test
-	public void testBadTimeFuture() {
+	public void testBadTimeFutureFails() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 
@@ -189,7 +194,8 @@ public class UnregisterControllerWsRestTest {
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2]))
 				.build();
 
@@ -204,7 +210,7 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadTimePast() {
+	public void testBadTimePastFails() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 
@@ -216,7 +222,8 @@ public class UnregisterControllerWsRestTest {
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2])).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -230,7 +237,7 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadTimeSize() {
+	public void testBadTimeSizeFails() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 
@@ -238,7 +245,8 @@ public class UnregisterControllerWsRestTest {
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode("AB".getBytes()))
+                .epochId(currentEpoch)
+                .time(Base64.encode("AB".getBytes()))
 				.mac(Base64.encode(reqContent[2])).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -252,7 +260,7 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadMACSize() {
+	public void testBadMACSizeFails() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 
@@ -260,7 +268,8 @@ public class UnregisterControllerWsRestTest {
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode("ABC".getBytes())).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -274,12 +283,15 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testBadMAC() {
+	public void testBadMACFails() {
 
 		// Given
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(true).isNotified(false)
+		Registration reg = Registration.builder()
+				.permanentIdentifier(idA)
+				.atRisk(true)
+				.isNotified(false)
 				.lastStatusRequestEpoch(currentEpoch - 3).build();
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
@@ -290,13 +302,12 @@ public class UnregisterControllerWsRestTest {
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(false).when(this.cryptoServerClient).validateMacForType(any());
-
+        doReturn(Optional.empty())
+                .when(this.cryptoServerClient).getIdFromStatus(any());
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
+                .epochId(currentEpoch)
 				.time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2])).build();
 
@@ -308,9 +319,8 @@ public class UnregisterControllerWsRestTest {
 
 		// Then
 		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.cryptoServerClient, times(1)).decryptEBID(ArgumentMatchers.any());
-		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
-		verify(this.cryptoServerClient, times(1)).validateMacForType(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+		verify(this.registrationService, never()).findById(ArgumentMatchers.any());
 		verify(this.registrationService, never()).delete(ArgumentMatchers.any());
 	}
 
@@ -397,16 +407,14 @@ public class UnregisterControllerWsRestTest {
 	}
 
 	@Test
-	public void testUnregisterRequestSuccess() {
+	public void testUnregisterRequestSucceeds() {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder()
 				.permanentIdentifier(idA)
-				.sharedKey(kA)
 				.atRisk(true)
 				.isNotified(false)
 				.lastStatusRequestEpoch(currentEpoch - 3).build();
-
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
@@ -416,13 +424,16 @@ public class UnregisterControllerWsRestTest {
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacForType(any());
+        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
+                .setEpochId(currentEpoch)
+                .setIdA(ByteString.copyFrom(idA))
+                .build()))
+                .when(this.cryptoServerClient).getIdFromAuth(any());
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2])).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -432,14 +443,13 @@ public class UnregisterControllerWsRestTest {
 
 		assertEquals(HttpStatus.OK, response.getStatusCode());
 		assertTrue(response.getBody().getSuccess());
-		verify(this.cryptoServerClient, times(1)).decryptEBID(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.cryptoServerClient, times(1)).validateMacForType(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).delete(ArgumentMatchers.any());
 	}
 
 	@Test
-	public void testUnregisterRequestNoSuchId() {
+	public void testUnregisterRequestNoSuchIdFails() {
 
 		// Given
 		byte[] idA = this.generateKey(5);
@@ -451,15 +461,18 @@ public class UnregisterControllerWsRestTest {
 		System.arraycopy(idA, 0, decryptedEbid, 3, idA.length);
 		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacForType(any());
+        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
+                .setEpochId(currentEpoch)
+                .setIdA(ByteString.copyFrom(idA))
+                .build()))
+                .when(this.cryptoServerClient).getIdFromAuth(any());
 
 		doReturn(Optional.empty()).when(this.registrationService).findById(idA);
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
-				.time(Base64.encode(reqContent[1]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
 				.mac(Base64.encode(reqContent[2])).build();
 
 		this.requestEntity = new HttpEntity<>(this.requestBody, this.headers);
@@ -470,9 +483,8 @@ public class UnregisterControllerWsRestTest {
 
 		// Then
 		assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-		verify(this.cryptoServerClient, times(1)).decryptEBID(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
-		verify(this.cryptoServerClient, never()).validateMacForType(ArgumentMatchers.any());
 		verify(this.registrationService, never()).delete(ArgumentMatchers.any());
 	}
 }

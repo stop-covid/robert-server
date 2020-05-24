@@ -1,5 +1,9 @@
 package fr.gouv.stopc.robertserver.ws.service;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusResponse;
+import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
+import lombok.*;
 import org.springframework.http.ResponseEntity;
 
 import fr.gouv.stopc.robertserver.database.model.Registration;
@@ -9,23 +13,16 @@ import fr.gouv.stopc.robertserver.ws.vo.AuthRequestVo;
 import java.util.Optional;
 
 public interface AuthRequestValidationService {
-    /**
-     * Perform MAC validation for an authenticated request
-     */
-    interface IMacValidator {
-        boolean validate(byte[] key, byte[] toCheck, byte[] mac);
+
+    @AllArgsConstructor
+    @Builder
+    @Getter
+    class ValidationResult<T> {
+        T response;
+        ResponseEntity error;
     }
 
-    /**
-     * Perform further business validation of request and request handling
-     */
-    interface IAuthenticatedRequestHandler {
-        void setEpochBundles(byte[] epochBundles);
+    ValidationResult<GetIdFromAuthResponse> validateRequestForAuth(AuthRequestVo authRequestVo);
+    ValidationResult<GetIdFromStatusResponse> validateStatusRequest(StatusVo statusVo);
 
-        Optional<ResponseEntity> validate(Registration record, int epoch) throws RobertServerException;
-    }
-
-    Optional<ResponseEntity> validateRequestForAuth(AuthRequestVo authRequestVo,
-                                                    IMacValidator macValidator,
-                                                    IAuthenticatedRequestHandler otherValidator);
 }

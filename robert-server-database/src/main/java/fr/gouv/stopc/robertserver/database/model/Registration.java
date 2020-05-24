@@ -16,9 +16,6 @@ public class Registration {
 	@Id
 	@ToString.Exclude
 	private byte[] permanentIdentifier;
-
-	@ToString.Exclude
-	private byte[] sharedKey;
 	
 	private boolean isNotified;
 	

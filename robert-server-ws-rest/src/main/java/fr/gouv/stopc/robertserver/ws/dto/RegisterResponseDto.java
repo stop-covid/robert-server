@@ -18,19 +18,14 @@ import lombok.ToString;
 @Builder
 public class RegisterResponseDto
  {
-	
-	@NotNull
-	@ToString.Exclude
-	private String key;
-
 	@NotNull
 	private String tuples;
-
-	private String message;
 
 	@Singular("config")
 	private List<ClientConfigDto> config;
 
 	@Min(3797858242L)
 	private long timeStart;
-}
+
+	private String message;
+ }
