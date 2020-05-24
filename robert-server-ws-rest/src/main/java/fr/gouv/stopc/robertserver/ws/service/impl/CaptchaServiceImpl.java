@@ -8,6 +8,7 @@ import javax.inject.Inject;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 			ResponseEntity<CaptchaDto> response = null;
 			try {
-				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request,
+				response = this.restTemplate.exchange(this.propertyLoader.getCaptchaVerificationUrl(), HttpMethod.POST, request,
 													   CaptchaDto.class);
 				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response.getBody());
 			} catch (RestClientException e) {
