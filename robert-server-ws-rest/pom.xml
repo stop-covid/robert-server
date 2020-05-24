@@ -119,6 +119,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+<<<<<<< HEAD
+
+=======
+>>>>>>> branch 'feat-hot-reload-configuration' of git@plant-stopcovid.gitlab.inria.fr:stopcovid19/robert-server.git
 	</dependencies>
 
 	<build>

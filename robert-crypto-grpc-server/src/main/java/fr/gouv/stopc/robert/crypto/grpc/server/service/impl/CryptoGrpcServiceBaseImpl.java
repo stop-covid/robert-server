@@ -5,9 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import javax.inject.Inject;
-
-import org.springframework.stereotype.Service;
+import org.lognet.springboot.grpc.GRpcService;
 import org.springframework.util.CollectionUtils;
 
 import com.google.protobuf.ByteString;
@@ -40,14 +38,13 @@ import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import io.grpc.stub.StreamObserver;
 
-@Service
+@GRpcService
 public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
 
     private final ICryptoServerConfigurationService serverConfigurationService;
     private final CryptoService cryptoService;
 
-    @Inject
     public CryptoGrpcServiceBaseImpl(final ICryptoServerConfigurationService serverConfigurationService,
                                      final CryptoService cryptoService) {
 

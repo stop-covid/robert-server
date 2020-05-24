@@ -1,3 +1,15 @@
+<<<<<<< HEAD
+eureka:
+  client:
+    enabled: false
+ 
+spring:
+  application:
+    name: robert-server
+  cloud:
+    config:
+      enabled: false
+=======
 spring:
   cloud:
     config:
@@ -5,3 +17,4 @@ spring:
 eureka:
   client:
     enabled: false
+>>>>>>> branch 'feat-hot-reload-configuration' of git@plant-stopcovid.gitlab.inria.fr:stopcovid19/robert-server.git

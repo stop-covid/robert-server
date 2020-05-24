@@ -1,0 +1,14 @@
+server:
+  port: 8088
+spring:
+  application:
+    name: robert-crypto
+  cloud:
+    config:
+      enabled: false
+eureka:
+  client:
+    enabled: false
+
+grpc:
+  port: 9090

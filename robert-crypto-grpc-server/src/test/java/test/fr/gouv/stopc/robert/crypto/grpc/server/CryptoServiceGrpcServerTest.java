@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +20,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.google.protobuf.ByteString;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.CryptoServiceGrpcServer;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplStub;
@@ -61,8 +59,6 @@ public class CryptoServiceGrpcServerTest {
 	public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 	private ManagedChannel inProcessChannel;
 
-	private CryptoServiceGrpcServer server;
-
 	private CryptoGrpcServiceImplImplBase service;
 
 	private ICryptoServerConfigurationService serverConfigurationService;
@@ -78,20 +74,10 @@ public class CryptoServiceGrpcServerTest {
 		service = new CryptoGrpcServiceBaseImpl(serverConfigurationService, cryptoService);
 
 		String serverName = InProcessServerBuilder.generateName();
-
-		server = new CryptoServiceGrpcServer(
-				InProcessServerBuilder.forName(serverName)
-				.directExecutor()
-				, 0, service);
-		server.start();
+		
 		inProcessChannel = grpcCleanup.register(
 				InProcessChannelBuilder.forName(serverName).directExecutor().build());
 
-	}
-
-	@AfterEach
-	public void tearDown() throws Exception {
-		server.stop();
 	}
 
 	@Test

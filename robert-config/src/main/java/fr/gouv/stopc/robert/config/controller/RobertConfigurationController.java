@@ -66,6 +66,10 @@ public class RobertConfigurationController {
 
 		// Compute the key / value version of the configuration
 		Map<String, Object> configuration = yamlCodec.load(yamlConfiguration);
+<<<<<<< HEAD
+		
+=======
+>>>>>>> branch 'feat-hot-reload-configuration' of git@plant-stopcovid.gitlab.inria.fr:stopcovid19/robert-server.git
 		String result = service.updateConfiguration(appName, profile, configuration);
 		HttpStatus status = HttpStatus.OK;
 		if (IConfigurationUpdateResults.CONFIGURATION_UPDATE_FAILED.equals(result)) {
