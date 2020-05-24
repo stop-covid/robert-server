@@ -1,25 +1,27 @@
 package fr.gouv.stopc.robertserver.ws.utils;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
 import lombok.Getter;
 
+@RefreshScope
 @Getter
 @Component
 public class PropertyLoader {
 
-	@Value("${robert.crypto.server.host}")
+	@Value("${robert.crypto.hostname}")
 	private String cryptoServerHost;
 
-	@Value("${robert.crypto.server.port}")
+	@Value("${robert.crypto.port}")
 	private String cryptoServerPort;
 
 	/**
 	 * 
 	 * @return the verification URL for the captcha
 	 */
-	@Value("${captcha.verify.url}")
+	@Value("${captcha.verify-url}")
 	private String captchaVerificationUrl;
 
 	/**

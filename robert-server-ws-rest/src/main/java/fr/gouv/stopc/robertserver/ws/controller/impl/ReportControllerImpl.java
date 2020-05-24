@@ -34,13 +34,13 @@ public class ReportControllerImpl implements IReportController {
 
 	private RestTemplate restTemplate;
 
-	@Value("${submission.code.server.host}")
+	@Value("${submissionCode.server.hostname}")
 	private String serverCodeHost;
 
-	@Value("${submission.code.server.port}")
+	@Value("${submissionCode.server.port}")
 	private String serverCodePort;
 
-	@Value("${submission.code.server.verify.path}")
+	@Value("${submissionCode.server.verify-path}")
 	private String serverCodeVerificationUri;
 
 	@Inject

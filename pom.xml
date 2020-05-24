@@ -32,6 +32,8 @@
 		<module>robert-server-database</module>
 		<module>robert-server-crypto</module>
 		<module>robert-server-common</module>
+		<module>robert-config</module>
+		<module>robert-service-registry</module>
 		<module>robert-crypto-grpc-server</module>
 		<module>robert-crypto-grpc-server-messaging</module>
 	</modules>
@@ -45,6 +47,7 @@
 		<grpc.version>1.29.0</grpc.version>
 		<protobuf.version>3.11.0</protobuf.version>
 		<error_prone_annotations.version>2.3.4</error_prone_annotations.version>
+		<spring-cloud.version>Hoxton.SR4</spring-cloud.version>
 	</properties>
 
 	<dependencies>

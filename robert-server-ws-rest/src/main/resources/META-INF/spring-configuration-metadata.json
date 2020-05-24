@@ -1,0 +1,50 @@
+{
+	"groups": [],
+	"properties": [
+		{
+			"name": "captcha.hostname",
+			"type": "java.lang.String",
+			"description": "Host name of the server hosting the Captcha service"
+		},
+		{
+			"name": "captcha.secret",
+			"type": "java.lang.String",
+			"description": "Secret to send to the Captcha service"
+		},
+		{
+			"name": "captcha.verify-url",
+			"type": "java.lang.String",
+			"description": "URL of the service of verification"
+		},
+		{
+			"name": "robert.server.controller-path-prefix",
+			"type": "java.lang.String",
+			"description": "Path prefix of the Robert Server controllers"
+		},
+		{
+			"name": "robert.crypto.hostname",
+			"type": "java.lang.String",
+			"description": "Host name of the Robert Crypto server"
+		},
+		{
+			"name": "robert.crypto.port",
+			"type": "java.lang.Integer",
+			"description": "Port to use when exchanging with the Robert Crypto server"
+		},
+		{
+			"name": "submissionCode.server.hostname",
+			"type": "java.lang.String",
+			"description": "Host name of the Submission Code server"
+		},
+		{
+			"name": "submissionCode.server.port",
+			"type": "java.lang.Integer",
+			"description": "Port to use when exchanging with the Submission Code server"
+		},
+		{
+			"name": "submissionCode.server.verify-path",
+			"type": "java.lang.String",
+			"description": "Path of the verify REST service of the Submission Code server"
+		}
+	]
+}

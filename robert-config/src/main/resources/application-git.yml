@@ -1,0 +1,21 @@
+server:
+  port: ${ROBERT_CONFIG_PORT:8888}
+
+spring:
+  application:
+    name: robert-config
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${ROBERT_CONFIG_GIT_REPO:file:///C:\Users\mrouanet\git\config-server-repo}
+        prefix: /spring-config
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    registerWithEureka: false
+    fetchRegistry: true
+  instance:
+    prefer-ip-address: true
