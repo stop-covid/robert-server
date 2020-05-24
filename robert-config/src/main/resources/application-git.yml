@@ -8,7 +8,7 @@ spring:
     config:
       server:
         git:
-          uri: ${ROBERT_CONFIG_GIT_REPO:file:///C:\Users\mrouanet\git\config-server-repo}
+          uri: ${ROBERT_CONFIG_GIT_REPO}
         prefix: /spring-config
 
 eureka:
