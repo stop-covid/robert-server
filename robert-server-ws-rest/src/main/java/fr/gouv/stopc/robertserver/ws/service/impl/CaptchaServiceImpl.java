@@ -13,15 +13,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.ws.dto.CaptchaDto;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -49,15 +47,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 
-			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(captcha,
-																		  this.propertyLoader.getCaptchaSecret()).toString(),
-															initHttpHeaders());
+			HttpEntity<RegisterVo> request = new HttpEntity(null, initHttpHeaders());
 			Date sendingDate = new Date();
 
 			ResponseEntity<CaptchaDto> response = null;
 			try {
-				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request,
-														   CaptchaDto.class);
+				response = this.restTemplate.postForEntity(constructUri(captcha), request, CaptchaDto.class);
 			} catch (RestClientException e) {
 				log.error(e.getMessage());
 				return false;
@@ -93,15 +88,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 											* 1000L;
 	}
 
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Data
-	class CaptchaVo {
+	private String constructUri(String captcha) {
 
-		private String secret;
-
-		private String response;
-
+		return UriComponentsBuilder.fromHttpUrl(this.propertyLoader.getCaptchaVerificationUrl())
+								   .queryParam("secret", this.propertyLoader.getCaptchaSecret())
+								   .queryParam("response", captcha)
+								   .toString();
 	}
 
 }
