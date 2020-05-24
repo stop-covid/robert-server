@@ -17,7 +17,7 @@ import lombok.ToString;
 public class RegisterVo {
   @JsonProperty(required = true)
   @NotNull
-  @ToString.Exclude
+//  @ToString.Exclude
   private String captcha;
 
 }

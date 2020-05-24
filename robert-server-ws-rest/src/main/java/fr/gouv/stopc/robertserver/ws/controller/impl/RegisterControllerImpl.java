@@ -32,7 +32,9 @@ import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class RegisterControllerImpl implements IRegisterController {
 
@@ -73,6 +75,7 @@ public class RegisterControllerImpl implements IRegisterController {
 //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 //        }
 
+        log.info("WE RECEIVED : {}", registerVo);
         if (!this.captchaService.verifyCaptcha(registerVo)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

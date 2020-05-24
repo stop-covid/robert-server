@@ -50,10 +50,13 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 		// This part of the code should be removed before any public use. For security reason.
 		// TODO: remove this as far as it is no more needed for test.
+	    log.info("WE RECEIVED THIS IN CAPTCHA SERVICE : {}", registerVo);
 		if (this.hasMagicNumber(registerVo)) return true;
 
+		log.info("THIS ISNT A MAGIC NUMBER");
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
-
+		    log.info("TRYING TO CALL THE RECAPTCHA : {}, {}, {}", captcha,this.propertyLoader.getCaptchaSecret(), 
+		            this.propertyLoader.getCaptchaVerificationUrl());
 			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(captcha,
 																		  this.propertyLoader.getCaptchaSecret()).toString(),
 															initHttpHeaders());
@@ -62,9 +65,10 @@ public class CaptchaServiceImpl implements CaptchaService {
 			ResponseEntity<CaptchaDto> response = null;
 			try {
 				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request,
-														   CaptchaDto.class);
+													   CaptchaDto.class);
+				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response.getBody());
 			} catch (RestClientException e) {
-				log.error(e.getMessage());
+				log.error("XXXXXXX X X=>  {}",e.getMessage());
 				return false;
 			}
 

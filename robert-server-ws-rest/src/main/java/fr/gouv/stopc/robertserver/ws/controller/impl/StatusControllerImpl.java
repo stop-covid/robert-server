@@ -126,12 +126,12 @@ public class StatusControllerImpl implements IStatusController {
 			// Step #7: Check that epochs are not too distant
 			int currentEpoch = TimeUtils.getCurrentEpochFrom(serverConfigurationService.getServiceTimeStart());
 			int epochDistance = currentEpoch - record.getLastStatusRequestEpoch();
-			if(epochDistance < serverConfigurationService.getStatusRequestMinimumEpochGap()) {
-				log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
-						epochDistance,
-						serverConfigurationService.getStatusRequestMinimumEpochGap());
-				return Optional.of(ResponseEntity.badRequest().build());
-			}
+//			if(epochDistance < serverConfigurationService.getStatusRequestMinimumEpochGap()) {
+//				log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
+//						epochDistance,
+//						serverConfigurationService.getStatusRequestMinimumEpochGap());
+//				return Optional.of(ResponseEntity.badRequest().build());
+//			}
 
 			// Request is valid
 			// (now iterating through steps from section "If the ESR_REQUEST_A,i is valid, the server:", p11 of spec)
