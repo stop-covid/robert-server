@@ -58,11 +58,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 		    log.info("TRYING TO CALL THE RECAPTCHA : {}, {}, {}", captcha,this.propertyLoader.getCaptchaSecret(), 
 		            this.propertyLoader.getCaptchaVerificationUrl());
-			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(captcha,
+			HttpEntity<CaptchaVo> request = new HttpEntity(new CaptchaVo(captcha,
 																		  this.propertyLoader.getCaptchaSecret()).toString(),
 															initHttpHeaders());
 			Date sendingDate = new Date();
 
+			log.info("CAPTCH VO = {}", request.getBody());
 			ResponseEntity<CaptchaDto> response = null;
 			try {
 				response = this.restTemplate.exchange(this.propertyLoader.getCaptchaVerificationUrl(), HttpMethod.POST, request,
