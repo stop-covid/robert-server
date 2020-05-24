@@ -33,6 +33,7 @@ import fr.gouv.stopc.robertserver.ws.dto.mapper.EpochKeyBundleDtoMapper;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
 import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
+import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +51,9 @@ public class StatusControllerImpl implements IStatusController {
 
 	private final ICryptoServerGrpcClient cryptoServerClient;
 
-	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
+	private final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
+
+	private final PropertyLoader propertyLoader;
 	
 	@Inject
 	public StatusControllerImpl(
@@ -59,7 +62,8 @@ public class StatusControllerImpl implements IStatusController {
 			final IApplicationConfigService applicationConfigService,
 			final AuthRequestValidationService authRequestValidationService,
 			final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
-			final ICryptoServerGrpcClient cryptoServerClient
+			final ICryptoServerGrpcClient cryptoServerClient,
+			final PropertyLoader propertyLoader
 	) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.registrationService = registrationService;
@@ -67,6 +71,7 @@ public class StatusControllerImpl implements IStatusController {
 		this.authRequestValidationService = authRequestValidationService;
 		this.cryptoServerClient = cryptoServerClient;
 		this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
+		this.propertyLoader = propertyLoader;
 	}
 
 	@Override
@@ -126,10 +131,14 @@ public class StatusControllerImpl implements IStatusController {
 			// Step #7: Check that epochs are not too distant
 			int currentEpoch = TimeUtils.getCurrentEpochFrom(serverConfigurationService.getServiceTimeStart());
 			int epochDistance = currentEpoch - record.getLastStatusRequestEpoch();
-			if(epochDistance < serverConfigurationService.getStatusRequestMinimumEpochGap()) {
+			int statusRequestMinimumEpochGap = 0;
+			if (!propertyLoader.isDevelopmentModeEnabled()) {
+				statusRequestMinimumEpochGap = serverConfigurationService.getStatusRequestMinimumEpochGap();
+			}
+			if(epochDistance < statusRequestMinimumEpochGap) {
 				log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
 						epochDistance,
-						serverConfigurationService.getStatusRequestMinimumEpochGap());
+						statusRequestMinimumEpochGap);
 				return Optional.of(ResponseEntity.badRequest().build());
 			}
 

@@ -36,4 +36,7 @@ public class PropertyLoader {
 	@Value("${captcha.hostname}")
 	private String captchaHostname;
 
+	@Value("${enable.development.mode}")
+	private boolean isDevelopmentModeEnabled;
+
 }
