@@ -5,9 +5,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyBundleDto;
-import fr.gouv.stopc.robertserver.ws.dto.EpochKeyDto;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,17 +15,14 @@ import com.google.protobuf.ByteString;
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
-import fr.gouv.stopc.robertserver.database.model.ApplicationConfigurationModel;
 import fr.gouv.stopc.robertserver.database.model.EpochExposition;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.IApplicationConfigService;
 import fr.gouv.stopc.robertserver.database.service.IRegistrationService;
 import fr.gouv.stopc.robertserver.ws.controller.IStatusController;
-import fr.gouv.stopc.robertserver.ws.dto.ClientConfigDto;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
-import fr.gouv.stopc.robertserver.ws.utils.MessageConstants;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -90,20 +84,8 @@ public class StatusControllerImpl implements IStatusController {
 
 		@Override
 		public boolean validate(byte[] key, byte[] toCheck, byte[] mac) {
-			boolean res;
-
-			try {
-				MacEsrValidationRequest request = MacEsrValidationRequest.newBuilder()
-						.setKa(ByteString.copyFrom(key))
-						.setDataToValidate(ByteString.copyFrom(toCheck))
-						.setMacToMatchWith(ByteString.copyFrom(mac))
-						.build();
-
-				res = this.cryptoServerClient.validateMacEsr(request);
-			} catch (Exception e) {
-				res = false;
-			}
-			return res;
+			// TODO: refactor, now mac validation is performed by crypto BE
+			return true;
 		}
 	}
 

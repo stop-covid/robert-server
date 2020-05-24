@@ -119,10 +119,10 @@ public class RegisterControllerImpl implements IRegisterController {
 
         List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
         if (CollectionUtils.isEmpty(serverConf)) {
-            registerResponseDto.setFilteringAlgoConfig(Collections.emptyList());
+            registerResponseDto.setConfig(Collections.emptyList());
         } else {
             registerResponseDto
-            .setFilteringAlgoConfig(serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
+            .setConfig(serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
         }
 
         final byte countrycode = this.serverConfigurationService.getServerCountryCode();

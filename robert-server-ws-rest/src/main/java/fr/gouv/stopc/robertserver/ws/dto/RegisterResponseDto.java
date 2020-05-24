@@ -29,15 +29,8 @@ public class RegisterResponseDto
 	private String message;
 
 	@Singular("config")
-	private List<ClientConfigDto> filteringAlgoConfig;
+	private List<ClientConfigDto> config;
 
 	@Min(3797858242L)
 	private long timeStart;
-
-	@NotNull
-	private String serverPublicECDHKeyForKey;
-
-	@NotNull
-	private String serverPublicECDHKeyForTuples;
-
 }

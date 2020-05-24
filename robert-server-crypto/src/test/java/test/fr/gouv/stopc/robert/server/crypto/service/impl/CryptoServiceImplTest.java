@@ -23,10 +23,18 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoAES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Slf4j
 @ExtendWith(SpringExtension.class)
 class CryptoServiceImplTest {
 
@@ -143,8 +151,8 @@ class CryptoServiceImplTest {
 
         final byte[] hello = ByteUtils.addAll(referenceET.getEncryptedCountryCode(), ByteUtils.addAll(referenceET.getEbid(), ByteUtils.addAll(referenceTime, referenceMAC)));
 
-        final Crypto3DES crypto3DES = new Crypto3DES(serverKey);
-        final CryptoAES cryptoAES = new CryptoAESOFB(federationKey);
+        final CryptoCipherStructureAbstract cryptoForEBID = new CryptoSkinny64(serverKey);
+        final CryptoCipherStructureAbstract cryptoForECC = new CryptoAESOFB(federationKey);
 
         //Verify that the message has the right length :
         assert hello.length == (8 + 64 + 16 + 40) / 8;
@@ -162,12 +170,12 @@ class CryptoServiceImplTest {
 
         //2. decrypts eccA
         System.out.println("------ ECC DECRYPTED ------");
-        final byte[] countryCode = this.cryptoService.decryptCountryCode(cryptoAES, ebid, encryptedCountryCode[0]);
+        final byte[] countryCode = this.cryptoService.decryptCountryCode(cryptoForECC, ebid, encryptedCountryCode[0]);
         System.out.println("country code : " + countryCode[0]);
 
         // 3. computes ENC-1(KS; ebidA)
         System.out.println("------ EBID DECRYPTED ------");
-        final byte[] concatIdAAndEpoch = this.cryptoService.decryptEBID(crypto3DES, ebid);
+        final byte[] concatIdAAndEpoch = this.cryptoService.decryptEBID(cryptoForEBID, ebid);
         final byte[] epoch = Arrays.copyOfRange(concatIdAAndEpoch, 0, 3); // 24/8
         final byte[] decryptedIdA = Arrays.copyOfRange(concatIdAAndEpoch, 3, concatIdAAndEpoch.length); // 24/8
         System.out.println(Arrays.toString(epoch) + Arrays.toString(decryptedIdA));

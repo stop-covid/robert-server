@@ -47,14 +47,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.EncryptedEphemeralTupleBundleResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import fr.gouv.stopc.robertserver.database.model.EpochExposition;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
@@ -99,9 +98,6 @@ public class StatusControllerWsRestTest {
 
     private int currentEpoch;
 
-    private EncryptedEphemeralTupleBundleResponse encryptedTupleResponse;
-
-
     @BeforeEach
     public void before() {
 
@@ -111,12 +107,6 @@ public class StatusControllerWsRestTest {
         this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.STATUS).build().encode().toUri();
 
         this.currentEpoch = this.getCurrentEpoch();
-
-        encryptedTupleResponse = EncryptedEphemeralTupleBundleResponse.newBuilder()
-                .setEncryptedTuples(ByteString.copyFrom(ByteUtils.generateRandom(52)))
-                .setServerPublicKeyForTuples(ByteString.copyFrom(ByteUtils.generateRandom(91)))
-                .build();
-
     }
 
     @Test
@@ -481,7 +471,7 @@ public class StatusControllerWsRestTest {
     private byte[][] createEBIDTimeMACFor(byte[] id, byte[] ka, int currentEpoch, int adjustTimeBySeconds) {
         byte[][] res = new byte[3][];
         try {
-            res[0] = this.cryptoService.generateEBID(new Crypto3DES(this.serverConfigurationService.getServerKey()),
+            res[0] = this.cryptoService.generateEBID(new CryptoSkinny64(this.serverConfigurationService.getServerKey()),
                     currentEpoch, id);
             res[1] = this.generateTime32(adjustTimeBySeconds);
             res[2] = this.generateMACforESR(res[0], res[1], ka);
@@ -525,9 +515,6 @@ public class StatusControllerWsRestTest {
 
         this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
-
-        doReturn(Optional.of(this.encryptedTupleResponse)).when(this.cryptoServerClient).generateEncryptedEphemeralTuple(any());
-
         // When
         ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
                 HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
@@ -567,11 +554,14 @@ public class StatusControllerWsRestTest {
 
         doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-        doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+        doReturn(Optional.of(GetIdFromStatusResponse.newBuilder()
+                .setEpochId(currentEpoch)
+                .setIdA(ByteString.copyFrom(idA))
+                .setTuples(ByteString.copyFrom("Base64encodedEncryptedJSONStringWithTuples".getBytes()))
+                .build()))
+                .when(this.cryptoServerClient).getIdFromStatus(any());
 
-        doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
-
-        when(this.cryptoServerClient.generateEncryptedEphemeralTuple(any())).thenReturn(Optional.of(this.encryptedTupleResponse));
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
 
         // When
         ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),

@@ -335,7 +335,7 @@ public class RegisterControllerWsRestTest {
 				HttpMethod.POST, this.requestEntity, RegisterResponseDto.class);
 
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
-		assertNotNull(response.getBody().getFilteringAlgoConfig());
+		assertNotNull(response.getBody().getConfig());
 		assertEquals(32, Base64.decode(response.getBody().getKey()).length);
 		assertEquals(expectedServerPublicKeyForKey, response.getBody().getServerPublicECDHKeyForKey());
 		assertEquals(expectedServerPublicKeyForTuples, response.getBody().getServerPublicECDHKeyForTuples());

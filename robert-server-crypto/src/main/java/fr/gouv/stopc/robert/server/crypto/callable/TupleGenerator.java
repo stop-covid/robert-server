@@ -1,13 +1,12 @@
 package fr.gouv.stopc.robert.server.crypto.callable;
 
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.CryptoAES;
-import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
-import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -24,8 +23,8 @@ public class TupleGenerator {
 
     private final byte[] federationKey;
 
-    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructure3DESList;
-    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureAESList;
+    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForEBIDList;
+    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForECCList;
 
     private ThreadPoolExecutor threadExecutor;
     private final CryptoService cryptoService;
@@ -42,19 +41,16 @@ public class TupleGenerator {
         this.threadExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
 
         // Generate [ #numberOfThreads * tripleDES ]
-        final CryptoCipherStructureAbstract[] availableCrypto3DES = new Crypto3DES[this.numberOfThreads];
-        final CryptoCipherStructureAbstract[] availableCryptoAES = new CryptoAESOFB[this.numberOfThreads];
+        final CryptoCipherStructureAbstract[] availableCryptoForEBID = new CryptoSkinny64[this.numberOfThreads];
+        final CryptoCipherStructureAbstract[] availableCryptoForECC = new CryptoAESOFB[this.numberOfThreads];
 
         for (int i = 0; i < this.numberOfThreads; i++) {
-            final CryptoCipherStructureAbstract crypto3DES = new Crypto3DES(this.serverKey);
-            final CryptoCipherStructureAbstract cryptoAES = new CryptoAESOFB(this.federationKey);
-
-            availableCrypto3DES[i] = crypto3DES;
-            availableCryptoAES[i] = cryptoAES;
+            availableCryptoForEBID[i] = new CryptoSkinny64(this.serverKey);;
+            availableCryptoForECC[i] = new CryptoAESOFB(this.federationKey);
         }
         // assign generated TripleDES to the TripleConcurrentList
-        this.cryptoStructure3DESList = new CryptoStructureConcurrentArray<>(availableCrypto3DES);
-        this.cryptoStructureAESList = new CryptoStructureConcurrentArray<>(availableCryptoAES);
+        this.cryptoStructureForEBIDList = new CryptoStructureConcurrentArray<>(availableCryptoForEBID);
+        this.cryptoStructureForECCList = new CryptoStructureConcurrentArray<>(availableCryptoForECC);
     }
 
     public Collection<EphemeralTuple> exec(final byte[] idA,
@@ -69,8 +65,8 @@ public class TupleGenerator {
             callableList.add(
                     new TupleCallable(
                             this.cryptoService,
-                            this.cryptoStructure3DESList,
-                            this.cryptoStructureAESList,
+                            this.cryptoStructureForEBIDList,
+                            this.cryptoStructureForECCList,
                             idA, epoch, countryCode
                     )
             );
