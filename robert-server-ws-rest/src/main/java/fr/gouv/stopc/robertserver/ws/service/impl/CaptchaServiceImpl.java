@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.service.impl;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
@@ -68,18 +69,19 @@ public class CaptchaServiceImpl implements CaptchaService {
 			Date sendingDate = new Date();
 
 			log.info("CAPTCH VO = {}", request.getBody());
-			ResponseEntity<CaptchaDto> response = null;
+			CaptchaDto response = null;
 			try {
-				response = this.restTemplate.exchange(this.propertyLoader.getCaptchaVerificationUrl(), HttpMethod.POST, request,
-													   CaptchaDto.class);
-				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response.getBody());
+			    URI verifyUri = URI.create(String.format(
+			            "https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s&remoteip=%s",
+			            this.propertyLoader.getCaptchaSecret(), captcha, this.propertyLoader.getCaptchaHostname()));
+			    response  = restTemplate.getForObject(verifyUri, CaptchaDto.class);
+				log.info("THE CALL DIDN'T FAILS : {}", response, Objects.isNull(response)  ? null : response);
 			} catch (RestClientException e) {
 				log.error("XXXXXXX X X=>  {}",e.getMessage());
 				return false;
 			}
 
 			return Optional.ofNullable(response)
-						   .map(ResponseEntity::getBody)
 						   .filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp()))
 						   .map(captchaDto -> {
 
