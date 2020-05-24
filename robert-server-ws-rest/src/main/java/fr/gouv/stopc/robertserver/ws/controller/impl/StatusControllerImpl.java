@@ -176,6 +176,7 @@ public class StatusControllerImpl implements IStatusController {
 		}
 	}
 
+	// TODO: delete commented code
 //	private void includeEphemeralTuplesForNextMEpochs(final StatusResponseDto statusResponse,
 //													  final Registration user,
 //													  final int numberOfDays) throws RobertServerException {

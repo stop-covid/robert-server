@@ -2,9 +2,9 @@ package fr.gouv.stopc.robert.crypto.grpc.server.service;
 
 import java.util.Optional;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 
 public interface IECDHKeyService {
-    
-    Optional<ServerECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey);
+    Optional<ClientIdentifierBundle> deriveKeysFromClientPublicKey(byte[] clientPublicKey) throws RobertServerCryptoException;
 }

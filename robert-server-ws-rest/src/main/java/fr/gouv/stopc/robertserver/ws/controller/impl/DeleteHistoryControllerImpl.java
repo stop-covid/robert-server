@@ -5,7 +5,9 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
+import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -34,14 +36,14 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 	@Override
 	public ResponseEntity<DeleteHistoryResponseDto> deleteHistory(DeleteHistoryRequestVo deleteHistoryRequestVo)
 			throws RobertServerException {
-		AuthRequestValidationService.ValidationResult<GetIdFromAuthResponse> validationResult =
-				authRequestValidationService.validateRequestForAuth(deleteHistoryRequestVo);
+		AuthRequestValidationService.ValidationResult<DeleteIdResponse> validationResult =
+				authRequestValidationService.validateRequestForUnregister(deleteHistoryRequestVo);
 
 		if (Objects.nonNull(validationResult.getError())) {
 			return ResponseEntity.badRequest().build();
 		}
 
-		GetIdFromAuthResponse authResponse = validationResult.getResponse();
+		DeleteIdResponse authResponse = validationResult.getResponse();
 		Optional<Registration> registrationRecord = this.registrationService.findById(authResponse.getIdA().toByteArray());
 
 		if (registrationRecord.isPresent()) {

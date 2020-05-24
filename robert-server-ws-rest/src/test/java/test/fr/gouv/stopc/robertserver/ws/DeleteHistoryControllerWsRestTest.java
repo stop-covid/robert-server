@@ -21,6 +21,7 @@ import javax.crypto.KeyGenerator;
 import javax.inject.Inject;
 
 import com.google.protobuf.ByteString;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import org.bson.internal.Base64;
@@ -138,11 +139,10 @@ public class DeleteHistoryControllerWsRestTest {
 		System.arraycopy(idA, 0, decryptedEbid, 3, idA.length);
 		System.arraycopy(ByteUtils.intToBytes(this.currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
-		doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-								.setEpochId(this.currentEpoch)
+		doReturn(Optional.of(DeleteIdResponse.newBuilder()
 								.setIdA(ByteString.copyFrom(idA))
 								.build()))
-				.when(this.cryptoServerClient).getIdFromAuth(any());
+				.when(this.cryptoServerClient).deleteId(any());
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
@@ -175,11 +175,10 @@ public class DeleteHistoryControllerWsRestTest {
 		System.arraycopy(ByteUtils.intToBytes(this.currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
-		doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-					.setEpochId(this.currentEpoch)
-					.setIdA(ByteString.copyFrom(idA))
-					.build()))
-				.when(this.cryptoServerClient).getIdFromAuth(any());
+		doReturn(Optional.of(DeleteIdResponse.newBuilder()
+				.setIdA(ByteString.copyFrom(idA))
+				.build()))
+				.when(this.cryptoServerClient).deleteId(any());
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, this.currentEpoch);
 
@@ -222,11 +221,10 @@ public class DeleteHistoryControllerWsRestTest {
 		System.arraycopy(idA, 0, decryptedEbid, 3, idA.length);
 		System.arraycopy(ByteUtils.intToBytes(this.currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
-		doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-					.setEpochId(this.currentEpoch)
-					.setIdA(ByteString.copyFrom(idA))
-					.build()))
-				.when(this.cryptoServerClient).getIdFromAuth(any());
+		doReturn(Optional.of(DeleteIdResponse.newBuilder()
+				.setIdA(ByteString.copyFrom(idA))
+				.build()))
+				.when(this.cryptoServerClient).deleteId(any());
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, this.currentEpoch);
 
@@ -278,11 +276,10 @@ public class DeleteHistoryControllerWsRestTest {
 		System.arraycopy(idA, 0, decryptedEbid, 3, idA.length);
 		System.arraycopy(ByteUtils.intToBytes(currentEpoch - 10), 1, decryptedEbid, 0,
 				decryptedEbid.length - idA.length);
-		doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-					.setEpochId(this.currentEpoch)
-					.setIdA(ByteString.copyFrom(idA))
-					.build()))
-				.when(this.cryptoServerClient).getIdFromAuth(any());
+		doReturn(Optional.of(DeleteIdResponse.newBuilder()
+				.setIdA(ByteString.copyFrom(idA))
+				.build()))
+				.when(this.cryptoServerClient).deleteId(any());
 
 		this.requestBody = DeleteHistoryRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
@@ -374,7 +371,7 @@ public class DeleteHistoryControllerWsRestTest {
 		System.arraycopy(ByteUtils.intToBytes(this.currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
-		doReturn(Optional.empty()).when(this.cryptoServerClient).getIdFromAuth(any());
+		doReturn(Optional.empty()).when(this.cryptoServerClient).deleteId(any());
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, this.currentEpoch);
 

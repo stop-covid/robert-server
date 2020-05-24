@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,39 +25,59 @@ public class ClientKeyStorageServiceTest {
         this.clientKeyStorageService = new ClientKeyStorageService();
     }
 
+    private final static String KEY_PLACEHOLDER = "0123456789ABCDEF0123456789ABCDEF";
+
     @Test
     public void testCreateIdAndKeySucceeds() {
-        ClientIdentifierBundle bundle = this.clientKeyStorageService.createClientIdAndKey();
-        assertNotNull(bundle.getId());
-        assertNotNull(bundle.getKey());
-        assertEquals(5, bundle.getId().length);
-        assertEquals(32, bundle.getKey().length);
+        Optional<ClientIdentifierBundle> bundle = this.clientKeyStorageService.createClientIdUsingKeys(
+                KEY_PLACEHOLDER.getBytes(),
+                KEY_PLACEHOLDER.getBytes());
+        assertTrue(bundle.isPresent());
+
+        assertNotNull(bundle.get().getId());
+        assertNotNull(bundle.get().getKeyMac());
+        assertNotNull(bundle.get().getKeyTuples());
+        assertEquals(5, bundle.get().getId().length);
+        assertEquals(32, bundle.get().getKeyMac().length);
+        assertEquals(32, bundle.get().getKeyTuples().length);
     }
 
     @Test
     public void testFindIdSucceeds() {
-        ClientIdentifierBundle bundle = this.clientKeyStorageService.createClientIdAndKey();
+        Optional<ClientIdentifierBundle> bundle = this.clientKeyStorageService.createClientIdUsingKeys(
+                KEY_PLACEHOLDER.getBytes(),
+                KEY_PLACEHOLDER.getBytes());
+        assertTrue(bundle.isPresent());
 
-        byte[] idCopy = Arrays.copyOf(bundle.getId(), bundle.getId().length);
-        ClientIdentifierBundle found = this.clientKeyStorageService.findKeyById(idCopy);
-        assertNotNull(found);
-        assertTrue(Arrays.equals(found.getId(), bundle.getId()));
-        assertTrue(Arrays.equals(found.getKey(), bundle.getKey()));
+        byte[] idCopy = Arrays.copyOf(bundle.get().getId(), bundle.get().getId().length);
+        Optional<ClientIdentifierBundle> found = this.clientKeyStorageService.findKeyById(idCopy);
+        assertTrue(found.isPresent());
+        assertTrue(Arrays.equals(found.get().getId(), bundle.get().getId()));
+        assertTrue(Arrays.equals(found.get().getKeyMac(), bundle.get().getKeyMac()));
+        assertTrue(Arrays.equals(found.get().getKeyTuples(), bundle.get().getKeyTuples()));
     }
 
     @Test
     public void testFindNonExistentIdFails() {
-        ClientIdentifierBundle bundle = this.clientKeyStorageService.createClientIdAndKey();
-        byte[] id = bundle.getId();
+        Optional<ClientIdentifierBundle> bundle = this.clientKeyStorageService.createClientIdUsingKeys(
+                KEY_PLACEHOLDER.getBytes(),
+                KEY_PLACEHOLDER.getBytes());
+        assertTrue(bundle.isPresent());
+
+        byte[] id = bundle.get().getId();
         id[3] = (byte)(id[3] + 1);
-        ClientIdentifierBundle found = this.clientKeyStorageService.findKeyById(id);
-        assertNull(found);
+        Optional<ClientIdentifierBundle> found = this.clientKeyStorageService.findKeyById(id);
+        assertTrue(!found.isPresent());
     }
 
     @Test
     public void testDeleteClientIdSucceeds() {
-        ClientIdentifierBundle bundle = this.clientKeyStorageService.createClientIdAndKey();
-        this.clientKeyStorageService.deleteClientId(bundle.getId());
-        assertNull(this.clientKeyStorageService.findKeyById(bundle.getId()));
+        Optional<ClientIdentifierBundle> bundle = this.clientKeyStorageService.createClientIdUsingKeys(
+                KEY_PLACEHOLDER.getBytes(),
+                KEY_PLACEHOLDER.getBytes());
+        assertTrue(bundle.isPresent());
+
+        this.clientKeyStorageService.deleteClientId(bundle.get().getId());
+        assertTrue(!this.clientKeyStorageService.findKeyById(bundle.get().getId()).isPresent());
     }
 }

@@ -10,6 +10,7 @@ import javax.validation.Validation;
 import javax.xml.ws.Response;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
+import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
@@ -94,7 +95,7 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
     }
 
     @Override
-    public ValidationResult<GetIdFromAuthResponse> validateRequestForAuth(AuthRequestVo authRequestVo) {
+    public ValidationResult<GetIdFromAuthResponse> validateRequestForAuth(AuthRequestVo authRequestVo, DigestSaltEnum requestType) {
         Optional<ResponseEntity> validationError = validateCommonAuth(authRequestVo);
 
         if (validationError.isPresent()) {
@@ -103,10 +104,11 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
 
         try {
             GetIdFromAuthRequest request = GetIdFromAuthRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(authRequestVo.getEbid().getBytes()))
-                    .setEpochId(authRequestVo.getEpochId())
-                    .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(authRequestVo.getTime()))))
-                    .setMac(ByteString.copyFrom(authRequestVo.getMac().getBytes()))
+                        .setEbid(ByteString.copyFrom(authRequestVo.getEbid().getBytes()))
+                        .setEpochId(authRequestVo.getEpochId())
+                        .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(authRequestVo.getTime()))))
+                        .setMac(ByteString.copyFrom(authRequestVo.getMac().getBytes()))
+                        .setRequestType(requestType.getValue())
                     .build();
 
             Optional<GetIdFromAuthResponse> response = this.cryptoServerClient.getIdFromAuth(request);
@@ -122,8 +124,35 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
     }
 
     @Override
-    public ValidationResult<GetIdFromStatusResponse> validateStatusRequest(StatusVo statusVo) {
+    public ValidationResult<DeleteIdResponse> validateRequestForUnregister(AuthRequestVo authRequestVo) {
+        Optional<ResponseEntity> validationError = validateCommonAuth(authRequestVo);
 
+        if (validationError.isPresent()) {
+            return ValidationResult.<DeleteIdResponse>builder().error(validationError.get()).build();
+        }
+
+        try {
+            DeleteIdRequest request = DeleteIdRequest.newBuilder()
+                    .setEbid(ByteString.copyFrom(authRequestVo.getEbid().getBytes()))
+                    .setEpochId(authRequestVo.getEpochId())
+                    .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(authRequestVo.getTime()))))
+                    .setMac(ByteString.copyFrom(authRequestVo.getMac().getBytes()))
+                    .build();
+
+            Optional<DeleteIdResponse> response = this.cryptoServerClient.deleteId(request);
+
+            if (response.isPresent()) {
+                return ValidationResult.<DeleteIdResponse>builder().response(response.get()).build();
+            } else {
+                return ValidationResult.<DeleteIdResponse>builder().error(createErrorValidationFailed()).build();
+            }
+        } catch (Exception e1) {
+            return ValidationResult.<DeleteIdResponse>builder().error(createErrorTechnicalIssue()).build();
+        }
+    }
+
+    @Override
+    public ValidationResult<GetIdFromStatusResponse> validateStatusRequest(StatusVo statusVo) {
         Optional<ResponseEntity> validationError = validateCommonAuth(statusVo);
 
         if (validationError.isPresent()) {
@@ -132,10 +161,12 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
 
         try {
             GetIdFromStatusRequest request = GetIdFromStatusRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(statusVo.getEbid().getBytes()))
-                    .setEpochId(statusVo.getEpochId())
-                    .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(statusVo.getTime().getBytes())))
-                    .setMac(ByteString.copyFrom(statusVo.getMac().getBytes()))
+                        .setEbid(ByteString.copyFrom(Base64.decode(statusVo.getEbid())))
+                        .setEpochId(statusVo.getEpochId())
+                        .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(statusVo.getTime()))))
+                        .setMac(ByteString.copyFrom(Base64.decode(statusVo.getMac())))
+                        .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
+                        .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
                     .build();
 
             Optional<GetIdFromStatusResponse> response = this.cryptoServerClient.getIdFromStatus(request);

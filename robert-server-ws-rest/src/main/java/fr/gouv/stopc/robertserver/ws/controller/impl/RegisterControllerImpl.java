@@ -87,6 +87,7 @@ public class RegisterControllerImpl implements IRegisterController {
                 .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
                 .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
                 .setServerCountryCode(ByteString.copyFrom(serverCountryCode))
+                .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
                 .build();
 
         Optional<CreateRegistrationResponse> response = this.cryptoServerClient.createRegistration(request);

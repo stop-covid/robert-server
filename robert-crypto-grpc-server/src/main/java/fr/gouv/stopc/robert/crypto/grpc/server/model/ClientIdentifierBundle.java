@@ -11,5 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ClientIdentifierBundle {
     private byte[] id;
-    private byte[] key;
+    private byte[] keyMac;
+    private byte[] keyTuples;
 }

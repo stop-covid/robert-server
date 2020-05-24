@@ -1,24 +1,22 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Optional;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ECDHKeyServiceImpl;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 public class ECDHKeyServiceImplTest {
@@ -34,47 +32,22 @@ public class ECDHKeyServiceImplTest {
     }
 
     @Test
-    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyIsNullFails() {
- 
-        // Given
-        byte [] clientPublicKey = null;
- 
-        // When
-        Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
-
-        // Then
-        assertFalse(keys.isPresent());
-        
-    }
-
-    @Test
-    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasWrongSizeFails() {
-
-        // Given
-        byte [] clientPublicKey = ByteUtils.generateRandom(50);
- 
-        // When
-        Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
-
-        // Then
-        assertFalse(keys.isPresent());
-
-    }
-
-    @Test
-    public void testGenerateECDHKeysForEncryptionWhenClientPublicKeyHasCorrectSizeSucceeds() {
+    public void testKeyDerivationFromClientPublicKeySucceeds() {
 
         // Given
         byte [] clientPublicKey = CryptoTestUtils.generateECDHPublicKey();
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = null;
 
-        // When
-        Optional<ServerECDHBundle> keys = this.keyService.generateECHDKeysForEncryption(clientPublicKey);
+        try {
+            // When
+            clientIdentifierBundle = this.keyService.deriveKeysFromClientPublicKey(clientPublicKey);
+        } catch (RobertServerCryptoException e) {
+            fail("Should not happen");
+        }
 
         // Then
-        assertTrue(keys.isPresent());
-        assertNotNull(keys.get().getGeneratedSharedSecret());
-        assertNotNull(keys.get().getServerPublicKey());
-        assertEquals(clientPublicKey.length ,keys.get().getServerPublicKey().length);
-
+        assertTrue(clientIdentifierBundle.isPresent());
+        assertNotNull(clientIdentifierBundle.get().getKeyTuples());
+        assertNotNull(clientIdentifierBundle.get().getKeyMac());
     }
 }

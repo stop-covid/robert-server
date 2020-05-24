@@ -15,14 +15,18 @@ import java.util.*;
 @Slf4j
 public class ClientKeyStorageService implements IClientKeyStorageService {
 
-    private final HashMap<ByteArray, byte[]> idKeyHashMap = new HashMap<>();
+    private final HashMap<ByteArray, ClientIdentifierBundle> idKeyHashMap = new HashMap<>();
+
+    private final static int MAX_ID_CREATION_ATTEMPTS = 10;
 
     private byte[] generateRandomIdentifier() {
         byte[] id;
+        int i = 0;
         do {
             id = generateKey(5);
-        } while (this.idKeyHashMap.containsKey(id));
-        return id;
+            i++;
+        } while (this.idKeyHashMap.containsKey(id) && i < MAX_ID_CREATION_ATTEMPTS);
+        return i == MAX_ID_CREATION_ATTEMPTS ? null : id;
     }
 
     public byte [] generateRandomKey() {
@@ -54,25 +58,26 @@ public class ClientKeyStorageService implements IClientKeyStorageService {
     }
 
     @Override
-    public ClientIdentifierBundle createClientIdAndKey() {
+    public Optional<ClientIdentifierBundle> createClientIdUsingKeys(byte[] kaMac, byte[] kaTuples) {
         byte[] id = generateRandomIdentifier();
-        byte[] key = generateRandomKey();
 
-        this.idKeyHashMap.put(new ByteArray(id), key);
-        return new ClientIdentifierBundle(id, key);
+        ClientIdentifierBundle clientBundle = ClientIdentifierBundle.builder()
+                .id(id)
+                .keyMac(kaMac)
+                .keyTuples(kaTuples)
+                .build();
+        this.idKeyHashMap.put(new ByteArray(id), clientBundle);
+        return Optional.of(clientBundle);
     }
 
     @Override
-    public ClientIdentifierBundle findKeyById(byte[] id) {
-        byte[] key = this.idKeyHashMap.get(new ByteArray(id));
-        if (Objects.isNull(key)) {
-            return null;
+    public Optional<ClientIdentifierBundle> findKeyById(byte[] id) {
+        ClientIdentifierBundle bundle = this.idKeyHashMap.get(new ByteArray(id));
+        if (Objects.isNull(bundle)) {
+            return Optional.empty();
         }
 
-        return new ClientIdentifierBundle().builder()
-                .id(Arrays.copyOf(id, id.length))
-                .key(Arrays.copyOf(key, key.length))
-                .build();
+        return Optional.of(bundle);
     }
 
     @Override

@@ -84,7 +84,7 @@ class CryptoServiceImplTest {
 
         System.out.println("ECC     size : " + referenceET.getEncryptedCountryCode().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEncryptedCountryCode()));
         System.out.println("EBID    size : " + referenceET.getEbid().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEbid()));
-        System.out.println("EPOCH : " + referenceET.getEpoch());
+        System.out.println("EPOCH : " + referenceET.getEpochId());
 
         final byte[] referenceTime = new byte[2];
         random.nextBytes(referenceTime);
@@ -141,7 +141,7 @@ class CryptoServiceImplTest {
 
         System.out.println("ECC     size : " + referenceET.getEncryptedCountryCode().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEncryptedCountryCode()));
         System.out.println("EBID    size : " + referenceET.getEbid().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEbid()));
-        System.out.println("EPOCH : " + referenceET.getEpoch());
+        System.out.println("EPOCH : " + referenceET.getEpochId());
 
         final byte[] referenceTime = new byte[2];
         random.nextBytes(referenceTime);

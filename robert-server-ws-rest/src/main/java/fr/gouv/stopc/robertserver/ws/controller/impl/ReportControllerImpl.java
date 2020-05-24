@@ -26,6 +26,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
+
 @Service
 @Slf4j
 public class ReportControllerImpl implements IReportController {
@@ -50,13 +52,23 @@ public class ReportControllerImpl implements IReportController {
 		this.restTemplate = restTemplate;
 	}
 
+	/**
+	 * The contacts list is present even if empty and the contactsAsBinary string is present and not empty
+	 * @param reportBatchRequestVo
+	 * @return
+	 */
 	private boolean areBothFieldsPresent(ReportBatchRequestVo reportBatchRequestVo) {
-		return !CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())
+		return !Objects.isNull(reportBatchRequestVo.getContacts())
 				&& StringUtils.isNotEmpty(reportBatchRequestVo.getContactsAsBinary());
 	}
 
+	/**
+	 * The contacts list is null and the contactsAsBinary string is absent or empty
+	 * @param reportBatchRequestVo
+	 * @return
+	 */
 	private boolean areBothFieldsAbsent(ReportBatchRequestVo reportBatchRequestVo) {
-		return CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())
+		return Objects.isNull(reportBatchRequestVo.getContacts())
 				&& StringUtils.isEmpty(reportBatchRequestVo.getContactsAsBinary());
 	}
 

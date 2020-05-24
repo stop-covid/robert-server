@@ -197,7 +197,6 @@ public class RegisterControllerWsRestTest {
         // Then
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         verify(this.cryptoServerClient).createRegistration(any());
-        verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
         verify(this.registrationService, never()).saveRegistration(any());
     }
 
@@ -234,7 +233,6 @@ public class RegisterControllerWsRestTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(this.cryptoServerClient).createRegistration(any());
         verify(this.registrationService).saveRegistration(any());
-        verify(this.cryptoServerClient, never()).generateEncryptedEphemeralTuple(any());
     }
 
 	@Test

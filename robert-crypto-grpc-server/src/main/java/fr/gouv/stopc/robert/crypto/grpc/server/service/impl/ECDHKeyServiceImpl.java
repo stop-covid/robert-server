@@ -1,13 +1,6 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.SecureRandom;
+import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -15,55 +8,73 @@ import java.util.Optional;
 
 import javax.crypto.KeyAgreement;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import org.springframework.stereotype.Service;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ServerECDHBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class ECDHKeyServiceImpl implements IECDHKeyService {
 
-    @Override
-    public Optional<ServerECDHBundle> generateECHDKeysForEncryption(byte[] clientPublicKey) {
-
-        if (ByteUtils.isEmpty(clientPublicKey)) {
-            return Optional.empty();
-        }
+    private KeyPair getServerKeyPair() {
+        // TODO: get the actual server key pair
+        KeyPair keyPair = null;
 
         try {
-            // Generate ephemeral ECDH keypair
             KeyPairGenerator kpg;
             kpg = KeyPairGenerator.getInstance("EC");
             kpg.initialize(new ECGenParameterSpec("secp256r1"), new SecureRandom());
-            KeyPair keyPair = kpg.generateKeyPair();
+            keyPair = kpg.generateKeyPair();
+        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
+            return null;
+        }
+        return keyPair;
+    }
 
-            KeyFactory kf = KeyFactory.getInstance("EC");
-            X509EncodedKeySpec pkSpec = new X509EncodedKeySpec(clientPublicKey);
-            PublicKey publicKey = kf.generatePublic(pkSpec);
+    private final static String HASH_MAC = "mac";
+    private final static String HASH_TUPLES = "tuples";
+    private byte[] deriveKaMacFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
+        CryptoHMACSHA256 sha256Mac = new CryptoHMACSHA256(sharedSecret);
+        return sha256Mac.encrypt(HASH_MAC.getBytes());
+    }
 
-            // Perform key agreement
+    private byte[] deriveKaTuplesFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
+        CryptoHMACSHA256 sha256Mac = new CryptoHMACSHA256(sharedSecret);
+        return sha256Mac.encrypt(HASH_TUPLES.getBytes());
+    }
+
+    private byte[] generateSharedSecret(byte[] clientPublicKey) {
+        KeyPair keyPair = getServerKeyPair();
+        PrivateKey serverPrivateKey = keyPair.getPrivate();
+
+        try {
             KeyAgreement ka = KeyAgreement.getInstance("ECDH");
-            ka.init(keyPair.getPrivate());
+            ka.init(serverPrivateKey);
+            X509EncodedKeySpec pkSpec = new X509EncodedKeySpec(clientPublicKey);
+            KeyFactory kf = KeyFactory.getInstance("EC");
+            PublicKey publicKey = kf.generatePublic(pkSpec);
             ka.doPhase(publicKey, true);
-
-            // Read shared secret
-            byte[] sharedSecret = ka.generateSecret();
-            
-            return Optional.of(ServerECDHBundle.builder()
-                    .generatedSharedSecret(sharedSecret)
-                    .serverPublicKey(keyPair.getPublic().getEncoded())
-                    .build());
-
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException 
-                | InvalidKeyException | IllegalStateException | InvalidAlgorithmParameterException e) {
-
+            return ka.generateSecret();
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException
+                | InvalidKeyException | IllegalStateException e) {
             log.error("Unable to generate ECDH Keys due to {}", e.getMessage());
         }
 
-        return Optional.empty();
+        return null;
+    }
+
+    @Override
+    public Optional<ClientIdentifierBundle> deriveKeysFromClientPublicKey(byte[] clientPublicKey)
+            throws RobertServerCryptoException {
+        byte[] sharedSecret = generateSharedSecret(clientPublicKey);
+        byte[] kaMac = deriveKaMacFromClientPublicKey(sharedSecret);
+        byte[] kaTuples = deriveKaTuplesFromClientPublicKey(sharedSecret);
+
+        return Optional.of(ClientIdentifierBundle.builder().keyMac(kaMac).keyTuples(kaTuples).build());
     }
 
 }
