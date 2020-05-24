@@ -20,8 +20,10 @@ import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.ws.dto.CaptchaDto;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
 import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
+import fr.gouv.stopc.robertserver.ws.vo.CaptchaVo;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,9 +60,11 @@ public class CaptchaServiceImpl implements CaptchaService {
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 		    log.info("TRYING TO CALL THE RECAPTCHA : {}, {}, {}", captcha,this.propertyLoader.getCaptchaSecret(), 
 		            this.propertyLoader.getCaptchaVerificationUrl());
-			HttpEntity<CaptchaVo> request = new HttpEntity(new CaptchaVo(captcha,
-																		  this.propertyLoader.getCaptchaSecret()).toString(),
-															initHttpHeaders());
+		    CaptchaVo captchaVo = CaptchaVo.builder()
+		            .secret(this.propertyLoader.getCaptchaSecret())
+		            .response(captcha)
+		            .build();
+			HttpEntity<CaptchaVo> request = new HttpEntity(captchaVo, initHttpHeaders());
 			Date sendingDate = new Date();
 
 			log.info("CAPTCH VO = {}", request.getBody());
@@ -121,18 +125,6 @@ public class CaptchaServiceImpl implements CaptchaService {
 						- captchaDto.getChallengeTimestamp()
 									.getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()
 											* 1000L;
-	}
-
-
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Data
-	class CaptchaVo {
-
-		private String secret;
-
-		private String response;
-
 	}
 
 }
