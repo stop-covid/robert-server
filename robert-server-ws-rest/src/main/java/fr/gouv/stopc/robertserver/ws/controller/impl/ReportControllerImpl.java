@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -58,10 +59,14 @@ public class ReportControllerImpl implements IReportController {
         if (areBothFieldsPresent(reportBatchRequestVo)) {
             log.warn("Contacts and ContactsAsBinary are both present");
             return ResponseEntity.badRequest().build();
-        } else if (areBothFieldsAbsent(reportBatchRequestVo)) {
-            log.warn("Contacts and ContactsAsBinary are absent");
+        } else if (Objects.isNull(reportBatchRequestVo.getContacts())) {
+            log.warn("Contacts are null. They could be empty but not null");
             return ResponseEntity.badRequest().build();
-        }
+        } 
+//        else if (areBothFieldsAbsent(reportBatchRequestVo)) {
+//            log.warn("Contacts and ContactsAsBinary are absent");
+//            return ResponseEntity.badRequest().build();
+//        }
 
         checkValidityToken(reportBatchRequestVo.getToken());
 
