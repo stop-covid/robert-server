@@ -140,10 +140,10 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
                 X509Certificate[] chain = new X509Certificate[1];
                 chain[0] = x509Certificate;
                 try {
-                    if(this.contains(ALIAS_SERVER_PRIVATE_KEY)) {
-                        this.delete(ALIAS_SERVER_PRIVATE_KEY);
+                    if(!this.contains(ALIAS_SERVER_PRIVATE_KEY)) {
+//                        this.delete(ALIAS_SERVER_PRIVATE_KEY);
+                        this.keyStore.setKeyEntry(ALIAS_SERVER_PRIVATE_KEY, privateKey, null, chain);
                     }
-                    this.keyStore.setKeyEntry(ALIAS_SERVER_PRIVATE_KEY, privateKey, null, chain);
                 } catch (KeyStoreException e) {
                     log.error("An expected error occured when trying to store the server public/private key due to {}", e.getMessage());
                     throw new RuntimeException("Unoble to store the private key of the server");
@@ -163,7 +163,13 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     @Override
     public Optional<Key> getServerPublicKey() {
 
-        return Optional.ofNullable(this.publicKey);
+        try {
+            return Optional.ofNullable(this.keyStore.getCertificate(ALIAS_SERVER_PRIVATE_KEY).getPublicKey());
+        } catch (KeyStoreException e) {
+            log.error("Unable to retrieve the public key due to {}", e.getMessage());
+        }
+        
+        return Optional.empty();
     }
 
     @Override
@@ -171,7 +177,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
         try {
             PrivateKeyEntry entry = (PrivateKeyEntry) this.keyStore.getEntry(ALIAS_SERVER_PRIVATE_KEY, null);
-            log.info("BYTES FROM PRIVATE KEY = {}", entry.getPrivateKey().getEncoded());
             return Optional.ofNullable(entry.getPrivateKey());
         } catch (NoSuchAlgorithmException | UnrecoverableEntryException | KeyStoreException e) {
             // TODO Auto-generated catch block
