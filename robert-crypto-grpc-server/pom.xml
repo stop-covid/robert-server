@@ -59,6 +59,12 @@
 
 		<dependency>
 			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>robert-crypto-grpc-server-storage</artifactId>
+			<version>${project.parent.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
 			<artifactId>robert-server-crypto</artifactId>
 			<version>${project.parent.version}</version>
 		</dependency>
@@ -128,6 +134,12 @@
 			<groupId>com.google.errorprone</groupId>
 			<artifactId>error_prone_annotations</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>

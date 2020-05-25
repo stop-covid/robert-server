@@ -1,0 +1,18 @@
+package fr.gouv.stopc.robert.crypto.grpc.server.storage.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+@Builder
+public class ClientIdentifierBundle {
+
+    private byte[] id;
+    private byte[] key;
+    private byte[] keyForTuples;
+
+}
