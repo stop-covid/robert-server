@@ -1,6 +1,5 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -142,37 +141,64 @@ public class StatusControllerImpl implements IStatusController {
 			// Step #2: "Score" was already processed during batch, simple lookup
 			boolean atRisk = record.isAtRisk();
 
-			if (!record.isNotified()) {
-				// Step #3: Set UserNotified to true if at risk
-				if (atRisk) {
-					record.setNotified(true);
-					record.setLastNotificationEpoch(currentEpoch);
-				}
-			} else {
-				// Has already been notified he was at risk
-				// Reassess new risk since latestEpochOfESR
+//			if (!record.isNotified()) {
+//				// Step #3: Set UserNotified to true if at risk
+//				if (atRisk) {
+//					record.setNotified(true);
+//					record.setLastNotificationEpoch(currentEpoch);
+//				}
+//			} else {
+//				// Has already been notified he was at risk
+//				// Reassess new risk since latestEpochOfESR
+//
+//				// Filter epoch exposition list to match latest ESR epoch
+//				List<EpochExposition> exposedEpochs = record.getExposedEpochs();
+//				List<EpochExposition> epochsToKeep = CollectionUtils.isEmpty(exposedEpochs) ?
+//						new ArrayList<>()
+//						: exposedEpochs.stream()
+//						.filter(ep -> ep.getEpochId() > latestNotifEpoch)
+//						.collect(Collectors.toList());
+//
+//				// Sum all risk scores for all the remaining epochs
+//				Double totalRisk = epochsToKeep.stream()
+//						.map(item -> item.getExpositionScores())
+//						.map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
+//						.reduce(0.0, (a,b) -> a + b);
+//
+//				atRisk = totalRisk > serverConfigurationService.getRiskThreshold();
+//			}
 
-				// Filter epoch exposition list to match latest ESR epoch
-				List<EpochExposition> exposedEpochs = record.getExposedEpochs();
-				List<EpochExposition> epochsToKeep = CollectionUtils.isEmpty(exposedEpochs) ?
-						new ArrayList<>()
-						: exposedEpochs.stream()
-						.filter(ep -> ep.getEpochId() > latestNotifEpoch)
-						.collect(Collectors.toList());
+			boolean newRiskDetected = false;
 
-				// Sum all risk scores for all the remaining epochs
-				Double totalRisk = epochsToKeep.stream()
-						.map(item -> item.getExpositionScores())
-						.map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
-						.reduce(0.0, (a,b) -> a + b);
+	        if (!record.isNotified()) {
+	            // Step #3: Set UserNotified to true if at risk
+	            // If was never notified and batch flagged a risk, notify
+	            // and remember last exposed epoch as new starting point for subsequent risk notifications
+	            if (atRisk) {
+	                newRiskDetected = true;
+	                record.setAtRisk(false);
+	                record.setNotified(true);
+	                int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+	                record.setLastNotificationEpoch(lastExposedEpoch);
+	            }
+	        } else {
+	            // Has already been notified he was at risk
 
-				atRisk = totalRisk > serverConfigurationService.getRiskThreshold();
-			}
+	            // Batch marked a new risk since latestRiskEpoch
+	            // Update latestRiskEpoch to latest exposed epoch
+	            if (atRisk) {
+	                newRiskDetected = true;
+	                record.setAtRisk(false);
+	                int lastExposedEpoch = findLastExposedEpoch(record.getExposedEpochs());
+	                record.setLastNotificationEpoch(lastExposedEpoch);
+	            }
+	        }
+
 			// Update the registration
 			updateRegistration(record);
 
 			// Include new EBIDs and ECCs for next M epochs
-			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
+			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(newRiskDetected).build();
 			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4);
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
@@ -222,4 +248,29 @@ public class StatusControllerImpl implements IStatusController {
 	private void updateRegistration(Registration user) {
 		registrationService.saveRegistration(user);
 	}
+
+	private int findLastExposedEpoch(List<EpochExposition> exposedEpochs) {
+        if (CollectionUtils.isEmpty(exposedEpochs)) {
+            return 0;
+        }
+
+        List<EpochExposition> sortedEpochs = exposedEpochs.stream()
+                .sorted((a, b) -> new Integer(a.getEpochId()).compareTo(b.getEpochId()))
+                .collect(Collectors.toList());
+        return sortedEpochs.get(sortedEpochs.size() - 1).getEpochId();
+    }
+
+//	private List<ClientConfigDto> getClientConfig() {
+//        List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
+//        if (CollectionUtils.isEmpty(serverConf)) {
+//            return Collections.emptyList();
+//        } else {
+//            return serverConf
+//                    .stream()
+//                    .map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build())
+//                    .collect(Collectors.toList());
+//        }
+//    }
+
+	
 }
