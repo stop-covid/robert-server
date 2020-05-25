@@ -18,6 +18,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -258,7 +259,7 @@ public class ReportControllerWsRestTest {
 
 		try {
 			// Given
-			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.contactsAsBinary = Base64.encode(this.contactAsBinaryProto.toByteArray());
 			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contacts(this.contacts)
 					.contactsAsBinary(this.contactsAsBinary).build();
 
@@ -305,7 +306,7 @@ public class ReportControllerWsRestTest {
 
 		try {
 			// Given
-			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.contactsAsBinary = Base64.encode(this.contactAsBinaryProto.toByteArray());
 			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contactsAsBinary(this.contactsAsBinary).build();
 
 			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);
@@ -353,7 +354,7 @@ public class ReportControllerWsRestTest {
 		try {
 			// Given
 			this.contactAsBinaryProto = ContactAsBinaryProto.newBuilder().build();
-			this.contactsAsBinary = new String(this.contactAsBinaryProto.toByteArray());
+			this.contactsAsBinary = Base64.encode(this.contactAsBinaryProto.toByteArray());
 			this.reportBatchRequestVo = ReportBatchRequestVo.builder().token(this.token).contactsAsBinary(this.contactsAsBinary).build();
 
 			this.requestEntity = new HttpEntity<>(this.reportBatchRequestVo, this.headers);

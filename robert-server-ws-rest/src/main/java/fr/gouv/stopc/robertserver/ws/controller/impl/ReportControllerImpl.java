@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
+import org.bson.internal.Base64;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -78,9 +79,9 @@ public class ReportControllerImpl implements IReportController {
 		if (CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())) {
 			// Case of a list of contact provided in contactsAsBinary
 			try {
+				byte[] decodedBase64 = Base64.decode(reportBatchRequestVo.getContactsAsBinary());
 				// First decode the protobuf binary string
-				ContactAsBinaryProto contactsProto = ContactAsBinaryProto
-						.parseFrom(reportBatchRequestVo.getContactsAsBinary().getBytes());
+				ContactAsBinaryProto contactsProto = ContactAsBinaryProto.parseFrom(decodedBase64);
 				// List of contacts must not be empty
 				if (CollectionUtils.isEmpty(contactsProto.getContactsList())) {
 					log.warn("Contact list is empty in contactsAsBinary");
