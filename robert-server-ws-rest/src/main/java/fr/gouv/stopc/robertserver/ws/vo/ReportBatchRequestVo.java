@@ -20,7 +20,7 @@ public class ReportBatchRequestVo {
 
 	@NotNull
 	@Size(min = 6, max = 36)
-	@ToString.Exclude
+	// @ToString.Exclude
 	private String token;
 
 	@Builder.Default

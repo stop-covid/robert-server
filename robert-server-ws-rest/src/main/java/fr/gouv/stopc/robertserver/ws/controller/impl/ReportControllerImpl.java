@@ -51,20 +51,22 @@ public class ReportControllerImpl implements IReportController {
     @Override
     public ResponseEntity<ReportBatchResponseDto> reportContactHistory(ReportBatchRequestVo reportBatchRequestVo) throws RobertServerException {
 
+    	log.info("reportBatchRequestVo {}", reportBatchRequestVo);
+    	
         if (CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())) {
-            log.warn("No contacts in request");
+            log.error("No contacts in request");
             return ResponseEntity.badRequest().build();
         }
 
         if (areBothFieldsPresent(reportBatchRequestVo)) {
-            log.warn("Contacts and ContactsAsBinary are both present");
+            log.error("Contacts and ContactsAsBinary are both present");
             return ResponseEntity.badRequest().build();
         } else if (Objects.isNull(reportBatchRequestVo.getContacts())) {
-            log.warn("Contacts are null. They could be empty but not null");
+            log.error("Contacts are null. They could be empty but not null");
             return ResponseEntity.badRequest().build();
         } 
 //        else if (areBothFieldsAbsent(reportBatchRequestVo)) {
-//            log.warn("Contacts and ContactsAsBinary are absent");
+//            log.error("Contacts and ContactsAsBinary are absent");
 //            return ResponseEntity.badRequest().build();
 //        }
 
@@ -78,20 +80,22 @@ public class ReportControllerImpl implements IReportController {
 
     private void checkValidityToken(String token) throws RobertServerException {
 
+    	log.info("Token {}", token);
+
         if (StringUtils.isEmpty(token)) {
-            log.warn("No token provided");
+            log.error("No token provided");
             throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
         }
 
         if (token.length() != 6 && token.length() != 36) {
-            log.warn("Token size is incorrect");
+            log.error("Token size is incorrect");
             throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
         }
 
         Optional<VerifyResponseDto> response = this.restApiService.verifyReportToken(token, getCodeType(token));
 
         if (!response.isPresent() ||  !response.get().isValid()) {
-            log.warn("Verifying the token failed");
+            log.error("Verifying the token failed");
             throw new RobertServerUnauthorizedException(MessageConstants.INVALID_AUTHENTICATION.getValue());
         }
 
