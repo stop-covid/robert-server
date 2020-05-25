@@ -10,7 +10,7 @@ import javax.crypto.spec.DHGenParameterSpec;
 @Slf4j
 public final class CryptoTestUtils {
 
-    private  CryptoTestUtils() {
+    private CryptoTestUtils() {
         throw new AssertionError();
     }
 
@@ -19,6 +19,16 @@ public final class CryptoTestUtils {
     }
 
     public static byte[] generateECDHPublicKey(String ecSpec) {
+        KeyPair keyPair = generateECDHKeyPair(ecSpec);
+
+        return keyPair == null ? null : keyPair.getPublic().getEncoded();
+    }
+
+    public static KeyPair generateECDHKeyPair() {
+        return generateECDHKeyPair("secp256r1");
+    }
+
+    public static KeyPair generateECDHKeyPair(String ecSpec) {
         try {
             // Generate ephemeral ECDH keypair
             KeyPairGenerator kpg;
@@ -26,7 +36,7 @@ public final class CryptoTestUtils {
             kpg.initialize(new ECGenParameterSpec(ecSpec));
             KeyPair keyPair = kpg.generateKeyPair();
 
-            return keyPair.getPublic().getEncoded();
+            return keyPair;
 
         } catch (NoSuchAlgorithmException | IllegalStateException | InvalidAlgorithmParameterException e) {
             log.error("Unable to generate ECDH public key", e.getMessage());

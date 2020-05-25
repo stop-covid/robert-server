@@ -1,10 +1,10 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server;
 
 import java.io.IOException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -12,6 +12,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.google.protobuf.ByteString;
@@ -31,10 +35,10 @@ import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGr
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplStub;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ClientKeyStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl.ClientKeyStorageServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceBaseImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoServerConfigurationServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ECDHKeyServiceImpl;
@@ -48,7 +52,10 @@ import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
+import javax.crypto.KeyGenerator;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -70,9 +77,13 @@ class CryptoServiceGrpcServerTest {
 
     private CryptoService cryptoService;
 
-    private IECDHKeyService keyService;
+    @InjectMocks
+    private ECDHKeyServiceImpl keyService;
 
     private IClientKeyStorageService clientStorageService;
+
+    @Mock
+    private ICryptographicStorageService cryptographicStorageService;
 
     private int currentEpochId;
 
@@ -83,14 +94,15 @@ class CryptoServiceGrpcServerTest {
 
         cryptoService=  new CryptoServiceImpl();
 
-        keyService = new ECDHKeyServiceImpl();
-
-        clientStorageService = new ClientKeyStorageService();
+        clientStorageService = new MockClientKeyStorageService();
 
         service = new CryptoGrpcServiceBaseImpl(serverConfigurationService,
                 cryptoService,
                 keyService,
                 clientStorageService);
+
+        when(this.cryptographicStorageService.getServerKeyPair())
+                .thenReturn(Optional.ofNullable(CryptoTestUtils.generateECDHKeyPair()));
 
         String serverName = InProcessServerBuilder.generateName();
 
@@ -134,7 +146,7 @@ class CryptoServiceGrpcServerTest {
         assertTrue(ByteUtils.isNotEmpty(tuples));
         CryptoAESGCM aesGcm = new CryptoAESGCM(
                 this.clientStorageService.findKeyById(
-                        createRegistrationResponse.getIdA().toByteArray()).get().getKeyTuples());
+                        createRegistrationResponse.getIdA().toByteArray()).get().getKeyForTuples());
         try {
             byte[] decryptedTuples = aesGcm.decrypt(tuples);
             ObjectMapper objectMapper = new ObjectMapper();
@@ -389,6 +401,96 @@ class CryptoServiceGrpcServerTest {
             return null;
         }
     }
+
+    public class MockClientKeyStorageService implements IClientKeyStorageService {
+
+    private final HashMap<ByteArray, ClientIdentifierBundle> idKeyHashMap = new HashMap<>();
+
+    private final static int MAX_ID_CREATION_ATTEMPTS = 10;
+
+    private byte[] generateRandomIdentifier() {
+        byte[] id;
+        int i = 0;
+        do {
+            id = generateKey(5);
+            i++;
+        } while (this.idKeyHashMap.containsKey(id) && i < MAX_ID_CREATION_ATTEMPTS);
+        return i == MAX_ID_CREATION_ATTEMPTS ? null : id;
+    }
+
+    public byte [] generateRandomKey() {
+        byte [] ka = null;
+
+        try {
+            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
+
+            //Creating a SecureRandom object
+            SecureRandom secRandom = new SecureRandom();
+
+            //Initializing the KeyGenerator
+            keyGen.init(secRandom);
+
+            //Creating/Generating a key
+            Key key = keyGen.generateKey();
+            ka = key.getEncoded();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Could not generate 256-bit key");
+        }
+        return ka;
+    }
+
+    private byte[] generateKey(final int nbOfbytes) {
+        byte[] rndBytes = new byte[nbOfbytes];
+        SecureRandom sr = new SecureRandom();
+        sr.nextBytes(rndBytes);
+        return rndBytes;
+    }
+
+    @Override
+    public Optional<ClientIdentifierBundle> createClientIdUsingKeys(byte[] kaMac, byte[] kaTuples) {
+        byte[] id = generateRandomIdentifier();
+
+        ClientIdentifierBundle clientBundle = ClientIdentifierBundle.builder()
+                .id(id)
+                .keyForMac(kaMac)
+                .keyForTuples(kaTuples)
+                .build();
+        this.idKeyHashMap.put(new ByteArray(id), clientBundle);
+        return Optional.of(clientBundle);
+    }
+
+    @Override
+    public Optional<ClientIdentifierBundle> findKeyById(byte[] id) {
+        ClientIdentifierBundle bundle = this.idKeyHashMap.get(new ByteArray(id));
+        if (Objects.isNull(bundle)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(bundle);
+    }
+
+    @Override
+    public void deleteClientId(byte[] id) {
+        this.idKeyHashMap.remove(new ByteArray(id));
+    }
+
+    private class ByteArray {
+        public final byte[] bytes;
+        public ByteArray(byte[] bytes) {
+            this.bytes = bytes;
+        }
+        @Override
+        public boolean equals(Object rhs) {
+            return rhs != null && rhs instanceof ByteArray
+                    && Arrays.equals(bytes, ((ByteArray)rhs).bytes);
+        }
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(bytes);
+        }
+    }
+}
+
 
 //    @Test
 //    public void testGenerateEBID() {

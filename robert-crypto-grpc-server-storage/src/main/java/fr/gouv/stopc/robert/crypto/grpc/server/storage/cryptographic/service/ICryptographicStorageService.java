@@ -1,6 +1,7 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service;
 
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.Provider;
 import java.util.Optional;
 
@@ -18,11 +19,9 @@ public interface ICryptographicStorageService {
 
     void addKeys(String serverPublicKey, String serverPrivateKey);
 
-    Optional<Key> getServerPublicKey();
- 
-    Optional<Key> getServerPrivateKey();
-    
+    Optional<KeyPair> getServerKeyPair();
+
     Provider getProvider();
 
-    byte[] getSharedSecret();
+    byte[] getKeyForEncryptingKeys();
 }

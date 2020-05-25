@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IClientKeyStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
@@ -73,8 +73,8 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             }
 
             clientIdentifierBundle = this.clientStorageService.createClientIdUsingKeys(
-                    clientIdentifierBundle.get().getKeyMac(),
-                    clientIdentifierBundle.get().getKeyTuples());
+                    clientIdentifierBundle.get().getKeyForMac(),
+                    clientIdentifierBundle.get().getKeyForTuples());
 
             if(!clientIdentifierBundle.isPresent()) {
                 responseObserver.onError(new RobertServerCryptoException("Unable to create a registration"));
@@ -82,7 +82,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             }
 
             Optional<TuplesGenerationResult> encryptedTuples = generateEncryptedTuples(
-                    clientIdentifierBundle.get().getKeyTuples(),
+                    clientIdentifierBundle.get().getKeyForTuples(),
                     clientIdentifierBundle.get().getId(),
                     request.getFromEpochId(),
                     request.getNumberOfEpochBundles(),
@@ -188,7 +188,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         }
 
         Optional<TuplesGenerationResult> encryptedTuples = generateEncryptedTuples(
-                clientIdentifierBundle.get().getKeyTuples(),
+                clientIdentifierBundle.get().getKeyForTuples(),
                 clientIdentifierBundle.get().getId(),
                 request.getFromEpochId(),
                 request.getNumberOfEpochBundles(),
@@ -335,7 +335,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 return Optional.empty();
             }
             boolean valid = this.cryptoService.macValidationForType(
-                                new CryptoHMACSHA256(clientIdentifierBundle.get().getKeyMac()),
+                                new CryptoHMACSHA256(clientIdentifierBundle.get().getKeyForMac()),
                                 addEbidComponents(encryptedEbid, epochId, time),
                                 mac,
                                 type);

@@ -1,15 +1,16 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
 import java.security.*;
-import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Objects;
 import java.util.Optional;
 
 import javax.crypto.KeyAgreement;
+import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import org.springframework.stereotype.Service;
@@ -21,36 +22,35 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class ECDHKeyServiceImpl implements IECDHKeyService {
 
-    private KeyPair getServerKeyPair() {
-        // TODO: get the actual server key pair
-        KeyPair keyPair = null;
-
-        try {
-            KeyPairGenerator kpg;
-            kpg = KeyPairGenerator.getInstance("EC");
-            kpg.initialize(new ECGenParameterSpec("secp256r1"), new SecureRandom());
-            keyPair = kpg.generateKeyPair();
-        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
-            return null;
-        }
-        return keyPair;
-    }
-
     private final static String HASH_MAC = "mac";
     private final static String HASH_TUPLES = "tuples";
-    private byte[] deriveKaMacFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
+
+    private ICryptographicStorageService cryptographicStorageService;
+
+    @Inject
+    public ECDHKeyServiceImpl(ICryptographicStorageService cryptographicStorageService) {
+        this.cryptographicStorageService = cryptographicStorageService;
+    }
+
+    private byte[] deriveKeyForMacFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
         CryptoHMACSHA256 sha256Mac = new CryptoHMACSHA256(sharedSecret);
         return sha256Mac.encrypt(HASH_MAC.getBytes());
     }
 
-    private byte[] deriveKaTuplesFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
+    private byte[] deriveKeyForTuplesFromClientPublicKey(byte[] sharedSecret) throws RobertServerCryptoException {
         CryptoHMACSHA256 sha256Mac = new CryptoHMACSHA256(sharedSecret);
         return sha256Mac.encrypt(HASH_TUPLES.getBytes());
     }
 
     private byte[] generateSharedSecret(byte[] clientPublicKey) {
-        KeyPair keyPair = getServerKeyPair();
-        PrivateKey serverPrivateKey = keyPair.getPrivate();
+        Optional<KeyPair> keyPair = this.cryptographicStorageService.getServerKeyPair();
+
+        if (!keyPair.isPresent()) {
+            log.error("Could not retrieve server key pair");
+            return null;
+        }
+
+        PrivateKey serverPrivateKey = keyPair.get().getPrivate();
 
         try {
             KeyAgreement ka = KeyAgreement.getInstance("ECDH");
@@ -77,14 +77,14 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
             return Optional.empty();
         }
 
-        byte[] kaMac = deriveKaMacFromClientPublicKey(sharedSecret);
-        byte[] kaTuples = deriveKaTuplesFromClientPublicKey(sharedSecret);
+        byte[] kaMac = deriveKeyForMacFromClientPublicKey(sharedSecret);
+        byte[] kaTuples = deriveKeyForTuplesFromClientPublicKey(sharedSecret);
 
         if (Objects.isNull(kaMac) || Objects.isNull(kaTuples)) {
             return Optional.empty();
         }
 
-        return Optional.of(ClientIdentifierBundle.builder().keyMac(kaMac).keyTuples(kaTuples).build());
+        return Optional.of(ClientIdentifierBundle.builder().keyForMac(kaMac).keyForTuples(kaTuples).build());
     }
 
 }

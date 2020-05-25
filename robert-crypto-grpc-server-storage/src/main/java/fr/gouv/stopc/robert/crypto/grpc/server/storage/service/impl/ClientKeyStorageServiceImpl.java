@@ -16,6 +16,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.exception.RobertServerStorageException;
 import org.bson.internal.Base64;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
+public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
+
+    private final static int MAX_ID_CREATION_ATTEMPTS = 10;
 
     private ICryptographicStorageService cryptographicStorageService;
 
@@ -40,23 +43,30 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
 
         this.cryptographicStorageService = cryptographicStorageService;
         this.clientIdentifierRepository = clientIdentifierRepository;
-        
 
-        ClientIdentifier c = ClientIdentifier.builder()
-                .idA(Base64.encode(generateKey(5)))
-                .key(Base64.encode(generateRandomKey()))
-                .keyForTuples(Base64.encode(generateRandomKey()))
-                .build();
-        log.info("Trying to save the client identifier : {}", c);
-        c = this.clientIdentifierRepository.saveAndFlush(c);
-        this.clientIdentifierRepository.delete(c);
+//        ClientIdentifier c = ClientIdentifier.builder()
+//                .idA(Base64.encode(generateKey(5)))
+//                .keyForMac(Base64.encode(generateRandomKey()))
+//                .keyForTuples(Base64.encode(generateRandomKey()))
+//                .build();
+//        log.info("Trying to save the client identifier : {}", c);
+//        c = this.clientIdentifierRepository.saveAndFlush(c);
+//        this.clientIdentifierRepository.delete(c);
     }
 
-    private byte[] generateRandomIdentifier() {
+    private byte[] generateRandomIdentifier() throws RobertServerStorageException {
         byte[] id;
+        int i = 0;
         do {
             id = generateKey(5);
-        } while (this.clientIdentifierRepository.findByIdA(Base64.encode(id)).isPresent());
+            i++;
+        } while (this.clientIdentifierRepository.findByIdA(Base64.encode(id)).isPresent() && i < MAX_ID_CREATION_ATTEMPTS);
+
+        if (MAX_ID_CREATION_ATTEMPTS == i) {
+            throw new RobertServerStorageException(
+                    String.format("Could not generate an id within max attempts %s", MAX_ID_CREATION_ATTEMPTS));
+        }
+
         return id;
     }
 
@@ -89,61 +99,110 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
     }
 
     @Override
-    public Optional<ClientIdentifierBundle> createClientIdAndKey() {
-        log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        byte[] id = generateRandomIdentifier();
-        byte[] key = generateRandomKey();
-        byte[] keyForTuples = generateRandomKey();
-        log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        if(Objects.isNull(this.cryptographicStorageService.getSharedSecret())) {
-            log.error("The server private key is Null");
-            return Optional.empty();
-        }
+    public Optional<ClientIdentifierBundle> createClientIdUsingKeys(byte[] keyForMac, byte[] keyForTuples) {
+        try {
+            log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            byte[] id = generateRandomIdentifier();
+            log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            if (Objects.isNull(keyForMac)) {
+                log.error("Provided key for mac is null");
+                return Optional.empty();
+            }
 
-        byte[] encryptedKey =  this.performEncryption(Cipher.ENCRYPT_MODE, key, this.cryptographicStorageService.getSharedSecret());
+            if (Objects.isNull(keyForTuples)) {
+                log.error("Provided key for tuples is null");
+                return Optional.empty();
+            }
 
-        if (Objects.isNull(encryptedKey)) {
-            log.error("The encrypted key  is Null");
-            return Optional.empty();
-        }
+            byte[] encryptedKeyForMac = this.performEncryption(Cipher.ENCRYPT_MODE, keyForMac, this.cryptographicStorageService.getKeyForEncryptingKeys());
 
-        byte[] encryptedKeyForTuples =  this.performEncryption(Cipher.ENCRYPT_MODE, key, this.cryptographicStorageService.getSharedSecret());
-        
-        if (Objects.isNull(encryptedKeyForTuples)) {
-            log.error("The encrypted key for tuples is Null");
-            return Optional.empty();
+            if (Objects.isNull(encryptedKeyForMac)) {
+                log.error("The encrypted key for mac is null");
+                return Optional.empty();
+            }
+
+            byte[] encryptedKeyForTuples = this.performEncryption(Cipher.ENCRYPT_MODE, keyForTuples, this.cryptographicStorageService.getKeyForEncryptingKeys());
+
+            if (Objects.isNull(encryptedKeyForTuples)) {
+                log.error("The encrypted key for tuples is null");
+                return Optional.empty();
+            }
+
+            ClientIdentifier c = ClientIdentifier.builder()
+                    .idA(Base64.encode(id))
+                    .keyForMac(Base64.encode(encryptedKeyForMac))
+                    .keyForTuples(Base64.encode(encryptedKeyForTuples))
+                    .build();
+            log.info("Trying to save the client identifier : {}", c);
+            this.clientIdentifierRepository.saveAndFlush(c);
+            log.info("Saving the client identifier");
+            return Optional.of(ClientIdentifierBundle.builder()
+                    .id(id)
+                    .keyForMac(keyForMac)
+                    .keyForTuples(keyForTuples)
+                    .build());
+        } catch (RobertServerStorageException e) {
+            log.error("Storage error when creating registration");
         }
-        
-        ClientIdentifier c = ClientIdentifier.builder()
-                .idA(Base64.encode(id))
-                .key(Base64.encode(encryptedKey))
-                .keyForTuples(Base64.encode(encryptedKeyForTuples))
-                .build();
-        log.info("Trying to save the client identifier : {}", c);
-        this.clientIdentifierRepository.saveAndFlush(c);
-        log.info("Saving the client identifier");
-        return Optional.of(ClientIdentifierBundle.builder()
-                .id(id)
-                .key(key)
-                .keyForTuples(keyForTuples)
-                .build());
+        return Optional.empty();
     }
+
+//    @Override
+//    public Optional<ClientIdentifierBundle> createClientIdAndKey() {
+//        log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+//        byte[] id = generateRandomIdentifier();
+//        byte[] key = generateRandomKey();
+//        byte[] keyForTuples = generateRandomKey();
+//        log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+//        if(Objects.isNull(this.cryptographicStorageService.getKeyForEncryptingKeys())) {
+//            log.error("The server private key is Null");
+//            return Optional.empty();
+//        }
+//
+//        byte[] encryptedKey =  this.performEncryption(Cipher.ENCRYPT_MODE, key, this.cryptographicStorageService.getKeyForEncryptingKeys());
+//
+//        if (Objects.isNull(encryptedKey)) {
+//            log.error("The encrypted key  is Null");
+//            return Optional.empty();
+//        }
+//
+//        byte[] encryptedKeyForTuples =  this.performEncryption(Cipher.ENCRYPT_MODE, key, this.cryptographicStorageService.getKeyForEncryptingKeys());
+//
+//        if (Objects.isNull(encryptedKeyForTuples)) {
+//            log.error("The encrypted key for tuples is Null");
+//            return Optional.empty();
+//        }
+//
+//        ClientIdentifier c = ClientIdentifier.builder()
+//                .idA(Base64.encode(id))
+//                .key(Base64.encode(encryptedKey))
+//                .keyForTuples(Base64.encode(encryptedKeyForTuples))
+//                .build();
+//        log.info("Trying to save the client identifier : {}", c);
+//        this.clientIdentifierRepository.saveAndFlush(c);
+//        log.info("Saving the client identifier");
+//        return Optional.of(ClientIdentifierBundle.builder()
+//                .id(id)
+//                .key(key)
+//                .keyForTuples(keyForTuples)
+//                .build());
+//    }
 
     @Override
     public Optional<ClientIdentifierBundle> findKeyById(byte[] id) {
         return this.clientIdentifierRepository.findByIdA(Base64.encode(id))
                 .map(client -> {
 
-                    byte[] secret = this.cryptographicStorageService.getSharedSecret();
+                    byte[] secret = this.cryptographicStorageService.getKeyForEncryptingKeys();
                     if(Objects.isNull(secret)) {
                         log.error("The secret is null to decrypt the client");
                         return null;
                     }
 
-                    byte[] decryptedKey = this.performEncryption(Cipher.DECRYPT_MODE, Base64.decode(client.getKey()),
+                    byte[] decryptedKeyForMac = this.performEncryption(Cipher.DECRYPT_MODE, Base64.decode(client.getKeyForMac()),
                             secret);
 
-                    if(Objects.isNull(decryptedKey)) {
+                    if(Objects.isNull(decryptedKeyForMac)) {
                         log.error("The decrypted client key is null.");
                         return null;
                     }
@@ -158,7 +217,7 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
 
                     return ClientIdentifierBundle.builder()
                             .id(Arrays.copyOf(id, id.length))
-                            .key(Arrays.copyOf(decryptedKey, decryptedKey.length))
+                            .keyForMac(Arrays.copyOf(decryptedKeyForMac, decryptedKeyForMac.length))
                             .keyForTuples(Arrays.copyOf(decryptedKeyForTuples, decryptedKeyForTuples.length))
                             .build();
                 });
@@ -170,22 +229,7 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
         this.clientIdentifierRepository.findByIdA(Base64.encode(id)).ifPresent(this.clientIdentifierRepository::delete);
     }
 
-//    private byte[] performEncryption(int mode, byte[] toEncrypt, Key key) {
-//
-//        try {
-//            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding", "SunPKCS11-StopCovid");
-//            log.info("KEY iS {} and encoded = {}", ((PrivateKey) key), ((PrivateKey) key).getEncoded());
-//            //            SecretKeySpec secret = new SecretKeySpec(key.getEncoded(), "AES");
-//            cipher.init(mode, key);
-//            return cipher.doFinal(toEncrypt);
-//        } catch (IllegalArgumentException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | NoSuchProviderException e) {
-//
-//            log.error("An expected error occured when trying to perform encryption operation with the mode {} due to {}", mode, e.getMessage());
-//            e.printStackTrace();
-//        } 
-//        return null;
-//    }
-
+    // TODO: use AES256-GCM?
     private byte[] performEncryption(int mode, byte[] toEncrypt, byte[] key) {
 
         try {
@@ -203,9 +247,10 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService{
 //            log.info("Decrypted data = {}", cipher.doFinal(encrypted));
 
             return encrypted;
-        } catch (IllegalArgumentException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+        } catch (IllegalArgumentException | InvalidKeyException | NoSuchAlgorithmException
+                | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
 
-            log.error("An expected error occured when trying to perform encryption operation with the mode {} due to {}", mode, e.getMessage());
+            log.error("An expected error occurred when trying to perform encryption operation with the mode {} due to {}", mode, e.getMessage());
             e.printStackTrace();
         } 
         return null;

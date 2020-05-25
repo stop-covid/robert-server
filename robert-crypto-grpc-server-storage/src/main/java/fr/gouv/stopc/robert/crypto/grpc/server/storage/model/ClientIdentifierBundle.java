@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class ClientIdentifierBundle {
 
     private byte[] id;
-    private byte[] key;
+    private byte[] keyForMac;
     private byte[] keyForTuples;
 
 }

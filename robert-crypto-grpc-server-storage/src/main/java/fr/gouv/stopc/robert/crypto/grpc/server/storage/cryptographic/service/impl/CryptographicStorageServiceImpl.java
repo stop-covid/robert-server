@@ -161,37 +161,16 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     }
 
     @Override
-    public Optional<Key> getServerPublicKey() {
+    public Optional<KeyPair> getServerKeyPair() {
 
         try {
-            return Optional.ofNullable(this.keyStore.getCertificate(ALIAS_SERVER_PRIVATE_KEY).getPublicKey());
-        } catch (KeyStoreException e) {
-            log.error("Unable to retrieve the public key due to {}", e.getMessage());
+            PrivateKey privateKey = (PrivateKey) this.keyStore.getKey(ALIAS_SERVER_PRIVATE_KEY, null);
+            PublicKey publicKey = this.keyStore.getCertificate(ALIAS_SERVER_PRIVATE_KEY).getPublicKey();
+            return Optional.ofNullable(new KeyPair(publicKey, privateKey));
+        } catch (KeyStoreException | UnrecoverableKeyException | NoSuchAlgorithmException e) {
+            log.error("Unable to retrieve the server key pair due to {}", e.getMessage());
         }
         
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<Key> getServerPrivateKey() {
-
-        try {
-            PrivateKeyEntry entry = (PrivateKeyEntry) this.keyStore.getEntry(ALIAS_SERVER_PRIVATE_KEY, null);
-            return Optional.ofNullable(entry.getPrivateKey());
-        } catch (NoSuchAlgorithmException | UnrecoverableEntryException | KeyStoreException e) {
-            // TODO Auto-generated catch block
-            log.error("Unable to retrieve the entry for alias {} from the keyStrore due to {}", ALIAS_SERVER_PRIVATE_KEY, e.getMessage());
-        }
-
-        return Optional.empty();
-    }
-
-    private Optional<Key> getKey(String alias) {
-        try {
-            return Optional.ofNullable(this.keyStore.getKey(alias,  null));
-        } catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
-            log.error("Unable to retrieve the alias {} from the keyStrore", alias);
-        }
         return Optional.empty();
     }
 
@@ -208,6 +187,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         return null;
     }
 
+    // TODO: remove
     private Optional<X509Certificate> generateCertificate(KeyPair keyPair) {
         try {
 
@@ -238,7 +218,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     }
 
     @Override
-    public byte[] getSharedSecret() {
+    public byte[] getKeyForEncryptingKeys() {
 
         try {
             Key staticPrivateKey =  this.keyStore.getKey(ALIAS_SERVER_PRIVATE_KEY, null);
