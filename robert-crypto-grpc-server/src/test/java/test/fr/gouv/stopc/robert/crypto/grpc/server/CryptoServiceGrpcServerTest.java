@@ -156,9 +156,9 @@ class CryptoServiceGrpcServerTest {
         try {
             byte[] decryptedTuples = aesGcm.decrypt(tuples);
             ObjectMapper objectMapper = new ObjectMapper();
-            Collection<EphemeralTuple> decodedTuples = objectMapper.readValue(
+            Collection<CryptoGrpcServiceBaseImpl.EpheremalTupleJson> decodedTuples = objectMapper.readValue(
                     decryptedTuples,
-                    new TypeReference<Collection<EphemeralTuple>>(){});
+                    new TypeReference<Collection<CryptoGrpcServiceBaseImpl.EpheremalTupleJson>>(){});
             assertEquals(NUMBER_OF_BUNDLES, decodedTuples.size());
         } catch (RobertServerCryptoException | IOException e) {
             fail(UNEXPECTED_FAILURE_MESSAGE);

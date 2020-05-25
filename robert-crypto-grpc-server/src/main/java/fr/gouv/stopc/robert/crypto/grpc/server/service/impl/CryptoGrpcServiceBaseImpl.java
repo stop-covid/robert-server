@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,9 +15,7 @@ import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -113,6 +112,41 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         byte[] encryptedTuples;
     }
 
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    @Getter
+    @Setter
+    public static class EpheremalTupleJson {
+        private int epochId;
+        private EpheremalTupleEbidEccJson key;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    @Getter
+    @Setter
+    public static class EpheremalTupleEbidEccJson {
+        private byte[] ebid;
+        private byte[] ecc;
+    }
+
+    private java.util.List<EpheremalTupleJson> mapEphemeralTuples(Collection<EphemeralTuple> tuples) {
+        ArrayList<EpheremalTupleJson> mappedTuples = new ArrayList<>();
+
+        for (EphemeralTuple tuple : tuples) {
+            mappedTuples.add(EpheremalTupleJson.builder()
+                    .epochId(tuple.getEpochId())
+                    .key(EpheremalTupleEbidEccJson.builder()
+                            .ebid(tuple.getEbid())
+                            .ecc(tuple.getEncryptedCountryCode())
+                            .build())
+                    .build());
+        }
+        return mappedTuples;
+    }
+
     private Optional<TuplesGenerationResult> generateEncryptedTuples(byte[] tuplesEncryptionKey,
                                                                      byte[] id,
                                                                      int epochId,
@@ -136,7 +170,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 // TODO: careful EphemeralTuple is different from the one in the current REST API,
                 // resulting JSONs don't match
                 ObjectMapper objectMapper = new ObjectMapper();
-                byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(ephemeralTuples);
+                byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(mapEphemeralTuples(ephemeralTuples));
                 CryptoAESGCM cryptoAESGCM = new CryptoAESGCM(tuplesEncryptionKey);
                 return Optional.of(TuplesGenerationResult.builder().encryptedTuples(cryptoAESGCM.encrypt(tuplesAsBytes)).build());
             }
