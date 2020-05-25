@@ -56,7 +56,7 @@ public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfig
     @Override
     public byte[] getServerKeyForEpochId(int epochId) {
         // TODO: retrieve key for this epoch from HSM storage
-        return generateKey(24);
+        return generateKey(192);
     }
 
     @Override

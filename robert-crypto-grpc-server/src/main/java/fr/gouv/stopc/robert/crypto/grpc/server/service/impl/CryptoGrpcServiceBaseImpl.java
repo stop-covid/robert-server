@@ -112,11 +112,13 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     private static class TuplesGenerationResult {
         byte[] encryptedTuples;
     }
+
     private Optional<TuplesGenerationResult> generateEncryptedTuples(byte[] tuplesEncryptionKey,
-                                           byte[] id,
-                                           int epochId,
-                                           int nbOfEpochs,
-                                           byte serverCountryCode) {
+                                                                     byte[] id,
+                                                                     int epochId,
+                                                                     int nbOfEpochs,
+                                                                     byte serverCountryCode) {
+        // TODO: provide M/96 K_S keys for tuple generation for next M epochs
         // Generate tuples
         final byte[] serverKey = this.serverConfigurationService.getServerKey();
         final byte[] federationKey = this.serverConfigurationService.getFederationKey();
@@ -236,6 +238,14 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         byte[] idA = getIdFromDecryptedEBID(decryptedEbid);
         int epochId = getEpochIdFromDecryptedEBID(decryptedEbid);
 
+        if (epochId < 0) {
+            log.error("Epoch from EBID is negative");
+            return null;
+        } else if (epoch != epochId) {
+            log.error("Epoch from EBID and accompanying epoch do not match");
+            return null;
+        }
+
         return EbidContent.builder().epochId(epochId).idA(idA).build();
     }
 
@@ -253,6 +263,12 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         try {
             // Decrypt EBID
             EbidContent ebidContent = decryptEBID(request.getEbid().toByteArray(), request.getTimeReceived());
+
+            if (Objects.isNull(ebidContent)) {
+                responseObserver.onError(new RobertServerCryptoException("Could not decrypt EBID"));
+                return;
+            }
+
             idA = ebidContent.getIdA();
             epochId = ebidContent.getEpochId();
         } catch (RobertServerCryptoException e) {

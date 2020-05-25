@@ -37,6 +37,7 @@ public final class ByteUtils {
     public static int convertEpoch24bitsToInt(byte[] epoch24) {
         ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
         buffer.put(epoch24, 0, epoch24.length);
+        buffer.put((byte)0x0); // pad last byte before flip
         buffer.flip();
         return buffer.getInt();
     }
