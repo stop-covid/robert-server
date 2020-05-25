@@ -1,6 +1,5 @@
 package fr.gouv.stopc.robertserver.ws.vo;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
@@ -20,12 +19,10 @@ public class ReportBatchRequestVo {
 
 	@NotNull
 	@Size(min = 6, max = 36)
-	// @ToString.Exclude
+	@ToString.Exclude
 	private String token;
 
-	@Builder.Default
-	@Size(min = 1)
-	private List<GroupedHellosReportVo> contacts = new ArrayList<>();
+	private List<GroupedHellosReportVo> contacts;
 
 	private String contactsAsBinary;
 
