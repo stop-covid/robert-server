@@ -142,6 +142,11 @@ class CryptoServiceGrpcServerTest {
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
+
+        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(this.currentEpochId))).thenReturn(serverKeys);
+
         ObserverExecutionResult res = new ObserverExecutionResult(false);
         CreateRegistrationResponse createRegistrationResponse =
                 sendCryptoRequest(
@@ -149,6 +154,7 @@ class CryptoServiceGrpcServerTest {
                         (stub, req, observer) -> stub.createRegistration(req, observer),
                         (t) -> fail(),
                         res);
+
         assertTrue(!res.isError());
         assertTrue(ByteUtils.isNotEmpty(createRegistrationResponse.getIdA().toByteArray()));
         byte[] tuples = createRegistrationResponse.getTuples().toByteArray();

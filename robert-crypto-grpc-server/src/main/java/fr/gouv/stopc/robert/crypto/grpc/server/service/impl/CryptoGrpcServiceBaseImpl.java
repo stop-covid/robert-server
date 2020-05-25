@@ -1,14 +1,10 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 import javax.inject.Inject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.sun.tools.javac.util.List;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -157,7 +153,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                                      byte serverCountryCode) {
         // TODO: provide M/96 K_S keys for tuple generation for next M epochs
         // Generate tuples
-        final byte[][] serverKeys = this.serverKeyStorageService.getServerKeysForEpochs(List.of(epochId));
+        final byte[][] serverKeys = this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(epochId));
         final byte[] federationKey = this.serverConfigurationService.getFederationKey();
         final TupleGenerator tupleGenerator = new TupleGenerator(serverKeys[0], federationKey, 1);
         try {
