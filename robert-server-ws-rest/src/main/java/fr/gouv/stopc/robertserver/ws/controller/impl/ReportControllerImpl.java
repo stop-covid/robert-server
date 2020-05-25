@@ -78,8 +78,6 @@ public class ReportControllerImpl implements IReportController {
 
     private void checkValidityToken(String token) throws RobertServerException {
 
-    	log.info("Token {}", token);
-
         if (StringUtils.isEmpty(token)) {
             log.error("No token provided");
             throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
