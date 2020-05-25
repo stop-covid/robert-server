@@ -44,14 +44,14 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
         this.cryptographicStorageService = cryptographicStorageService;
         this.clientIdentifierRepository = clientIdentifierRepository;
 
-//        ClientIdentifier c = ClientIdentifier.builder()
-//                .idA(Base64.encode(generateKey(5)))
-//                .keyForMac(Base64.encode(generateRandomKey()))
-//                .keyForTuples(Base64.encode(generateRandomKey()))
-//                .build();
-//        log.info("Trying to save the client identifier : {}", c);
-//        c = this.clientIdentifierRepository.saveAndFlush(c);
-//        this.clientIdentifierRepository.delete(c);
+        ClientIdentifier c = ClientIdentifier.builder()
+                .idA(Base64.encode(generateKey(5)))
+                .keyForMac(Base64.encode(generateRandomKey()))
+                .keyForTuples(Base64.encode(generateRandomKey()))
+                .build();
+        log.info("Trying to save the client identifier : {}", c);
+        c = this.clientIdentifierRepository.saveAndFlush(c);
+        this.clientIdentifierRepository.delete(c);
     }
 
     private byte[] generateRandomIdentifier() throws RobertServerStorageException {
