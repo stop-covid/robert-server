@@ -658,7 +658,7 @@ public class StatusControllerWsRestTest {
 		Registration reg = Registration.builder()
 				.permanentIdentifier(idA)
 				.sharedKey(kA)
-				.atRisk(true)
+				.atRisk(false)
 				.isNotified(true)
 				.lastStatusRequestEpoch(currentEpoch - 3)
 				.lastNotificationEpoch(currentEpoch - 8)
@@ -710,7 +710,7 @@ public class StatusControllerWsRestTest {
 		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
 		assertEquals(false, response.getBody().isAtRisk());
 		assertNotNull(response.getBody().getIdsForEpochs());
-		assertEquals(true, reg.isAtRisk());
+		assertEquals(false, reg.isAtRisk());
 		assertEquals(true, reg.isNotified());
 		verify(this.registrationService, times(1)).findById(idA);
 		verify(this.registrationService, times(1)).saveRegistration(reg);
@@ -793,49 +793,50 @@ public class StatusControllerWsRestTest {
 		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
 		assertEquals(true, response.getBody().isAtRisk());
 		assertNotNull(response.getBody().getIdsForEpochs());
-		assertEquals(true, reg.isAtRisk());
+		assertEquals(false, reg.isAtRisk());
 		assertEquals(true, reg.isNotified());
 		verify(this.registrationService, times(1)).findById(idA);
 		verify(this.registrationService, times(1)).saveRegistration(reg);
 	}
 
-	@Test
-	public void testStatusRequestESRThrottle() {
-
-		// Given
-		byte[] idA = this.generateKey(5);
-		byte[] kA = this.generateKA();
-		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch).build();
-
-
-		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
-
-		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
-				.mac(Base64.encode(reqContent[2])).build();
-
-		byte[] decryptedEbid = new byte[8];
-		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
-		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
-
-		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
-
-		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
-
-		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
-
-		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
-
-
-		// When
-		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
-				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
-
-		// Then
-		// TODO: should maybe have a different HTTP error code?
-		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
-		verify(this.registrationService, times(1)).findById(idA);
-		verify(this.registrationService, times(0)).saveRegistration(reg);
-	}
+	// PURPOSEFULLY DISABLING TEST BECAUSE ESR IS DISABLED ON THIS SPECIAL BRANCH
+//	@Test
+//	public void testStatusRequestESRThrottle() {
+//
+//		// Given
+//		byte[] idA = this.generateKey(5);
+//		byte[] kA = this.generateKA();
+//		Registration reg = Registration.builder().permanentIdentifier(idA).sharedKey(kA).atRisk(false).isNotified(false)
+//				.lastStatusRequestEpoch(currentEpoch).build();
+//
+//
+//		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+//
+//		statusBody = StatusVo.builder().ebid(Base64.encode(reqContent[0])).time(Base64.encode(reqContent[1]))
+//				.mac(Base64.encode(reqContent[2])).build();
+//
+//		byte[] decryptedEbid = new byte[8];
+//		System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+//		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+//
+//		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+//
+//		doReturn(decryptedEbid).when(this.cryptoServerClient).decryptEBID(any());
+//
+//		doReturn(true).when(this.cryptoServerClient).validateMacEsr(any());
+//
+//		this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+//
+//
+//		// When
+//		ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+//				HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+//
+//		// Then
+//		// TODO: should maybe have a different HTTP error code?
+//		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+//		assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
+//		verify(this.registrationService, times(1)).findById(idA);
+//		verify(this.registrationService, times(0)).saveRegistration(reg);
+//	}
 }

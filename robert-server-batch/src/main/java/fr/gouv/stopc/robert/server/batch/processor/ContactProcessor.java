@@ -72,8 +72,16 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
 
         Registration registrationRecord = registration.get();
         List<EpochExposition> epochsToKeep = step9AddContactInListOfExposedEpochs(contact, epochId, registrationRecord);
+        int latestRiskEpoch = registrationRecord.getLastNotificationEpoch();
 
-        Double totalRisk = epochsToKeep.stream()
+        // Only consider epochs that are after the last notification for scoring
+        List<EpochExposition> scoresSinceLastNotif = CollectionUtils.isEmpty(epochsToKeep) ?
+                new ArrayList<>()
+                : epochsToKeep.stream()
+                .filter(ep -> ep.getEpochId() > latestRiskEpoch)
+                .collect(Collectors.toList());
+
+        Double totalRisk = scoresSinceLastNotif.stream()
                 .map(EpochExposition::getExpositionScores)
                 .map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
                 .reduce(0.0, (a,b) -> a + b);
