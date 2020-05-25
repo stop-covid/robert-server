@@ -1,18 +1,14 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server;
 
 import java.io.IOException;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationRequest;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationResponse;
