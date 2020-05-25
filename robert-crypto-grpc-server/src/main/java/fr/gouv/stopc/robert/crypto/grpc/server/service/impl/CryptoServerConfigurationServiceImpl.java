@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,7 @@ public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfig
 
     private final byte[] serverKey;
     private final byte[] federationKey;
-
+    
     /**
      * Generation of bit array.
      * @param size in bits
@@ -35,7 +36,6 @@ public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfig
     }
 
     public CryptoServerConfigurationServiceImpl() {
-        super();
        // server key should be a 192-bits key
        this.serverKey = this.generateKey(192);
 

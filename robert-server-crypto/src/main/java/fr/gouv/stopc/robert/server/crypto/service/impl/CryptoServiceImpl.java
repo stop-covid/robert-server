@@ -151,7 +151,7 @@ public class CryptoServiceImpl implements CryptoService {
             final byte[] toBeEncrypted,
             final byte[] macToVerify,
             final DigestSaltEnum salt) throws RobertServerCryptoException {
-        this.assertLength("concat(EBID | Time)", 96, toBeEncrypted);
+        this.assertLength("concat(EBID | Time)", 64+32+32, toBeEncrypted);
         byte[] generatedMAC = this.generateHMAC(cryptoHMACSHA256S, toBeEncrypted, salt);
         return Arrays.equals(macToVerify, generatedMAC);
     }

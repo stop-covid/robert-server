@@ -5,12 +5,12 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.crypto.Cipher;
 import javax.inject.Inject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.protobuf.Option;
+import com.sun.tools.javac.util.List;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
@@ -45,17 +45,20 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     private final CryptoService cryptoService;
     private final IECDHKeyService keyService;
     private final IClientKeyStorageService clientStorageService;
+    private final IServerKeyStorageService serverKeyStorageService;
 
     @Inject
     public CryptoGrpcServiceBaseImpl(final ICryptoServerConfigurationService serverConfigurationService,
-            final CryptoService cryptoService,
-            final IECDHKeyService keyService,
-            final IClientKeyStorageService clientStorageService) {
+                                     final CryptoService cryptoService,
+                                     final IECDHKeyService keyService,
+                                     final IClientKeyStorageService clientStorageService,
+                                     final IServerKeyStorageService serverKeyStorageService) {
 
         this.serverConfigurationService = serverConfigurationService;
         this.cryptoService = cryptoService;
         this.keyService = keyService;
         this.clientStorageService = clientStorageService;
+        this.serverKeyStorageService = serverKeyStorageService;
     }
 
     @Override
@@ -117,9 +120,9 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     @Builder
     @Getter
     @Setter
-    public static class EpheremalTupleJson {
+    public static class EphemeralTupleJson {
         private int epochId;
-        private EpheremalTupleEbidEccJson key;
+        private EphemeralTupleEbidEccJson key;
     }
 
     @AllArgsConstructor
@@ -127,18 +130,18 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     @Builder
     @Getter
     @Setter
-    public static class EpheremalTupleEbidEccJson {
+    public static class EphemeralTupleEbidEccJson {
         private byte[] ebid;
         private byte[] ecc;
     }
 
-    private java.util.List<EpheremalTupleJson> mapEphemeralTuples(Collection<EphemeralTuple> tuples) {
-        ArrayList<EpheremalTupleJson> mappedTuples = new ArrayList<>();
+    private java.util.List<EphemeralTupleJson> mapEphemeralTuples(Collection<EphemeralTuple> tuples) {
+        ArrayList<EphemeralTupleJson> mappedTuples = new ArrayList<>();
 
         for (EphemeralTuple tuple : tuples) {
-            mappedTuples.add(EpheremalTupleJson.builder()
+            mappedTuples.add(EphemeralTupleJson.builder()
                     .epochId(tuple.getEpochId())
-                    .key(EpheremalTupleEbidEccJson.builder()
+                    .key(EphemeralTupleEbidEccJson.builder()
                             .ebid(tuple.getEbid())
                             .ecc(tuple.getEncryptedCountryCode())
                             .build())
@@ -154,9 +157,9 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                                      byte serverCountryCode) {
         // TODO: provide M/96 K_S keys for tuple generation for next M epochs
         // Generate tuples
-        final byte[] serverKey = this.serverConfigurationService.getServerKey();
+        final byte[][] serverKeys = this.serverKeyStorageService.getServerKeysForEpochs(List.of(epochId));
         final byte[] federationKey = this.serverConfigurationService.getFederationKey();
-        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, federationKey, 1);
+        final TupleGenerator tupleGenerator = new TupleGenerator(serverKeys[0], federationKey, 1);
         try {
             final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(
                     id,
@@ -167,8 +170,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             tupleGenerator.stop();
 
             if (!CollectionUtils.isEmpty(ephemeralTuples)) {
-                // TODO: careful EphemeralTuple is different from the one in the current REST API,
-                // resulting JSONs don't match
                 ObjectMapper objectMapper = new ObjectMapper();
                 byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(mapEphemeralTuples(ephemeralTuples));
                 CryptoAESGCM cryptoAESGCM = new CryptoAESGCM(tuplesEncryptionKey);
@@ -267,7 +268,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     private EbidContent decryptEBID(byte[] ebid, long timeReceived) throws RobertServerCryptoException {
         int epoch = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), timeReceived);
         byte[] decryptedEbid = this.cryptoService.decryptEBID(
-                new CryptoSkinny64(this.serverConfigurationService.getServerKeyForEpochId(epoch)),
+                new CryptoSkinny64(this.serverKeyStorageService.getServerKeyForEpoch(epoch)),
                 ebid);
         byte[] idA = getIdFromDecryptedEBID(decryptedEbid);
         int epochId = getEpochIdFromDecryptedEBID(decryptedEbid);
@@ -360,15 +361,15 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     }
 
     private byte[] addEbidComponents(byte[] encryptedEbid, int epochId, long time) {
-        byte[] all = new byte[encryptedEbid.length + Integer.BYTES + Long.BYTES];
+        byte[] all = new byte[encryptedEbid.length + Integer.BYTES + Integer.BYTES];
         System.arraycopy(encryptedEbid, 0, all, 0, encryptedEbid.length);
         System.arraycopy(ByteUtils.intToBytes(epochId), 0, all, encryptedEbid.length, Integer.BYTES);
         System.arraycopy(
                 ByteUtils.longToBytes(time),
-                0,
+                4,
                 all,
                 encryptedEbid.length + Integer.BYTES,
-                Long.BYTES);
+                Integer.BYTES);
         return all;
     }
 
@@ -378,7 +379,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                                       byte[] mac,
                                                                       DigestSaltEnum type) {
         try {
-            EbidContent ebidContent = decryptEBID(encryptedEbid, epochId);
+            EbidContent ebidContent = decryptEBID(encryptedEbid, time);
 
             Optional<ClientIdentifierBundle> clientIdentifierBundle = this.clientStorageService.findKeyById(ebidContent.getIdA());
             if (!clientIdentifierBundle.isPresent()) {
