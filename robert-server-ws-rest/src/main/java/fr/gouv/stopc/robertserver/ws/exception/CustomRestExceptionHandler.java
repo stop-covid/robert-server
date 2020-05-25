@@ -30,7 +30,7 @@ public class CustomRestExceptionHandler extends ResponseEntityExceptionHandler {
 	protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException e, HttpHeaders headers, HttpStatus status, WebRequest request) {
 
 		String message = MessageConstants.INVALID_DATA.getValue();
-		log.error(message, e.getCause());
+		log.error(e.getLocalizedMessage());
 
 		return new ResponseEntity<>(buildApiError(message), status);
 	}

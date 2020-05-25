@@ -51,6 +51,7 @@ public class ReportControllerImpl implements IReportController {
     @Override
     public ResponseEntity<ReportBatchResponseDto> reportContactHistory(ReportBatchRequestVo reportBatchRequestVo) throws RobertServerException {
 
+    	log.info("reportBatchRequestVo {}", reportBatchRequestVo);
 //        if (CollectionUtils.isEmpty(reportBatchRequestVo.getContacts())) {
 //            log.error("No contacts in request");
 //            return ResponseEntity.badRequest().build();
