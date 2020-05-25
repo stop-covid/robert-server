@@ -4,6 +4,7 @@ import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.crypto.KeyAgreement;
@@ -71,8 +72,17 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
     public Optional<ClientIdentifierBundle> deriveKeysFromClientPublicKey(byte[] clientPublicKey)
             throws RobertServerCryptoException {
         byte[] sharedSecret = generateSharedSecret(clientPublicKey);
+
+        if (Objects.isNull(sharedSecret)) {
+            return Optional.empty();
+        }
+
         byte[] kaMac = deriveKaMacFromClientPublicKey(sharedSecret);
         byte[] kaTuples = deriveKaTuplesFromClientPublicKey(sharedSecret);
+
+        if (Objects.isNull(kaMac) || Objects.isNull(kaTuples)) {
+            return Optional.empty();
+        }
 
         return Optional.of(ClientIdentifierBundle.builder().keyMac(kaMac).keyTuples(kaTuples).build());
     }

@@ -1,16 +1,12 @@
 package test.fr.gouv.stopc.robert.crypto.grpc.server;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -24,6 +20,8 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
+import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,12 +52,18 @@ import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+@Slf4j
 @ExtendWith(SpringExtension.class)
-public class CryptoServiceGrpcServerTest {
+class CryptoServiceGrpcServerTest {
 
     private final static String UNEXPECTED_FAILURE_MESSAGE = "Should not fail";
+    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x33 };
+    private final static int NUMBER_OF_BUNDLES = 4 * 4 * 24;
 
-    public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
+    final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
+
     private ManagedChannel inProcessChannel;
 
     private CryptoServiceGrpcServer server;
@@ -74,8 +78,10 @@ public class CryptoServiceGrpcServerTest {
 
     private IClientKeyStorageService clientStorageService;
 
+    private int currentEpochId;
+
     @BeforeEach
-    public void beforeEach() throws IOException {
+    void beforeEach() throws IOException {
 
         serverConfigurationService = new CryptoServerConfigurationServiceImpl();
 
@@ -99,43 +105,268 @@ public class CryptoServiceGrpcServerTest {
         server.start();
         inProcessChannel = grpcCleanup.register(
                 InProcessChannelBuilder.forName(serverName).directExecutor().build());
+
+        this.currentEpochId = TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart());
     }
 
     @AfterEach
-    public void tearDown() throws Exception {
+    void tearDown() throws Exception {
         server.stop();
     }
 
-    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte)0x33 };
     @Test
-    public void testCreateRegistrationSucceeds() {
+    void testCreateRegistrationSucceeds() {
+        // Given
+        CreateRegistrationRequest request = CreateRegistrationRequest
+                .newBuilder()
+                .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateECDHPublicKey()))
+                .setFromEpochId(this.currentEpochId)
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        CreateRegistrationResponse createRegistrationResponse =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.createRegistration(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(createRegistrationResponse.getIdA().toByteArray()));
+        byte[] tuples = createRegistrationResponse.getTuples().toByteArray();
+        assertTrue(ByteUtils.isNotEmpty(tuples));
+        CryptoAESGCM aesGcm = new CryptoAESGCM(
+                this.clientStorageService.findKeyById(
+                        createRegistrationResponse.getIdA().toByteArray()).get().getKeyTuples());
         try {
-            int numberOfBundles = 4 * 4 * 24;
-            // Given
-            CreateRegistrationRequest request = CreateRegistrationRequest
-                    .newBuilder()
-                    .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateECDHPublicKey()))
-                    .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
-                    .setNumberOfEpochBundles(numberOfBundles)
-                    .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
-                    .build();
+            byte[] decryptedTuples = aesGcm.decrypt(tuples);
+            ObjectMapper objectMapper = new ObjectMapper();
+            Collection<EphemeralTuple> decodedTuples = objectMapper.readValue(
+                    decryptedTuples,
+                    new TypeReference<Collection<EphemeralTuple>>(){});
+            assertEquals(NUMBER_OF_BUNDLES, decodedTuples.size());
+        } catch (RobertServerCryptoException | IOException e) {
+            fail(UNEXPECTED_FAILURE_MESSAGE);
+        }
+    }
 
-            CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(inProcessChannel);
+    @Test
+    void testCreateRegistrationFakeClientPublicKeyFails() {
+        byte[] fakeKey = new byte[32];
+        new SecureRandom().nextBytes(fakeKey);
 
-            final List<CreateRegistrationResponse> response = new ArrayList<>();
+        CreateRegistrationRequest request = CreateRegistrationRequest
+                .newBuilder()
+                .setClientPublicKey(ByteString.copyFrom(fakeKey))
+                .setFromEpochId(this.currentEpochId)
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        CreateRegistrationResponse createRegistrationResponse =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.createRegistration(req, observer),
+                        (t) -> log.error(t.getMessage()),
+                        res);
+
+        assertNull(createRegistrationResponse);
+        assertTrue(res.isError());
+    }
+
+    @Test
+    void testCreateRegistrationClientPublicKeyNotECDHFails() {
+        CreateRegistrationRequest request = CreateRegistrationRequest
+                .newBuilder()
+                .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateDHPublicKey()))
+                .setFromEpochId(this.currentEpochId)
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        CreateRegistrationResponse createRegistrationResponse =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.createRegistration(req, observer),
+                        (t) -> assertNotNull(t),
+                        res);
+
+        assertNull(createRegistrationResponse);
+        assertTrue(res.isError());
+    }
+
+    @Test
+    void testCreateRegistrationClientPublicKeyImproperECFails() {
+        // Client public key generated with EC curve "secp256k1" instead of server's choice of "secp256*r*1"
+        CreateRegistrationRequest request = CreateRegistrationRequest
+                .newBuilder()
+                .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateECDHPublicKey("secp256k1")))
+                .setFromEpochId(this.currentEpochId)
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        CreateRegistrationResponse createRegistrationResponse =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.createRegistration(req, observer),
+                        (t) -> assertNotNull(t),
+                        res);
+
+        assertNull(createRegistrationResponse);
+        assertTrue(res.isError());
+    }
+
+    @Test
+    void testGetIdFromAuthRequestSucceeds() {
+
+    }
+
+    @Test
+    void testGetIdFromAuthRequestFakeEBIDFails() {
+
+    }
+
+    @Test
+    void testGetIdFromAuthRequestBadMacFails() {
+
+    }
+
+    @Test
+    void testGetIdFromAuthRequestEpochIdsDoNotMatchFails() {
+
+    }
+
+    @Test
+    void testGetIdFromAuthRequestUnknownRequestTypeFails() {
+
+    }
+
+    @Test
+    void testGetIdFromAuthRequestNegativeTimeFails() {
+
+    }
+
+    @Test
+    void testDeleteIdSucceeds() {
+
+    }
+
+    @Test
+    void testDeleteIdUnknownIdFails() {
+
+    }
+
+    @Test
+    void testDeleteIdFakeEBIDFails() {
+
+    }
+
+    @Test
+    void testDeleteIdBadMacFails() {
+
+    }
+
+    @Test
+    void testDeleteIdEpochIdsDoNotMatchFails() {
+
+    }
+
+    @Test
+    void testDeleteIdNegativeTimeFails() {
+
+    }
+
+    @Test
+    void testGetIdFromStatusSucceeds() {
+
+    }
+
+    @Test
+    void testGetIdFromStatusFakeEBIDFails() {
+
+    }
+
+    @Test
+    void testGetIdFromStatusBadMacFails() {
+
+    }
+
+    @Test
+    void testGetIdFromStatusEpochIdsDoNotMatchFails() {
+
+    }
+
+    @Test
+    void testGetIdFromStatusNegativeTimeFails() {
+
+    }
+
+    @Test
+    void testGetInfoFromHelloMessageSucceeds() {
+
+    }
+
+    @Test
+    void testGetInfoFromHelloMessageBadMacFails() {
+
+    }
+
+    @Test
+    void testGetInfoFromHelloMessageFakeEbidFails() {
+
+    }
+
+    @Test
+    void testGetInfoFromHelloMessageEpochIdsDoNotMatchFails() {
+
+    }
+
+    @Test
+    void testGetInfoFromHelloMessageNegativeTimeFails() {
+
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Getter
+    @Setter
+    @Builder
+    static class ObserverExecutionResult {
+        boolean error;
+    }
+
+    interface StubExecution<T,U> {
+        void execute(CryptoGrpcServiceImplStub stub, T t, StreamObserver<U> u);
+    }
+
+    interface HandleError {
+        void execute(Throwable t);
+    }
+
+    <T, U> U sendCryptoRequest(T request, StubExecution<T, U> stubExecution, HandleError handleError, ObserverExecutionResult res) {
+        try {
+            CryptoGrpcServiceImplStub stub = CryptoGrpcServiceImplGrpc.newStub(this.inProcessChannel);
+
+            final List<U> response = new ArrayList<>();
 
             final CountDownLatch latch = new CountDownLatch(1);
 
-            StreamObserver<CreateRegistrationResponse> responseObserver =
-                    new StreamObserver<CreateRegistrationResponse>() {
+            StreamObserver<U> responseObserver =
+                    new StreamObserver<U>() {
                         @Override
-                        public void onNext(CreateRegistrationResponse value) {
+                        public void onNext(U value) {
                             response.add(value);
                         }
 
                         @Override
                         public void onError(Throwable t) {
-                            fail();
+                            handleError.execute(t);
+                            res.setError(true);
                         }
 
                         @Override
@@ -144,31 +375,22 @@ public class CryptoServiceGrpcServerTest {
                         }
                     };
 
+            stubExecution.execute(stub, request, responseObserver);
             // When
-            stub.createRegistration(request, responseObserver);
+            //stub.createRegistration(request, responseObserver);
+
+            if (res.isError()) {
+                return null;
+            }
 
             // Then
             assertTrue(latch.await(1, TimeUnit.SECONDS));
             assertEquals(1, response.size());
-            CreateRegistrationResponse createRegistrationResponse = response.get(0);
-            assertTrue(ByteUtils.isNotEmpty(createRegistrationResponse.getIdA().toByteArray()));
-            byte[] tuples = createRegistrationResponse.getTuples().toByteArray();
-            assertTrue(ByteUtils.isNotEmpty(tuples));
-            CryptoAESGCM aesGcm = new CryptoAESGCM(
-                    this.clientStorageService.findKeyById(
-                            createRegistrationResponse.getIdA().toByteArray()).get().getKeyTuples());
-            try {
-                byte[] decryptedTuples = aesGcm.decrypt(tuples);
-                ObjectMapper objectMapper = new ObjectMapper();
-                Collection<EphemeralTuple> decodedTuples = objectMapper.readValue(
-                        decryptedTuples,
-                        new TypeReference<Collection<EphemeralTuple>>(){});
-                assertEquals(numberOfBundles, decodedTuples.size());
-            } catch (RobertServerCryptoException | IOException e) {
-                fail(UNEXPECTED_FAILURE_MESSAGE);
-            }
+
+            return response.get(0);
         } catch (InterruptedException e) {
-            fail(e.getMessage());
+            fail(UNEXPECTED_FAILURE_MESSAGE);
+            return null;
         }
     }
 
