@@ -10,14 +10,17 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationRequest;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CreateRegistrationResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.impl.ServerKeyStorageServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
+import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
-import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -31,14 +34,11 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.CryptoServiceGrpcServer;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplStub;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.ICryptoServerConfigurationService;
-import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl.ClientKeyStorageServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceBaseImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoServerConfigurationServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.ECDHKeyServiceImpl;
@@ -55,6 +55,7 @@ import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 import javax.crypto.KeyGenerator;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @Slf4j
@@ -77,6 +78,9 @@ class CryptoServiceGrpcServerTest {
 
     private CryptoService cryptoService;
 
+    @Mock
+    private IServerKeyStorageService serverKeyStorageService;
+
     @InjectMocks
     private ECDHKeyServiceImpl keyService;
 
@@ -92,17 +96,22 @@ class CryptoServiceGrpcServerTest {
 
         serverConfigurationService = new CryptoServerConfigurationServiceImpl();
 
-        cryptoService=  new CryptoServiceImpl();
+        cryptoService = new CryptoServiceImpl();
 
         clientStorageService = new MockClientKeyStorageService();
 
         service = new CryptoGrpcServiceBaseImpl(serverConfigurationService,
                 cryptoService,
                 keyService,
-                clientStorageService);
+                clientStorageService,
+                serverKeyStorageService);
 
         when(this.cryptographicStorageService.getServerKeyPair())
                 .thenReturn(Optional.ofNullable(CryptoTestUtils.generateECDHKeyPair()));
+
+        byte[] keyToEncodeKeys = new byte[32];
+        new SecureRandom().nextBytes(keyToEncodeKeys);
+        when(this.cryptographicStorageService.getKeyForEncryptingKeys()).thenReturn(keyToEncodeKeys);
 
         String serverName = InProcessServerBuilder.generateName();
 
@@ -133,6 +142,11 @@ class CryptoServiceGrpcServerTest {
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
+
+        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(this.currentEpochId))).thenReturn(serverKeys);
+
         ObserverExecutionResult res = new ObserverExecutionResult(false);
         CreateRegistrationResponse createRegistrationResponse =
                 sendCryptoRequest(
@@ -140,6 +154,7 @@ class CryptoServiceGrpcServerTest {
                         (stub, req, observer) -> stub.createRegistration(req, observer),
                         (t) -> fail(),
                         res);
+
         assertTrue(!res.isError());
         assertTrue(ByteUtils.isNotEmpty(createRegistrationResponse.getIdA().toByteArray()));
         byte[] tuples = createRegistrationResponse.getTuples().toByteArray();
@@ -150,9 +165,9 @@ class CryptoServiceGrpcServerTest {
         try {
             byte[] decryptedTuples = aesGcm.decrypt(tuples);
             ObjectMapper objectMapper = new ObjectMapper();
-            Collection<EphemeralTuple> decodedTuples = objectMapper.readValue(
+            Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson> decodedTuples = objectMapper.readValue(
                     decryptedTuples,
-                    new TypeReference<Collection<EphemeralTuple>>(){});
+                    new TypeReference<Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson>>(){});
             assertEquals(NUMBER_OF_BUNDLES, decodedTuples.size());
         } catch (RobertServerCryptoException | IOException e) {
             fail(UNEXPECTED_FAILURE_MESSAGE);
@@ -229,9 +244,109 @@ class CryptoServiceGrpcServerTest {
         assertTrue(res.isError());
     }
 
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Getter
+    @Builder
+    static class AuthRequestBundle {
+        private byte[] ebid;
+        private int epochId;
+        private long time;
+        private byte[] mac;
+        private DigestSaltEnum requestType;
+        private byte[] serverKey;
+    }
+
+    private Optional<ClientIdentifierBundle> createId() {
+        byte[] keyForMac = new byte[32];
+        byte[] keyForTuples = new byte[32];
+
+        return this.clientStorageService.createClientIdUsingKeys(keyForMac, keyForTuples);
+    }
+
+    private byte[] generateMac(byte[] ebid, int epochId, long time, byte[] keyForMac, DigestSaltEnum digestSalt) {
+        byte[] digest = new byte[] { digestSalt.getValue() };
+        byte[] toHash = new byte[digest.length + ebid.length + Integer.BYTES + Integer.BYTES];
+        System.arraycopy(digest, 0, toHash, 0, digest.length);
+        System.arraycopy(ebid, 0, toHash, digest.length, ebid.length);
+        System.arraycopy(ByteUtils.intToBytes(epochId), 0, toHash, digest.length + ebid.length, Integer.BYTES);
+        System.arraycopy(ByteUtils.longToBytes(time), 4, toHash, digest.length + ebid.length + Integer.BYTES, Integer.BYTES);
+
+        try {
+            CryptoHMACSHA256 hmacsha256 = new CryptoHMACSHA256(keyForMac);
+            return hmacsha256.encrypt(toHash);
+        } catch (RobertServerCryptoException e) {
+            fail();
+        }
+        return null;
+    }
+
+    private byte[] generateEbid(byte[] id, int epochId, byte[] ks) {
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(ByteUtils.intToBytes(epochId), 1, decryptedEbid, 0, Integer.BYTES - 1);
+        System.arraycopy(id, 0, decryptedEbid, Integer.BYTES - 1, id.length);
+
+        CryptoSkinny64 cryptoSkinny64 = new CryptoSkinny64(ks);
+        byte[] encryptedEbid = null;
+
+        try {
+            encryptedEbid = cryptoSkinny64.encrypt(decryptedEbid);
+        } catch (RobertServerCryptoException e) {
+            fail();
+        }
+
+        return encryptedEbid;
+    }
+
+    private AuthRequestBundle generateAuthRequestBundle(byte[] id, byte[] keyForMac, DigestSaltEnum digestSalt) {
+        long time = System.currentTimeMillis() / 1000 + 2208988800L;
+        int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
+
+        // Mock K_S
+        byte[] ks = new byte[24];
+        new SecureRandom().nextBytes(ks);
+        byte[] ebid = generateEbid(id, epochId, ks);
+        when(this.serverKeyStorageService.getServerKeyForEpoch(epochId)).thenReturn(ks);
+
+        return new AuthRequestBundle().builder()
+                .ebid(ebid)
+                .epochId(epochId)
+                .time(time)
+                .mac(generateMac(ebid, epochId, time, keyForMac, digestSalt))
+                .requestType(digestSalt)
+                .serverKey(ks)
+                .build();
+    }
+
     @Test
     void testGetIdFromAuthRequestSucceeds() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
 
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+
+        //TODO
     }
 
     @Test
