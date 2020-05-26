@@ -45,4 +45,7 @@ public class PropertyLoader {
 
     @Value("${submission.code.server.verify.path}")
     private String serverCodeVerificationPath;
+
+    @Value("${robert.esr.limit}")
+    private Integer esrLimit;
 }
