@@ -302,7 +302,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         String alias = dateFromEpoch.format(dateFormatter);
         if (!this.contains(alias)) {
             log.info("Creating new server key with alias {}", alias);
-            serverKey = ByteUtils.generateRandom(192);
+            serverKey = ByteUtils.generateRandom(24);
             this.storeKey(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME));
         } else {
             log.debug("Fetching existing server key with alias {}", alias);
