@@ -67,7 +67,7 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public int getHelloMessageTimeStampTolerance() {
-        return 3;
+        return 10;
     }
 
     @Override
