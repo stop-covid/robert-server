@@ -13,12 +13,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.impl.ServerKeyStorageServiceImpl;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import lombok.*;
@@ -55,7 +55,6 @@ import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 import javax.crypto.KeyGenerator;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @Slf4j
@@ -117,8 +116,9 @@ class CryptoServiceGrpcServerTest {
 
         server = new CryptoServiceGrpcServer(
                 InProcessServerBuilder.forName(serverName)
-                .directExecutor()
-                , 0, service);
+                .directExecutor(),
+                0,
+                service);
         server.start();
         inProcessChannel = grpcCleanup.register(
                 InProcessChannelBuilder.forName(serverName).directExecutor().build());
@@ -159,19 +159,22 @@ class CryptoServiceGrpcServerTest {
         assertTrue(ByteUtils.isNotEmpty(createRegistrationResponse.getIdA().toByteArray()));
         byte[] tuples = createRegistrationResponse.getTuples().toByteArray();
         assertTrue(ByteUtils.isNotEmpty(tuples));
-        CryptoAESGCM aesGcm = new CryptoAESGCM(
-                this.clientStorageService.findKeyById(
-                        createRegistrationResponse.getIdA().toByteArray()).get().getKeyForTuples());
+        assertTrue(checkTuples(createRegistrationResponse.getIdA().toByteArray(), tuples));
+    }
+
+    private boolean checkTuples(byte[] id, byte[] tuples) {
+        CryptoAESGCM aesGcm = new CryptoAESGCM(this.clientStorageService.findKeyById(id).get().getKeyForTuples());
         try {
             byte[] decryptedTuples = aesGcm.decrypt(tuples);
             ObjectMapper objectMapper = new ObjectMapper();
             Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson> decodedTuples = objectMapper.readValue(
                     decryptedTuples,
                     new TypeReference<Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson>>(){});
-            assertEquals(NUMBER_OF_BUNDLES, decodedTuples.size());
+            return NUMBER_OF_BUNDLES == decodedTuples.size();
         } catch (RobertServerCryptoException | IOException e) {
             fail(UNEXPECTED_FAILURE_MESSAGE);
         }
+        return false;
     }
 
     @Test
@@ -298,8 +301,12 @@ class CryptoServiceGrpcServerTest {
         return encryptedEbid;
     }
 
+    private long getCurrentTimeNTPSeconds() {
+        return System.currentTimeMillis() / 1000 + 2208988800L;
+    }
+
     private AuthRequestBundle generateAuthRequestBundle(byte[] id, byte[] keyForMac, DigestSaltEnum digestSalt) {
-        long time = System.currentTimeMillis() / 1000 + 2208988800L;
+        long time = getCurrentTimeNTPSeconds();
         int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
 
         // Mock K_S
@@ -324,7 +331,7 @@ class CryptoServiceGrpcServerTest {
         AuthRequestBundle bundle = generateAuthRequestBundle(
                 clientIdentifierBundle.get().getId(),
                 clientIdentifierBundle.get().getKeyForMac(),
-                DigestSaltEnum.UNREGISTER);
+                DigestSaltEnum.DELETE_HISTORY);
 
         // Given
         GetIdFromAuthRequest request = GetIdFromAuthRequest
@@ -345,113 +352,727 @@ class CryptoServiceGrpcServerTest {
                         res);
         assertTrue(!res.isError());
         assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
-
-        //TODO
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
     }
 
     @Test
     void testGetIdFromAuthRequestFakeEBIDFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
 
+        byte[] fakeEbid = new byte[8];
+        new SecureRandom().nextBytes(fakeEbid);
+
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(fakeEbid))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromAuthRequestBadMacFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
 
+        // Mess up with mac
+        byte[] mac = new byte[32];
+        System.arraycopy(bundle.getMac(), 0, mac, 0, bundle.getMac().length);
+        mac[3] = (byte)(mac[3] ^ 0x4);
+
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(mac))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
+    }
+
+    @Test
+    void testGetIdFromAuthRequestMacWithBadRequestTypeFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
+
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(DigestSaltEnum.DELETE_HISTORY.getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromAuthRequestEpochIdsDoNotMatchFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
 
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId() + 1)
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromAuthRequestUnknownRequestTypeFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
 
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType((byte)0x7) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromAuthRequestNegativeTimeFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
 
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(0 - bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
+    }
+
+    @Test
+    void testGetIdFromAuthRequestUnknownIdFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+
+        byte[] modifiedId = new byte[5];
+        System.arraycopy(clientIdentifierBundle.get().getId(),
+                0,
+                modifiedId,
+                0,
+                clientIdentifierBundle.get().getId().length);
+
+        // Modify ID slightly
+        modifiedId[4] = (byte)(modifiedId[4] ^ 0x4);
+
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                modifiedId,
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY);
+
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testDeleteIdSucceeds() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
 
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
     }
 
     @Test
     void testDeleteIdUnknownIdFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
 
+        byte[] modifiedId = new byte[5];
+        System.arraycopy(clientIdentifierBundle.get().getId(),
+                0,
+                modifiedId,
+                0,
+                clientIdentifierBundle.get().getId().length);
+
+        // Modify ID slightly
+        modifiedId[4] = (byte)(modifiedId[4] ^ 0x4);
+
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                modifiedId,
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
+
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
     }
 
     @Test
     void testDeleteIdFakeEBIDFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
 
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
+
+        byte[] fakeEbid = new byte[8];
+        new SecureRandom().nextBytes(fakeEbid);
+
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(fakeEbid))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
     }
 
     @Test
     void testDeleteIdBadMacFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
 
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
+
+        // Mess up with mac
+        byte[] mac = new byte[32];
+        System.arraycopy(bundle.getMac(), 0, mac, 0, bundle.getMac().length);
+        mac[3] = (byte)(mac[3] ^ 0x4);
+
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(mac))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
     }
 
     @Test
     void testDeleteIdEpochIdsDoNotMatchFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
 
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId() + 1)
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testDeleteIdNegativeTimeFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.UNREGISTER);
 
+        // Given
+        DeleteIdRequest request = DeleteIdRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(0 - bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        DeleteIdResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.deleteId(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromStatusSucceeds() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS);
 
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
+
+        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(this.currentEpochId))).thenReturn(serverKeys);
+
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setFromEpochId(bundle.getEpochId())
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
+        assertTrue(checkTuples(response.getIdA().toByteArray(), response.getTuples().toByteArray()));
     }
 
     @Test
     void testGetIdFromStatusFakeEBIDFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS);
 
+        byte[] fakeEbid = new byte[8];
+        new SecureRandom().nextBytes(fakeEbid);
+
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(fakeEbid))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromStatusBadMacFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS);
 
+        // Mess up with mac
+        byte[] mac = new byte[32];
+        System.arraycopy(bundle.getMac(), 0, mac, 0, bundle.getMac().length);
+        mac[3] = (byte)(mac[3] ^ 0x4);
+
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(mac))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromStatusEpochIdsDoNotMatchFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS);
 
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId() + 1)
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
     }
 
     @Test
     void testGetIdFromStatusNegativeTimeFails() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundle(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS);
 
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(0 - bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
+        assertNull(response);
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    @Getter
+    private static class HelloMessageBundle {
+        private byte[] ebid;
+        private byte[] ecc;
+        private byte[] mac;
+        private int timeSent;
+        private long timeReceived;
+    }
+
+    private HelloMessageBundle generateHelloMessage(byte[] id, byte[] serverKey, byte[] keyForMac, DigestSaltEnum digestSalt) {
+        long time = getCurrentTimeNTPSeconds() - 500000;
+        int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
+        byte[] ebid = generateEbid(id, epochId, serverKey);
+
+        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(epochId))).thenReturn(new byte[][] { serverKey });
+        when(this.serverKeyStorageService.getServerKeyForEpoch(epochId)).thenReturn(serverKey);
+
+        byte[] hello = new byte[16];
+        System.arraycopy(new byte[] { digestSalt.getValue() }, 0, hello, 0, 1);
+        System.arraycopy(ebid, 0, hello, 1, ebid.length);
+        System.arraycopy(ByteUtils.longToBytes(time), 6, hello, 1 + ebid.length, 2);
+
+        byte[] mac;
+        byte[] ecc;
+        try {
+            mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(keyForMac), hello);
+            ecc = this.cryptoService.encryptCountryCode(
+                    new CryptoAESOFB(this.serverConfigurationService.getFederationKey()),
+                    ebid,
+                    SERVER_COUNTRY_CODE[0]);
+        } catch (RobertServerCryptoException e) {
+            return null;
+        }
+
+        return HelloMessageBundle.builder()
+                .ebid(ebid)
+                .ecc(ecc)
+                .timeReceived(time + 1)
+                .timeSent((int)time)
+                .mac(mac)
+                .build();
     }
 
     @Test
     void testGetInfoFromHelloMessageSucceeds() {
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
 
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        HelloMessageBundle bundle = generateHelloMessage(
+                clientIdentifierBundle.get().getId(),
+                serverKeys[0],
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.HELLO);
+
+        // Given
+        GetInfoFromHelloMessageRequest request = GetInfoFromHelloMessageRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setTimeReceived(bundle.getTimeReceived())
+                .setTimeSent(bundle.getTimeSent())
+                .setEcc(ByteString.copyFrom(bundle.getEcc()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetInfoFromHelloMessageResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getInfoFromHelloMessage(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(response.getCountryCode().toByteArray(), SERVER_COUNTRY_CODE));
     }
 
     @Test
     void testGetInfoFromHelloMessageBadMacFails() {
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
 
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        HelloMessageBundle bundle = generateHelloMessage(
+                clientIdentifierBundle.get().getId(),
+                serverKeys[0],
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.HELLO);
+
+        // Mess up with mac
+        byte[] mac = new byte[32];
+        System.arraycopy(bundle.getMac(), 0, mac, 0, bundle.getMac().length);
+        mac[3] = (byte)(mac[3] ^ 0x4);
+
+        // Given
+        GetInfoFromHelloMessageRequest request = GetInfoFromHelloMessageRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setMac(ByteString.copyFrom(mac))
+                .setTimeReceived(bundle.getTimeReceived())
+                .setTimeSent(bundle.getTimeSent())
+                .setEcc(ByteString.copyFrom(bundle.getEcc()))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetInfoFromHelloMessageResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getInfoFromHelloMessage(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
     }
 
     @Test
     void testGetInfoFromHelloMessageFakeEbidFails() {
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
 
-    }
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        HelloMessageBundle bundle = generateHelloMessage(
+                clientIdentifierBundle.get().getId(),
+                serverKeys[0],
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.HELLO);
 
-    @Test
-    void testGetInfoFromHelloMessageEpochIdsDoNotMatchFails() {
+        byte[] fakeEbid = new byte[8];
+        new SecureRandom().nextBytes(fakeEbid);
 
-    }
+        // Given
+        GetInfoFromHelloMessageRequest request = GetInfoFromHelloMessageRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(fakeEbid))
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setTimeReceived(bundle.getTimeReceived())
+                .setTimeSent(bundle.getTimeSent())
+                .setEcc(ByteString.copyFrom(bundle.getEcc()))
+                .build();
 
-    @Test
-    void testGetInfoFromHelloMessageNegativeTimeFails() {
-
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetInfoFromHelloMessageResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getInfoFromHelloMessage(req, observer),
+                        (t) -> {},
+                        res);
+        assertTrue(res.isError());
     }
 
     @AllArgsConstructor
