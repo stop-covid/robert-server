@@ -26,6 +26,7 @@ import fr.gouv.stopc.robertserver.ws.controller.IStatusController;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
 import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
+import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -42,16 +43,20 @@ public class StatusControllerImpl implements IStatusController {
 
 	private final AuthRequestValidationService authRequestValidationService;
 
+	private final PropertyLoader propertyLoader;
+
 	@Inject
 	public StatusControllerImpl(
 			final IServerConfigurationService serverConfigurationService,
 			final IRegistrationService registrationService,
 			final IApplicationConfigService applicationConfigService,
-			final AuthRequestValidationService authRequestValidationService) {
+			final AuthRequestValidationService authRequestValidationService,
+			final PropertyLoader propertyLoader) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.registrationService = registrationService;
 		this.applicationConfigService = applicationConfigService;
 		this.authRequestValidationService = authRequestValidationService;
+		this.propertyLoader = propertyLoader;
 	}
 
 	@Override
@@ -111,7 +116,8 @@ public class StatusControllerImpl implements IStatusController {
 		// Step #7: Check that epochs are not too distant
 		int currentEpoch = TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart());
 		int epochDistance = currentEpoch - record.getLastStatusRequestEpoch();
-		if(epochDistance < this.serverConfigurationService.getStatusRequestMinimumEpochGap()) {
+		if(epochDistance < this.serverConfigurationService.getStatusRequestMinimumEpochGap() 
+		        && this.propertyLoader.getEsrLimit() != 0) {
 			log.info("Discarding ESR request because epochs are too close: {} > {} (tolerance)",
 					epochDistance,
 					this.serverConfigurationService.getStatusRequestMinimumEpochGap());

@@ -21,7 +21,6 @@ import java.util.Optional;
 import javax.crypto.KeyGenerator;
 import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusResponse;
 import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -47,6 +47,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.google.protobuf.ByteString;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromStatusResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -58,7 +59,9 @@ import fr.gouv.stopc.robertserver.database.model.EpochExposition;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
 import fr.gouv.stopc.robertserver.ws.RobertServerWsRestApplication;
+import fr.gouv.stopc.robertserver.ws.config.RobertServerWsConfiguration;
 import fr.gouv.stopc.robertserver.ws.dto.StatusResponseDto;
+import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.utils.UriConstants;
 import fr.gouv.stopc.robertserver.ws.vo.StatusVo;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +73,7 @@ import lombok.extern.slf4j.Slf4j;
 @TestPropertySource("classpath:application.properties")
 @Slf4j
 public class StatusControllerWsRestTest {
+
     @Value("${controller.path.prefix}")
     private String pathPrefix;
 
@@ -96,17 +100,24 @@ public class StatusControllerWsRestTest {
     @Autowired
     private IServerConfigurationService serverConfigurationService;
 
+    @MockBean
+    private PropertyLoader propertyLoader;
+
+    @MockBean
+    private RobertServerWsConfiguration config;
+
     private int currentEpoch;
 
     @BeforeEach
     public void before() {
-
         assert (this.restTemplate != null);
         this.headers = new HttpHeaders();
         this.headers.setContentType(MediaType.APPLICATION_JSON);
         this.targetUrl = UriComponentsBuilder.fromUriString(this.pathPrefix).path(UriConstants.STATUS).build().encode().toUri();
 
         this.currentEpoch = this.getCurrentEpoch();
+
+        when(this.propertyLoader.getEsrLimit()).thenReturn(-1);
     }
 
     @Test
@@ -833,5 +844,58 @@ public class StatusControllerWsRestTest {
         assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
         verify(this.registrationService, times(1)).findById(idA);
         verify(this.registrationService, times(0)).saveRegistration(reg);
+    }
+    @Test
+    public void testStatusRequestESRThrottleShouldSucceedsWhenLimitIsZero() {
+
+        // Given
+        byte[] idA = this.generateKey(5);
+        byte[] kA = this.generateKA();
+        Registration reg = Registration.builder()
+                .permanentIdentifier(idA)
+                .atRisk(true)
+                .isNotified(false)
+                .lastStatusRequestEpoch(currentEpoch - 3).build();
+
+        byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
+
+        statusBody = StatusVo.builder()
+                .ebid(Base64.encode(reqContent[0]))
+                .epochId(currentEpoch)
+                .time(Base64.encode(reqContent[1]))
+                .mac(Base64.encode(reqContent[2]))
+                .build();
+
+        byte[] decryptedEbid = new byte[8];
+        System.arraycopy(idA, 0, decryptedEbid, 3, 5);
+        System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, 3);
+
+        doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
+
+        doReturn(Optional.of(GetIdFromStatusResponse.newBuilder()
+                    .setEpochId(currentEpoch)
+                    .setIdA(ByteString.copyFrom(idA))
+                    .setTuples(ByteString.copyFrom("Base64encodedEncryptedJSONStringWithTuples".getBytes()))
+                    .build()))
+                .when(this.cryptoServerClient).getIdFromStatus(any());
+
+        when(this.propertyLoader.getEsrLimit()).thenReturn(0);
+
+        this.requestEntity = new HttpEntity<>(this.statusBody, this.headers);
+
+        // When
+        ResponseEntity<StatusResponseDto> response = this.restTemplate.exchange(this.targetUrl.toString(),
+                HttpMethod.POST, this.requestEntity, StatusResponseDto.class);
+
+        // Then
+        // TODO: should maybe have a different HTTP error code?
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(currentEpoch, reg.getLastStatusRequestEpoch());
+        assertEquals(true, response.getBody().isAtRisk());
+        assertNotNull(response.getBody().getTuples());
+        assertEquals(false, reg.isAtRisk());
+        assertEquals(true, reg.isNotified());
+        verify(this.registrationService, times(1)).findById(idA);
+        verify(this.registrationService, times(1)).saveRegistration(reg);
     }
 }
