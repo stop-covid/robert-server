@@ -55,6 +55,7 @@ import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 import javax.crypto.KeyGenerator;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @Slf4j
@@ -369,7 +370,7 @@ class CryptoServiceGrpcServerTest {
                 clientIdentifierBundle.get().getId(),
                 clientIdentifierBundle.get().getKeyForMac(),
                 DigestSaltEnum.DELETE_HISTORY,
-                900*3); // ebid will be 3-epochs old
+                900 * 3); // ebid will be 3-epochs old
 
         // Given
         GetIdFromAuthRequest request = GetIdFromAuthRequest
@@ -838,6 +839,43 @@ class CryptoServiceGrpcServerTest {
         assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
         assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
         assertTrue(checkTuples(response.getIdA().toByteArray(), response.getTuples().toByteArray()));
+    }
+
+    @Test
+    void testGetIdFromStatusRequestWithOlderEBIDAndEpochSucceeds() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundleWithTimeDelta(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.STATUS,
+                900 * 3); // ebid will be 3-epochs old
+
+        byte[][] serverKeys = new byte[1][24];
+        new SecureRandom().nextBytes(serverKeys[0]);
+        when(this.serverKeyStorageService.getServerKeysForEpochs(any())).thenReturn(serverKeys);
+
+        // Given
+        GetIdFromStatusRequest request = GetIdFromStatusRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setFromEpochId(bundle.getEpochId())
+                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromStatusResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromStatus(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
     }
 
     @Test

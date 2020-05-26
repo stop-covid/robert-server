@@ -277,41 +277,77 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         int epochId;
     }
 
+    private final static int EPOCH_DURATION = 900;
     //TODO: careful if on edges...
     private EbidContent decryptEBIDWithTimeReceived(byte[] ebid, long timeReceived) throws RobertServerCryptoException {
         int epoch = TimeUtils.getNumberOfEpochsBetween(
                 this.serverConfigurationService.getServiceTimeStart(),
                 timeReceived);
 
-        return decryptEBIDAndCheckEpoch(ebid, epoch);
+        AdjacentEpochMatchEnum adjacentEpochMatch = AdjacentEpochMatchEnum.NONE;
+        // TODO: replace local EPOCH_DURATION with common epoch duration constant
+        if (timeReceived % EPOCH_DURATION < 5) {
+            adjacentEpochMatch = AdjacentEpochMatchEnum.PREVIOUS;
+        } else if (timeReceived % EPOCH_DURATION > EPOCH_DURATION - 5) {
+            adjacentEpochMatch = AdjacentEpochMatchEnum.NEXT;
+        }
+
+        return decryptEBIDAndCheckEpoch(ebid, epoch, adjacentEpochMatch);
+    }
+
+    private enum AdjacentEpochMatchEnum {
+        NONE,
+        PREVIOUS,
+        NEXT
+    }
+
+    /**
+     * Decrypt the provided ebid and check the epoch it contains matches exactly the provided one
+     * @param ebid
+     * @param epoch
+     * @return
+     * @throws RobertServerCryptoException
+     */
+    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int epoch) throws RobertServerCryptoException {
+        return decryptEBIDAndCheckEpoch(ebid, epoch, AdjacentEpochMatchEnum.NONE);
     }
 
     // TODO: handle edge cases at edges of an epoch (start and finish) by trying and previous K_S
-    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int epoch) throws RobertServerCryptoException {
-//        int epoch = TimeUtils.getNumberOfEpochsBetween(
+
+    /**
+     * Decrypt the provided ebid and check the authRequestEpoch it contains the provided one or the next/previous
+     * @param ebid
+     * @param authRequestEpoch
+     * @param adjacentEpochMatchEnum
+     * @return
+     * @throws RobertServerCryptoException
+     */
+    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int authRequestEpoch, AdjacentEpochMatchEnum adjacentEpochMatchEnum)
+            throws RobertServerCryptoException {
+//        int authRequestEpoch = TimeUtils.getNumberOfEpochsBetween(
 //                this.serverConfigurationService.getServiceTimeStart(),
 //                timeReceived);
 
-        byte[] serverKey = this.serverKeyStorageService.getServerKeyForEpoch(epoch);
+        byte[] serverKey = this.serverKeyStorageService.getServerKeyForEpoch(authRequestEpoch);
 
         if (Objects.isNull(serverKey)) {
-            log.warn("Cannot retrieve server key for {}", epoch);
+            log.warn("Cannot retrieve server key for {}", authRequestEpoch);
             return null;
         }
 
         byte[] decryptedEbid = this.cryptoService.decryptEBID(new CryptoSkinny64(serverKey), ebid);
         byte[] idA = getIdFromDecryptedEBID(decryptedEbid);
-        int epochId = getEpochIdFromDecryptedEBID(decryptedEbid);
+        int ebidEpochId = getEpochIdFromDecryptedEBID(decryptedEbid);
 
-        if (epochId < 0) {
+        if (ebidEpochId < 0) {
             log.warn("Epoch from EBID is negative");
             return null;
-        } else if (epoch != epochId) {
-            log.warn("Epoch from EBID and accompanying epoch do not match");
+        } else if (authRequestEpoch != ebidEpochId) {
+            log.warn("Epoch from EBID and accompanying authRequestEpoch do not match: ebid authRequestEpoch = {} vs auth request authRequestEpoch = {}", ebidEpochId, authRequestEpoch);
             return null;
         }
 
-        return EbidContent.builder().epochId(epochId).idA(idA).build();
+        return EbidContent.builder().epochId(ebidEpochId).idA(idA).build();
     }
 
     private byte[] decryptECC(byte[] ebid, byte encryptedCountryCode) throws RobertServerCryptoException {
