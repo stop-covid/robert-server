@@ -1,8 +1,8 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service;
 
-import java.security.Key;
 import java.security.KeyPair;
 import java.security.Provider;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ICryptographicStorageService {
@@ -14,6 +14,10 @@ public interface ICryptographicStorageService {
     void delete(String alias);
     
     void store(String alias, String secretKey);
+ 
+    byte[] getServerKey(int epochId, long serviceTimeStart);
+
+    Map<Integer, byte[]> getServerKeys(int epochId, long timeStart, int nbDays);
  
     byte[] getEntry(String alias);
 
