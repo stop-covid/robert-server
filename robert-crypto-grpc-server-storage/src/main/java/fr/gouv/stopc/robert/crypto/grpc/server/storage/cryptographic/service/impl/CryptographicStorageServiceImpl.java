@@ -10,7 +10,6 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStore.PrivateKeyEntry;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -18,7 +17,6 @@ import java.security.Provider;
 import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.Security;
-import java.security.UnrecoverableEntryException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -28,12 +26,17 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import javax.crypto.KeyAgreement;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -45,6 +48,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
+import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import sun.security.pkcs11.SunPKCS11;
 
@@ -120,12 +124,22 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
     }
 
+    private void storeKey(String alias, Key secretKey) {
+
+        try {
+            if (!isServerKeyAlias(alias) && this.contains(alias)) {
+                this.delete(alias);
+                this.keyStore.setKeyEntry(alias, secretKey, null, null);
+            }
+        } catch (KeyStoreException e) {
+            log.error("An expected error occured when trying to store the alias {} due to {}", alias, e.getMessage());
+        }
+
+    }
     @Override
     public void addKeys(String serverPublicKey, String serverPrivateKey) {
 
         try {
-            log.info("PUBLIC : {}", serverPublicKey);
-            log.info("PRIVATE : {}", serverPrivateKey);
             EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.decode(serverPrivateKey));
             KeyFactory generator = KeyFactory.getInstance("EC");
             PrivateKey privateKey = generator.generatePrivate(privateKeySpec);
@@ -213,7 +227,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
     @Override
     public Provider getProvider() {
-        // TODO Auto-generated method stub
+
         return this.provider;
     }
 
@@ -241,11 +255,98 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             ecdh.doPhase(ephemeralKeys.getPublic(), true);
             return ecdh.generateSecret();
         } catch (KeyStoreException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | UnrecoverableKeyException | InvalidKeyException | IllegalStateException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+
+            log.error("Unable to perform ECDH key  agreement from the server public/private keys", e.getClass(), e.getMessage());
         }
 
 
         return null;
     }
+
+    public void storeServerKey(String alias, byte[] secret) {
+
+        if(Objects.isNull(secret)) {
+            log.error("Unable to store a null secret");
+        }
+
+        if (this.contains(alias)) {
+            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
+            return ;
+        }
+        SecretKeySpec secretKey = new SecretKeySpec(secret, "AES");
+        
+    }
+
+    @Override
+    public byte[] getServerKey(int epochId, long serviceTimeStart) {
+
+        LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, serviceTimeStart);
+        if(Objects.isNull(dateFromEpoch) ) {
+            log.error("The date from epoch {} and the time start {} is null", epochId, serviceTimeStart);
+            return null;
+        }
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        String alias = dateFromEpoch.format(dateFormatter);
+        if (this.contains(alias)) {
+            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
+            return this.getEntry(alias) ;
+        }
+        byte[] serverKey = generateKey(192);
+
+        SecretKeySpec secretKey = new SecretKeySpec(serverKey, "AES");
+        this.storeKey(alias, secretKey);
+           
+        return serverKey;
+    }
+
+    private byte[] getServerKey(LocalDate dateFromEpoch) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        String alias = dateFromEpoch.format(dateFormatter);
+        if (this.contains(alias)) {
+            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
+            return this.getEntry(alias) ;
+        }
+        byte[] serverKey = generateKey(192);
+
+        SecretKeySpec secretKey = new SecretKeySpec(serverKey, "AES");
+        this.storeKey(alias, secretKey);
+           
+        return serverKey;
+    }
+    /**
+     * Generation of bit array.
+     * @param size in bits
+     * @return
+     */
+    private byte[] generateKey(int size) {
+        size /= 8;
+        byte[] data = new byte[size];
+        for (int i = 0; i < size; i++) {
+            data[i] = new Long(i).byteValue();
+        }
+        return data;
+    }
+
+    @Override
+    public Map<Integer, byte[]> getServerKeys(int epochId, long timeStart, int nbDays) {
+ 
+        LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, timeStart);
+        if(Objects.isNull(dateFromEpoch) ) {
+            log.error("The date from epoch {} and the time start {} is null", epochId, timeStart);
+            return null;
+        }
+
+        Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
+        keyMap.put(0, getServerKey(dateFromEpoch));
+
+        for(int i = 1; i< nbDays; i++) {
+            
+            keyMap.put(i, this.getServerKey(dateFromEpoch.plusDays(i)));
+        }
+        return keyMap;
+        
+    }
+
 }

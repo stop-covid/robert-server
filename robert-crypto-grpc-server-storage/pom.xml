@@ -50,6 +50,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>robert-server-common</artifactId>
+			<version>${project.parent.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
