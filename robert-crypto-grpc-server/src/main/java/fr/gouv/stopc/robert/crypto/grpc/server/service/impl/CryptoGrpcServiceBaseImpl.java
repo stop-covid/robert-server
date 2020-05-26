@@ -277,11 +277,20 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         int epochId;
     }
 
-    // TODO: handle edge cases at edges of an epoch (start and finish) by trying and previous K_S
-    private EbidContent decryptEBID(byte[] ebid, long timeReceived) throws RobertServerCryptoException {
+    //TODO: careful if on edges...
+    private EbidContent decryptEBIDWithTimeReceived(byte[] ebid, long timeReceived) throws RobertServerCryptoException {
         int epoch = TimeUtils.getNumberOfEpochsBetween(
                 this.serverConfigurationService.getServiceTimeStart(),
                 timeReceived);
+
+        return decryptEBIDAndCheckEpoch(ebid, epoch);
+    }
+
+    // TODO: handle edge cases at edges of an epoch (start and finish) by trying and previous K_S
+    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int epoch) throws RobertServerCryptoException {
+//        int epoch = TimeUtils.getNumberOfEpochsBetween(
+//                this.serverConfigurationService.getServiceTimeStart(),
+//                timeReceived);
 
         byte[] serverKey = this.serverKeyStorageService.getServerKeyForEpoch(epoch);
 
@@ -329,7 +338,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         byte[] cc;
         try {
             // Decrypt EBID
-            EbidContent ebidContent = decryptEBID(request.getEbid().toByteArray(), request.getTimeReceived());
+            EbidContent ebidContent = decryptEBIDWithTimeReceived(request.getEbid().toByteArray(), request.getTimeReceived());
 
             if (Objects.isNull(ebidContent)) {
                 responseObserver.onError(new RobertServerCryptoException("Could not decrypt EBID"));
@@ -438,7 +447,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                                       byte[] mac,
                                                                       DigestSaltEnum type) {
         try {
-            EbidContent ebidContent = decryptEBID(encryptedEbid, time);
+            EbidContent ebidContent = decryptEBIDAndCheckEpoch(encryptedEbid, epochId);
 
             if (Objects.isNull(ebidContent)) {
                 log.warn("Could not decrypt ebid content");
@@ -488,12 +497,12 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 //    }
 //
 //    @Override
-//    public void decryptEBID(DecryptEBIDRequest request,
+//    public void decryptEBIDAndCheckEpoch(DecryptEBIDRequest request,
 //            StreamObserver<EBIDResponse> responseObserver) {
 //        try {
 //            responseObserver.onNext(EBIDResponse.newBuilder()
 //                    .setEbid(ByteString.copyFrom(
-//                            this.cryptoService.decryptEBID(
+//                            this.cryptoService.decryptEBIDAndCheckEpoch(
 //                                    new CryptoSkinny64(this.serverConfigurationService.getServerKey()),
 //                                    request.getEbid().toByteArray())))
 //                    .build());

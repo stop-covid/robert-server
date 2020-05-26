@@ -305,9 +305,12 @@ class CryptoServiceGrpcServerTest {
         return System.currentTimeMillis() / 1000 + 2208988800L;
     }
 
-    private AuthRequestBundle generateAuthRequestBundle(byte[] id, byte[] keyForMac, DigestSaltEnum digestSalt) {
+    private AuthRequestBundle generateAuthRequestBundleWithTimeDelta(byte[] id,
+                                                                     byte[] keyForMac,
+                                                                     DigestSaltEnum digestSalt,
+                                                                     long timeDelta) {
         long time = getCurrentTimeNTPSeconds();
-        int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
+        int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time - timeDelta);
 
         // Mock K_S
         byte[] ks = new byte[24];
@@ -325,6 +328,10 @@ class CryptoServiceGrpcServerTest {
                 .build();
     }
 
+    private AuthRequestBundle generateAuthRequestBundle(byte[] id, byte[] keyForMac, DigestSaltEnum digestSalt) {
+        return generateAuthRequestBundleWithTimeDelta(id, keyForMac, digestSalt, 0L);
+    }
+
     @Test
     void testGetIdFromAuthRequestSucceeds() {
         Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
@@ -332,6 +339,37 @@ class CryptoServiceGrpcServerTest {
                 clientIdentifierBundle.get().getId(),
                 clientIdentifierBundle.get().getKeyForMac(),
                 DigestSaltEnum.DELETE_HISTORY);
+
+        // Given
+        GetIdFromAuthRequest request = GetIdFromAuthRequest
+                .newBuilder()
+                .setEbid(ByteString.copyFrom(bundle.getEbid()))
+                .setEpochId(bundle.getEpochId())
+                .setTime(bundle.getTime())
+                .setMac(ByteString.copyFrom(bundle.getMac()))
+                .setRequestType(bundle.getRequestType().getValue()) // Select a request type
+                .build();
+
+        ObserverExecutionResult res = new ObserverExecutionResult(false);
+        GetIdFromAuthResponse response =
+                sendCryptoRequest(
+                        request,
+                        (stub, req, observer) -> stub.getIdFromAuth(req, observer),
+                        (t) -> fail(),
+                        res);
+        assertTrue(!res.isError());
+        assertTrue(ByteUtils.isNotEmpty(response.getIdA().toByteArray()));
+        assertTrue(Arrays.equals(clientIdentifierBundle.get().getId(), response.getIdA().toByteArray()));
+    }
+
+    @Test
+    void testGetIdFromAuthRequestWithOlderEBIDAndEpochSucceeds() {
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
+        AuthRequestBundle bundle = generateAuthRequestBundleWithTimeDelta(
+                clientIdentifierBundle.get().getId(),
+                clientIdentifierBundle.get().getKeyForMac(),
+                DigestSaltEnum.DELETE_HISTORY,
+                900*3); // ebid will be 3-epochs old
 
         // Given
         GetIdFromAuthRequest request = GetIdFromAuthRequest
