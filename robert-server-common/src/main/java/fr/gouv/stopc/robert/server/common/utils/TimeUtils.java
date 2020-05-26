@@ -44,9 +44,15 @@ public final class TimeUtils {
         return getNumberOfEpochsBetween(timeStart, convertUnixMillistoNtpSeconds(System.currentTimeMillis()));
     }
 
+    /**
+     *
+     * @param epoch
+     * @param timeStart in NTP seconds
+     * @return
+     */
     public static LocalDate getDateFromEpoch(int epoch, long timeStart) {
 
-        long fromInNtpSecs = timeStart - (EPOCH_DURATION_SECS * epoch);
+        long fromInNtpSecs = (EPOCH_DURATION_SECS * epoch) - timeStart;
         long fromUnixMillis = (fromInNtpSecs - SECONDS_FROM_01_01_1900) * 1000;
         return Instant.ofEpochMilli(fromUnixMillis).atZone(ZoneId.of("Europe/Paris")).toLocalDate();
     }

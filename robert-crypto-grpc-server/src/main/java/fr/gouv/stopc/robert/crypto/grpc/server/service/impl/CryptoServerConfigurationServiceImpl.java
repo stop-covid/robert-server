@@ -1,6 +1,5 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import org.springframework.stereotype.Service;
 

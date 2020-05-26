@@ -12,7 +12,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
@@ -78,9 +77,6 @@ class CryptoServiceGrpcServerTest {
 
     private CryptoService cryptoService;
 
-    @Mock
-    private IServerKeyStorageService serverKeyStorageService;
-
     @InjectMocks
     private ECDHKeyServiceImpl keyService;
 
@@ -104,7 +100,7 @@ class CryptoServiceGrpcServerTest {
                 cryptoService,
                 keyService,
                 clientStorageService,
-                serverKeyStorageService);
+                cryptographicStorageService);
 
         when(this.cryptographicStorageService.getServerKeyPair())
                 .thenReturn(Optional.ofNullable(CryptoTestUtils.generateECDHKeyPair()));
@@ -143,10 +139,12 @@ class CryptoServiceGrpcServerTest {
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
-        byte[][] serverKeys = new byte[1][24];
-        new SecureRandom().nextBytes(serverKeys[0]);
+        byte[][] serverKeys = generateRandomServerKeys();
 
-        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(this.currentEpochId))).thenReturn(serverKeys);
+        when(this.cryptographicStorageService.getServerKeys(
+                this.currentEpochId,
+                this.serverConfigurationService.getServiceTimeStart(),
+                4)).thenReturn(serverKeys);
 
         ObserverExecutionResult res = new ObserverExecutionResult(false);
         CreateRegistrationResponse createRegistrationResponse =
@@ -317,7 +315,10 @@ class CryptoServiceGrpcServerTest {
         byte[] ks = new byte[24];
         new SecureRandom().nextBytes(ks);
         byte[] ebid = generateEbid(id, epochId, ks);
-        when(this.serverKeyStorageService.getServerKeyForEpoch(epochId)).thenReturn(ks);
+        when(this.cryptographicStorageService.getServerKey(
+                epochId,
+                this.serverConfigurationService.getServiceTimeStart()))
+                .thenReturn(ks);
 
         return new AuthRequestBundle().builder()
                 .ebid(ebid)
@@ -811,10 +812,9 @@ class CryptoServiceGrpcServerTest {
                 clientIdentifierBundle.get().getKeyForMac(),
                 DigestSaltEnum.STATUS);
 
-        byte[][] serverKeys = new byte[1][24];
-        new SecureRandom().nextBytes(serverKeys[0]);
+        byte[][] serverKeys = generateRandomServerKeys();
 
-        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(this.currentEpochId))).thenReturn(serverKeys);
+        when(this.cryptographicStorageService.getServerKeys(this.currentEpochId, this.serverConfigurationService.getServiceTimeStart(), 4)).thenReturn(serverKeys);
 
         // Given
         GetIdFromStatusRequest request = GetIdFromStatusRequest
@@ -841,6 +841,12 @@ class CryptoServiceGrpcServerTest {
         assertTrue(checkTuples(response.getIdA().toByteArray(), response.getTuples().toByteArray()));
     }
 
+    private byte[][] generateRandomServerKeys() {
+         byte[][] serverKeys = new byte[1][24];
+         new SecureRandom().nextBytes(serverKeys[0]);
+         return serverKeys;
+    }
+
     @Test
     void testGetIdFromStatusRequestWithOlderEBIDAndEpochSucceeds() {
         Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
@@ -850,9 +856,11 @@ class CryptoServiceGrpcServerTest {
                 DigestSaltEnum.STATUS,
                 900 * 3); // ebid will be 3-epochs old
 
-        byte[][] serverKeys = new byte[1][24];
-        new SecureRandom().nextBytes(serverKeys[0]);
-        when(this.serverKeyStorageService.getServerKeysForEpochs(any())).thenReturn(serverKeys);
+        byte[][] serverKeys = generateRandomServerKeys();
+        when(this.cryptographicStorageService.getServerKeys(
+                bundle.getEpochId(),
+                this.serverConfigurationService.getServiceTimeStart(),
+                4)).thenReturn(serverKeys);
 
         // Given
         GetIdFromStatusRequest request = GetIdFromStatusRequest
@@ -1015,8 +1023,8 @@ class CryptoServiceGrpcServerTest {
         int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
         byte[] ebid = generateEbid(id, epochId, serverKey);
 
-        when(this.serverKeyStorageService.getServerKeysForEpochs(Arrays.asList(epochId))).thenReturn(new byte[][] { serverKey });
-        when(this.serverKeyStorageService.getServerKeyForEpoch(epochId)).thenReturn(serverKey);
+        when(this.cryptographicStorageService.getServerKeys(epochId, this.serverConfigurationService.getServiceTimeStart(), 4)).thenReturn(new byte[][] { serverKey, serverKey, serverKey, serverKey });
+        when(this.cryptographicStorageService.getServerKey(epochId, this.serverConfigurationService.getServiceTimeStart())).thenReturn(serverKey);
 
         byte[] hello = new byte[16];
         System.arraycopy(new byte[] { digestSalt.getValue() }, 0, hello, 0, 1);

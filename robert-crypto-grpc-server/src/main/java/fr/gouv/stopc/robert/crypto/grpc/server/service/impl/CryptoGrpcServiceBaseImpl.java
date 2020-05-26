@@ -6,8 +6,7 @@ import javax.inject.Inject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.*;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.IServerKeyStorageService;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.exception.RobertServerStorageException;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESGCM;
@@ -42,20 +41,20 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     private final CryptoService cryptoService;
     private final IECDHKeyService keyService;
     private final IClientKeyStorageService clientStorageService;
-    private final IServerKeyStorageService serverKeyStorageService;
+    private final ICryptographicStorageService cryptographicStorageService;
 
     @Inject
     public CryptoGrpcServiceBaseImpl(final ICryptoServerConfigurationService serverConfigurationService,
                                      final CryptoService cryptoService,
                                      final IECDHKeyService keyService,
                                      final IClientKeyStorageService clientStorageService,
-                                     final IServerKeyStorageService serverKeyStorageService) {
+                                     final ICryptographicStorageService cryptographicStorageService) {
 
         this.serverConfigurationService = serverConfigurationService;
         this.cryptoService = cryptoService;
         this.keyService = keyService;
         this.clientStorageService = clientStorageService;
-        this.serverKeyStorageService = serverKeyStorageService;
+        this.cryptographicStorageService = cryptographicStorageService;
     }
 
     @Override
@@ -154,11 +153,13 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                                      byte serverCountryCode) {
         // TODO: provide M/96 K_S keys for tuple generation for next M epochs
         // Generate tuples
-        List<Integer> epochList = Arrays.asList(epochId);
-        final byte[][] serverKeys = this.serverKeyStorageService.getServerKeysForEpochs(epochList);
+        final byte[][] serverKeys = this.cryptographicStorageService.getServerKeys(
+                epochId,
+                this.serverConfigurationService.getServiceTimeStart(),
+                4);
 
         if (Objects.isNull(serverKeys)) {
-            log.warn("Could not retrieve server keys for epoch span starting with: {}", epochList);
+            log.warn("Could not retrieve server keys for epoch span starting with: {}", epochId);
             return Optional.empty();
         }
 
@@ -339,7 +340,9 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
     private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int authRequestEpoch, AdjacentEpochMatchEnum adjacentEpochMatchEnum)
             throws RobertServerCryptoException {
 
-        byte[] serverKey = this.serverKeyStorageService.getServerKeyForEpoch(authRequestEpoch);
+        byte[] serverKey = this.cryptographicStorageService.getServerKey(
+                authRequestEpoch,
+                this.serverConfigurationService.getServiceTimeStart());
 
         if (Objects.isNull(serverKey)) {
             log.warn("Cannot retrieve server key for {}", authRequestEpoch);

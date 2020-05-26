@@ -17,7 +17,7 @@ public interface ICryptographicStorageService {
  
     byte[] getServerKey(int epochId, long serviceTimeStart);
 
-    Map<Integer, byte[]> getServerKeys(int epochId, long timeStart, int nbDays);
+    byte[][] getServerKeys(int epochId, long serviceTimeStart, int nbDays);
  
     byte[] getEntry(String alias);
 

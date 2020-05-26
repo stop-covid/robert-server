@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import javax.crypto.KeyAgreement;
 import javax.crypto.spec.SecretKeySpec;
 
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -57,6 +58,13 @@ import sun.security.pkcs11.SunPKCS11;
 public class CryptographicStorageServiceImpl implements ICryptographicStorageService {
 
     private KeyStore keyStore;
+
+    private static final int SERVER_KEY_SIZE = 24;
+
+    // Because Java does not know Skinny64, specify AES instead
+    private static final String KEYSTORE_SKINNY64_ALGONAME = "AES";
+    private static final String SERVER_KEY_CERTIFICATE_CN = "CN=stopcovid.gouv.fr";
+    private static final String ECDH_ALGORITHM = "EC";
 
     private static final String ALIAS_SERVER_PUBLIC_KEY = "serverPublicKey";
     private static final String ALIAS_SERVER_PRIVATE_KEY = "serverPrivateKey";
@@ -141,22 +149,21 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
         try {
             EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.decode(serverPrivateKey));
-            KeyFactory generator = KeyFactory.getInstance("EC");
+            KeyFactory generator = KeyFactory.getInstance(ECDH_ALGORITHM);
             PrivateKey privateKey = generator.generatePrivate(privateKeySpec);
 
             EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.decode(serverPublicKey));
             this.publicKey = generator.generatePublic(publicKeySpec);
             KeyPair keyPair = new KeyPair(publicKey, privateKey);
 
-            log.info("BEFORE THE STORING {}", keyPair.getPrivate().getEncoded());
             generateCertificate(keyPair).ifPresent(x509Certificate -> {
 
                 X509Certificate[] chain = new X509Certificate[1];
                 chain[0] = x509Certificate;
                 try {
                     if(!this.contains(ALIAS_SERVER_PRIVATE_KEY)) {
-//                        this.delete(ALIAS_SERVER_PRIVATE_KEY);
                         this.keyStore.setKeyEntry(ALIAS_SERVER_PRIVATE_KEY, privateKey, null, chain);
+                        log.warn("Storing ECDH server key");
                     }
                 } catch (KeyStoreException e) {
                     log.error("An expected error occured when trying to store the server public/private key due to {}", e.getMessage());
@@ -204,11 +211,11 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     // TODO: remove
     private Optional<X509Certificate> generateCertificate(KeyPair keyPair) {
         try {
-
-            X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(new X500Name("CN=Test Certificate"),
-                    BigInteger.valueOf(System.currentTimeMillis()),
+            // TODO: insert proper certificate info
+            X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
+                    new X500Name(SERVER_KEY_CERTIFICATE_CN), BigInteger.valueOf(System.currentTimeMillis()),
                     new Date(System.currentTimeMillis() - 50000), new Date(System.currentTimeMillis() + 50000), 
-                    new X500Name("CN=Test Certificate"), SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
+                    new X500Name(SERVER_KEY_CERTIFICATE_CN), SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
             JcaContentSignerBuilder builder = new JcaContentSignerBuilder("SHA512withECDSA");
             ContentSigner signer = builder.build(keyPair.getPrivate());
 
@@ -244,7 +251,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             }
             // Generate an ephemeral key-pair on the device
             log.info("Generating ephemeral ECDH keys");
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance(ECDH_ALGORITHM);
             kpg.initialize(((ECPublicKey) staticPublicKey).getParams());
             KeyPair ephemeralKeys = kpg.generateKeyPair();
 
@@ -258,7 +265,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
             log.error("Unable to perform ECDH key  agreement from the server public/private keys", e.getClass(), e.getMessage());
         }
-
 
         return null;
     }
@@ -282,55 +288,32 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
         LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, serviceTimeStart);
         if(Objects.isNull(dateFromEpoch) ) {
-            log.error("The date from epoch {} and the time start {} is null", epochId, serviceTimeStart);
+            log.error("The date from epoch {} from the time start {} is null", epochId, serviceTimeStart);
             return null;
         }
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
-        String alias = dateFromEpoch.format(dateFormatter);
-        if (this.contains(alias)) {
-            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
-            return this.getEntry(alias) ;
-        }
-        byte[] serverKey = generateKey(192);
-
-        SecretKeySpec secretKey = new SecretKeySpec(serverKey, "AES");
-        this.storeKey(alias, secretKey);
-           
-        return serverKey;
+        return getServerKey(dateFromEpoch);
     }
 
     private byte[] getServerKey(LocalDate dateFromEpoch) {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
+        byte[] serverKey;
         String alias = dateFromEpoch.format(dateFormatter);
-        if (this.contains(alias)) {
-            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
-            return this.getEntry(alias) ;
+        if (!this.contains(alias)) {
+            log.info("Creating new server key with alias {}", alias);
+            serverKey = ByteUtils.generateRandom(192);
+            this.storeKey(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME));
+        } else {
+            log.debug("Fetching existing server key with alias {}", alias);
+            serverKey = this.getEntry(alias);
         }
-        byte[] serverKey = generateKey(192);
 
-        SecretKeySpec secretKey = new SecretKeySpec(serverKey, "AES");
-        this.storeKey(alias, secretKey);
-           
         return serverKey;
-    }
-    /**
-     * Generation of bit array.
-     * @param size in bits
-     * @return
-     */
-    private byte[] generateKey(int size) {
-        size /= 8;
-        byte[] data = new byte[size];
-        for (int i = 0; i < size; i++) {
-            data[i] = new Long(i).byteValue();
-        }
-        return data;
     }
 
     @Override
-    public Map<Integer, byte[]> getServerKeys(int epochId, long timeStart, int nbDays) {
+    public byte[][] getServerKeys(int epochId, long timeStart, int nbDays) {
  
         LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, timeStart);
         if(Objects.isNull(dateFromEpoch) ) {
@@ -338,12 +321,9 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             return null;
         }
 
-        Map<Integer, byte[]> keyMap = new HashMap<Integer, byte[]>();
-        keyMap.put(0, getServerKey(dateFromEpoch));
-
-        for(int i = 1; i< nbDays; i++) {
-            
-            keyMap.put(i, this.getServerKey(dateFromEpoch.plusDays(i)));
+        byte[][] keyMap = new byte[nbDays][SERVER_KEY_SIZE];
+        for(int i = 0; i < nbDays; i++) {
+            keyMap[i] = this.getServerKey(dateFromEpoch.plusDays(i));
         }
         return keyMap;
         
