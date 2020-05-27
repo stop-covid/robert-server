@@ -8,6 +8,7 @@ import javax.inject.Inject;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ import fr.gouv.stopc.robertserver.ws.exception.RobertServerException;
 import fr.gouv.stopc.robertserver.ws.service.AuthRequestValidationService;
 import fr.gouv.stopc.robertserver.ws.vo.DeleteHistoryRequestVo;
 
+@Slf4j
 @Service
 public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 
@@ -36,12 +38,16 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 	@Override
 	public ResponseEntity<DeleteHistoryResponseDto> deleteHistory(DeleteHistoryRequestVo deleteHistoryRequestVo)
 			throws RobertServerException {
+		log.info("Receiving delete exposure history request");
+
 		AuthRequestValidationService.ValidationResult<DeleteIdResponse> validationResult =
 				authRequestValidationService.validateRequestForUnregister(deleteHistoryRequestVo);
 
 		if (Objects.nonNull(validationResult.getError())) {
+			log.info("Delete exposure history request authentication failed");
 			return ResponseEntity.badRequest().build();
 		}
+		log.info("Delete exposure history request authentication passed");
 
 		DeleteIdResponse authResponse = validationResult.getResponse();
 		Optional<Registration> registrationRecord = this.registrationService.findById(authResponse.getIdA().toByteArray());
@@ -55,10 +61,10 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 				registrationService.saveRegistration(record);
 			}
 
-			DeleteHistoryResponseDto statusResponse = DeleteHistoryResponseDto.builder().success(true).build();
-
-			return ResponseEntity.ok(statusResponse);
+			log.info("Delete exposure history request successful");
+			return ResponseEntity.ok(DeleteHistoryResponseDto.builder().success(true).build());
 		} else {
+			log.info("Discarding delete exposure history request because id unknown (fake or was deleted)");
 			return ResponseEntity.notFound().build();
 		}
 	}

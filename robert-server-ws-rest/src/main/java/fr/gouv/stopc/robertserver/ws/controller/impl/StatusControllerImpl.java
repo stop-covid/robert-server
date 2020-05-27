@@ -91,7 +91,7 @@ public class StatusControllerImpl implements IStatusController {
 				return ResponseEntity.badRequest().build();
 			}
 		} else {
-			log.info("Discarding authenticated request because id unknown (fake or was deleted)");
+			log.info("Discarding status request because id unknown (fake or was deleted)");
 			return ResponseEntity.notFound().build();
 		}
 	}
