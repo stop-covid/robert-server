@@ -32,7 +32,7 @@ service CryptoGrpcServiceImpl {
 message CreateRegistrationRequest {
 	bytes clientPublicKey = 1;
 	int32 fromEpochId = 2;
-	int32 numberOfEpochBundles = 3; // the number of epoch for which ephemeral bundles must be generated
+	int32 numberOfDaysForEpochBundles = 3; // the number of days for which ephemeral bundles must be generated
 	bytes serverCountryCode = 4; // the country code configured on the server to be used when generating ECCs
 }
 
@@ -60,7 +60,7 @@ message GetIdFromStatusRequest {
 	int64 time = 3;
 	bytes mac = 4;
 	int32 fromEpochId = 5;
-	int32 numberOfEpochBundles = 6;
+	int32 numberOfDaysForEpochBundles = 6;
 	bytes serverCountryCode = 7;
 }
 

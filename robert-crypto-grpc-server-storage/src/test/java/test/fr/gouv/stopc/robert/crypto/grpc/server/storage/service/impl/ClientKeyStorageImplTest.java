@@ -56,6 +56,7 @@ public class ClientKeyStorageImplTest {
         // return value that was passed
         //when(this.clientIdentiferRepository.saveAndFlush(any())).thenAnswer(i -> i.getArguments()[0]);
         this.clientKeyStorageService = new ClientKeyStorageServiceImpl(cryptographicStorageService, mockClientIdentifierRepository);
+        this.mockClientIdentifierRepository.clearLastSavedClientIdentifier();
 
         when(this.cryptographicStorageService.getKeyForEncryptingClientKeys()).thenReturn(new SecretKeySpec(generateKey(), "AES"));
     }

@@ -3,6 +3,7 @@ package fr.gouv.stopc.robertserver.database.service.impl;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,6 +74,7 @@ public class RegistrationService implements IRegistrationService {
 	public Optional<Registration> createRegistration(byte[] id) {
 		return Optional.ofNullable(Registration.builder()
 					.permanentIdentifier(id)
+					.exposedEpochs(new ArrayList<>())
 					.build())
 				.map(this.registrationRepository::insert);
 	}

@@ -85,7 +85,7 @@ public class RegisterControllerImpl implements IRegisterController {
 
         CreateRegistrationRequest request = CreateRegistrationRequest.newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(clientPublicECDHKey))
-                .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
+                .setNumberOfDaysForEpochBundles(this.serverConfigurationService.getEpochBundleDurationInDays())
                 .setServerCountryCode(ByteString.copyFrom(serverCountryCode))
                 .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
                 .build();

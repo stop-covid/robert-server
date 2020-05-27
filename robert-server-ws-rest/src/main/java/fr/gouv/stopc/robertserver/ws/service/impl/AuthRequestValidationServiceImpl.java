@@ -166,7 +166,7 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
                         .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(statusVo.getTime()))))
                         .setMac(ByteString.copyFrom(Base64.decode(statusVo.getMac())))
                         .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
-                        .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
+                        .setNumberOfDaysForEpochBundles(this.serverConfigurationService.getEpochBundleDurationInDays())
                         .setServerCountryCode(ByteString.copyFrom(new byte[] { this.serverConfigurationService.getServerCountryCode() }))
                     .build();
 

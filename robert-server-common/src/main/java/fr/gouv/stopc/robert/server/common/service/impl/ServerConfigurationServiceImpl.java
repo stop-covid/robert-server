@@ -67,7 +67,7 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public int getHelloMessageTimeStampTolerance() {
-        return 3;
+        return 180;
     }
 
     @Override
@@ -81,10 +81,10 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
     }
 
     @Override
-    public int getEpochBundleDuration() {
+    public int getEpochBundleDurationInDays() {
         // number of seconds in a day / duration of an epoch in seconds * number of days for which to generates bundle
         // (to be configurable)
-        return (24 * 60 * 60) / getEpochDurationSecs() * 4;
+        return 4;
     }
 
     @Override

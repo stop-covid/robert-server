@@ -65,7 +65,7 @@ class CryptoServiceGrpcServerTest {
 
     private final static String UNEXPECTED_FAILURE_MESSAGE = "Should not fail";
     private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x33 };
-    private final static int NUMBER_OF_BUNDLES = 4 * 4 * 24;
+    private final static int NUMBER_OF_DAYS_FOR_BUNDLES = 4;
 
     final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 
@@ -138,7 +138,7 @@ class CryptoServiceGrpcServerTest {
                 .newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateECDHPublicKey()))
                 .setFromEpochId(this.currentEpochId)
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
@@ -172,7 +172,7 @@ class CryptoServiceGrpcServerTest {
             Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson> decodedTuples = objectMapper.readValue(
                     decryptedTuples,
                     new TypeReference<Collection<CryptoGrpcServiceBaseImpl.EphemeralTupleJson>>(){});
-            return NUMBER_OF_BUNDLES == decodedTuples.size();
+            return (NUMBER_OF_DAYS_FOR_BUNDLES * 24 * 4) == decodedTuples.size();
         } catch (RobertServerCryptoException | IOException e) {
             fail(UNEXPECTED_FAILURE_MESSAGE);
         }
@@ -188,7 +188,7 @@ class CryptoServiceGrpcServerTest {
                 .newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(fakeKey))
                 .setFromEpochId(this.currentEpochId)
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
@@ -210,7 +210,7 @@ class CryptoServiceGrpcServerTest {
                 .newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateDHPublicKey()))
                 .setFromEpochId(this.currentEpochId)
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
@@ -233,7 +233,7 @@ class CryptoServiceGrpcServerTest {
                 .newBuilder()
                 .setClientPublicKey(ByteString.copyFrom(CryptoTestUtils.generateECDHPublicKey("secp256k1")))
                 .setFromEpochId(this.currentEpochId)
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
@@ -827,7 +827,7 @@ class CryptoServiceGrpcServerTest {
                 .setTime(bundle.getTime())
                 .setMac(ByteString.copyFrom(bundle.getMac()))
                 .setFromEpochId(bundle.getEpochId())
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 
@@ -845,8 +845,11 @@ class CryptoServiceGrpcServerTest {
     }
 
     private byte[][] generateRandomServerKeys() {
-         byte[][] serverKeys = new byte[1][24];
+         byte[][] serverKeys = new byte[4][24];
          new SecureRandom().nextBytes(serverKeys[0]);
+        new SecureRandom().nextBytes(serverKeys[1]);
+        new SecureRandom().nextBytes(serverKeys[2]);
+        new SecureRandom().nextBytes(serverKeys[3]);
          return serverKeys;
     }
 
@@ -873,7 +876,7 @@ class CryptoServiceGrpcServerTest {
                 .setTime(bundle.getTime())
                 .setMac(ByteString.copyFrom(bundle.getMac()))
                 .setFromEpochId(bundle.getEpochId())
-                .setNumberOfEpochBundles(NUMBER_OF_BUNDLES)
+                .setNumberOfDaysForEpochBundles(NUMBER_OF_DAYS_FOR_BUNDLES)
                 .setServerCountryCode(ByteString.copyFrom(SERVER_COUNTRY_CODE))
                 .build();
 

@@ -1,6 +1,7 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -83,7 +84,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                     clientIdentifierBundle.get().getKeyForTuples(),
                     clientIdentifierBundle.get().getId(),
                     request.getFromEpochId(),
-                    request.getNumberOfEpochBundles(),
+                    request.getNumberOfDaysForEpochBundles(),
                     request.getServerCountryCode().byteAt(0));
 
             if (!encryptedTuples.isPresent()) {
@@ -146,34 +147,54 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         return mappedTuples;
     }
 
+    private final static int EPOCHS_PER_DAY = 4 * 24;
     private Optional<TuplesGenerationResult> generateEncryptedTuples(byte[] tuplesEncryptionKey,
                                                                      byte[] id,
                                                                      int epochId,
-                                                                     int nbOfEpochs,
+                                                                     int nbDays,
                                                                      byte serverCountryCode) {
-        // TODO: provide M/96 K_S keys for tuple generation for next M epochs
+
+        if (nbDays < 1) {
+            log.error("Request number of epochs is invalid for tuple generation");
+            return Optional.empty();
+        }
+
+        // TODO: limit generation to a max number of days ?
+
         // Generate tuples
         final byte[][] serverKeys = this.cryptographicStorageService.getServerKeys(
                 epochId,
                 this.serverConfigurationService.getServiceTimeStart(),
-                4);
+                nbDays);
 
         if (Objects.isNull(serverKeys)) {
             log.warn("Could not retrieve server keys for epoch span starting with: {}", epochId);
             return Optional.empty();
         }
 
+        Collection<EphemeralTuple> ephemeralTuples = new ArrayList<>();
         final byte[] federationKey = this.serverConfigurationService.getFederationKey();
-        final TupleGenerator tupleGenerator = new TupleGenerator(serverKeys[0], federationKey, 1);
-        try {
-            final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(
-                    id,
-                    epochId,
-                    nbOfEpochs,
-                    serverCountryCode
-            );
-            tupleGenerator.stop();
+        for (int i = 0; i < nbDays; i++) {
+            final TupleGenerator tupleGenerator = new TupleGenerator(serverKeys[i], federationKey, 1);
+            try {
+                Collection<EphemeralTuple> tuplesForDay = tupleGenerator.exec(
+                        id,
+                        epochId + (i * EPOCHS_PER_DAY),
+                        EPOCHS_PER_DAY,
+                        serverCountryCode
+                );
+                tupleGenerator.stop();
+                ephemeralTuples.addAll(tuplesForDay);
+            } catch (RobertServerCryptoException e) {
+                log.warn("Error generating tuples for day {}", i);
+                return Optional.empty();
+            }
+        }
+        ephemeralTuples = ephemeralTuples.stream()
+                .sorted(Comparator.comparingInt(EphemeralTuple::getEpochId))
+                .collect(Collectors.toList());
 
+        try {
             if (!CollectionUtils.isEmpty(ephemeralTuples)) {
                 ObjectMapper objectMapper = new ObjectMapper();
                 byte[] tuplesAsBytes = objectMapper.writeValueAsBytes(mapEphemeralTuples(ephemeralTuples));
@@ -243,7 +264,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 clientIdentifierBundle.get().getKeyForTuples(),
                 clientIdentifierBundle.get().getId(),
                 request.getFromEpochId(),
-                request.getNumberOfEpochBundles(),
+                request.getNumberOfDaysForEpochBundles(),
                 request.getServerCountryCode().byteAt(0));
 
         if (!encryptedTuples.isPresent()) {

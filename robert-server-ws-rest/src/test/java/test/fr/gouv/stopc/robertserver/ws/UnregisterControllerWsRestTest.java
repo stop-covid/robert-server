@@ -2,7 +2,7 @@ package test.fr.gouv.stopc.robertserver.ws;
 
 import com.google.protobuf.ByteString;
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdResponse;
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
@@ -155,11 +155,10 @@ public class UnregisterControllerWsRestTest {
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-                .setEpochId(currentEpoch)
+        doReturn(Optional.of(DeleteIdResponse.newBuilder()
                 .setIdA(ByteString.copyFrom(idA))
                 .build()))
-                .when(this.cryptoServerClient).getIdFromAuth(any());
+                .when(this.cryptoServerClient).deleteId(any());
 
 		this.requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
@@ -176,7 +175,7 @@ public class UnregisterControllerWsRestTest {
 
 		// Given
 		assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+        verify(this.cryptoServerClient, times(1)).deleteId(ArgumentMatchers.any());
         verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).delete(ArgumentMatchers.any());
 	}
@@ -303,7 +302,7 @@ public class UnregisterControllerWsRestTest {
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
         doReturn(Optional.empty())
-                .when(this.cryptoServerClient).getIdFromStatus(any());
+                .when(this.cryptoServerClient).deleteId(any());
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
@@ -319,7 +318,7 @@ public class UnregisterControllerWsRestTest {
 
 		// Then
 		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).deleteId(ArgumentMatchers.any());
 		verify(this.registrationService, never()).findById(ArgumentMatchers.any());
 		verify(this.registrationService, never()).delete(ArgumentMatchers.any());
 	}
@@ -375,8 +374,8 @@ public class UnregisterControllerWsRestTest {
 		return generatedSHA256;
 	}
 
-	private byte[] generateMACforESR(byte[] ebid, byte[] time, byte[] ka) {
-		byte[] agg = new byte[8 + 4];
+	private byte[] generateMACFor(byte[] ebid, byte[] time, byte[] ka) {
+		byte[] agg = new byte[ebid.length + time.length];
 		System.arraycopy(ebid, 0, agg, 0, ebid.length);
 		System.arraycopy(time, 0, agg, ebid.length, time.length);
 
@@ -399,7 +398,7 @@ public class UnregisterControllerWsRestTest {
 			res[0] = this.cryptoService.generateEBID(new CryptoSkinny64(this.serverConfigurationService.getServerKey()),
 					currentEpoch, id);
 			res[1] = this.generateTime32(adjustTimeBySeconds);
-			res[2] = this.generateMACforESR(res[0], res[1], ka);
+			res[2] = this.generateMACFor(res[0], res[1], ka);
 		} catch (Exception e) {
 			log.info("Problem creating EBID, Time and MAC for test");
 		}
@@ -424,11 +423,10 @@ public class UnregisterControllerWsRestTest {
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(idA);
 
-        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-                .setEpochId(currentEpoch)
+        doReturn(Optional.of(DeleteIdResponse.newBuilder()
                 .setIdA(ByteString.copyFrom(idA))
                 .build()))
-                .when(this.cryptoServerClient).getIdFromAuth(any());
+                .when(this.cryptoServerClient).deleteId(any());
 
 		requestBody = UnregisterRequestVo.builder()
 				.ebid(Base64.encode(reqContent[0]))
@@ -443,7 +441,7 @@ public class UnregisterControllerWsRestTest {
 
 		assertEquals(HttpStatus.OK, response.getStatusCode());
 		assertTrue(response.getBody().getSuccess());
-		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).deleteId(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).findById(idA);
 		verify(this.registrationService, times(1)).delete(ArgumentMatchers.any());
 	}
@@ -461,11 +459,10 @@ public class UnregisterControllerWsRestTest {
 		System.arraycopy(idA, 0, decryptedEbid, 3, idA.length);
 		System.arraycopy(ByteUtils.intToBytes(currentEpoch), 1, decryptedEbid, 0, decryptedEbid.length - idA.length);
 
-        doReturn(Optional.of(GetIdFromAuthResponse.newBuilder()
-                .setEpochId(currentEpoch)
+        doReturn(Optional.of(DeleteIdResponse.newBuilder()
                 .setIdA(ByteString.copyFrom(idA))
                 .build()))
-                .when(this.cryptoServerClient).getIdFromAuth(any());
+                .when(this.cryptoServerClient).deleteId(any());
 
 		doReturn(Optional.empty()).when(this.registrationService).findById(idA);
 
@@ -483,7 +480,7 @@ public class UnregisterControllerWsRestTest {
 
 		// Then
 		assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-		verify(this.cryptoServerClient, times(1)).getIdFromAuth(ArgumentMatchers.any());
+		verify(this.cryptoServerClient, times(1)).deleteId(ArgumentMatchers.any());
 		verify(this.registrationService, times(1)).findById(ArgumentMatchers.any());
 		verify(this.registrationService, never()).delete(ArgumentMatchers.any());
 	}

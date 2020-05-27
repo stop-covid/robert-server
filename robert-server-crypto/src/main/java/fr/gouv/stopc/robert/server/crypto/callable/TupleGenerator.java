@@ -45,7 +45,7 @@ public class TupleGenerator {
         final CryptoCipherStructureAbstract[] availableCryptoForECC = new CryptoAESOFB[this.numberOfThreads];
 
         for (int i = 0; i < this.numberOfThreads; i++) {
-            availableCryptoForEBID[i] = new CryptoSkinny64(this.serverKey);;
+            availableCryptoForEBID[i] = new CryptoSkinny64(this.serverKey);
             availableCryptoForECC[i] = new CryptoAESOFB(this.federationKey);
         }
         // assign generated TripleDES to the TripleConcurrentList

@@ -412,7 +412,7 @@ public class ContactProcessorTest {
 			byte[] time = new byte[2];
 
 			byte[] timeOfDevice = new byte[4];
-			System.arraycopy(ByteUtils.longToBytes(currentTime + 10), 4, timeOfDevice, 0, 4);
+			System.arraycopy(ByteUtils.longToBytes(currentTime + this.serverConfigurationService.getHelloMessageTimeStampTolerance() + 1), 4, timeOfDevice, 0, 4);
 
 			byte[] timeHelloB = new byte[4];
 			System.arraycopy(ByteUtils.longToBytes(currentTime), 4, timeHelloB, 0, 4);

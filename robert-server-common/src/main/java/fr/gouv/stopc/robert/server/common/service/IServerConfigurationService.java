@@ -44,9 +44,9 @@ public interface IServerConfigurationService {
 
     /**
      *
-     * @return The duration that must be covered by an epoch bundle returned in /register and /status (in epochs)
+     * @return The duration that must be covered by an epoch bundle returned in /register and /status (in days)
      */
-    int getEpochBundleDuration();
+    int getEpochBundleDurationInDays();
 
     /**
      * Get the tolerable time difference between a timestamp sent by the client and the current time on the server

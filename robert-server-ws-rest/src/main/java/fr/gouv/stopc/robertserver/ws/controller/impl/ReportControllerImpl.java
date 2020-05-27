@@ -95,7 +95,7 @@ public class ReportControllerImpl implements IReportController {
     }
 
     private String getCodeType(String token) {
-
+        // TODO: create enum for long and short codes
         return token.length() == 6 ? "2" : "1";
     }
 }
