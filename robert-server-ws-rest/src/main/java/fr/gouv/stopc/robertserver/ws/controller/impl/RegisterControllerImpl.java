@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.controller.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -101,6 +102,7 @@ public class RegisterControllerImpl implements IRegisterController {
 
         Registration registration = Registration.builder()
                 .permanentIdentifier(identity.getIdA().toByteArray())
+                .exposedEpochs(new ArrayList<>())
                 .build();
 
         Optional<Registration> registered = this.registrationService.saveRegistration(registration);

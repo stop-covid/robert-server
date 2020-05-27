@@ -309,6 +309,11 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
     private List<EpochExposition> step9ScoreAndAddContactInListOfExposedEpochs(Contact contact, int epochIdFromEBID, Registration registrationRecord) throws RobertScoringException {
         List<EpochExposition> exposedEpochs = registrationRecord.getExposedEpochs();
 
+        // Exposed epochs should be empty, never null
+        if (Objects.isNull(exposedEpochs)) {
+            exposedEpochs = new ArrayList<>();
+        }
+
         // Add EBID's epoch to exposed epochs list
         Optional<EpochExposition> epochToAddTo = exposedEpochs.stream()
                 .filter(item -> item.getEpochId() == epochIdFromEBID)
