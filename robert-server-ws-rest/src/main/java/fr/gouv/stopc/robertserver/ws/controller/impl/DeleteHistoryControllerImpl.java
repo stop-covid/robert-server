@@ -40,8 +40,8 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 			throws RobertServerException {
 		log.info("Receiving delete exposure history request");
 
-		AuthRequestValidationService.ValidationResult<DeleteIdResponse> validationResult =
-				authRequestValidationService.validateRequestForUnregister(deleteHistoryRequestVo);
+		AuthRequestValidationService.ValidationResult<GetIdFromAuthResponse> validationResult =
+				authRequestValidationService.validateRequestForAuth(deleteHistoryRequestVo, DigestSaltEnum.DELETE_HISTORY);
 
 		if (Objects.nonNull(validationResult.getError())) {
 			log.info("Delete exposure history request authentication failed");
@@ -49,7 +49,7 @@ public class DeleteHistoryControllerImpl implements IDeleteHistoryController {
 		}
 		log.info("Delete exposure history request authentication passed");
 
-		DeleteIdResponse authResponse = validationResult.getResponse();
+		GetIdFromAuthResponse authResponse = validationResult.getResponse();
 		Optional<Registration> registrationRecord = this.registrationService.findById(authResponse.getIdA().toByteArray());
 
 		if (registrationRecord.isPresent()) {

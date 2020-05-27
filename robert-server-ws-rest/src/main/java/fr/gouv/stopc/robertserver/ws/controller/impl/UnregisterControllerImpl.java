@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdRequest;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.DeleteIdResponse;
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetIdFromAuthResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -33,14 +35,14 @@ public class UnregisterControllerImpl implements IUnregisterController {
 
     @Override
     public ResponseEntity<UnregisterResponseDto> unregister(UnregisterRequestVo unregisterRequestVo) {
-        AuthRequestValidationService.ValidationResult<GetIdFromAuthResponse> validationResult =
-                authRequestValidationService.validateRequestForAuth(unregisterRequestVo, DigestSaltEnum.UNREGISTER);
+        AuthRequestValidationService.ValidationResult<DeleteIdResponse> validationResult =
+                authRequestValidationService.validateRequestForUnregister(unregisterRequestVo);
 
         if (Objects.nonNull(validationResult.getError())) {
             return ResponseEntity.badRequest().build();
         }
 
-        GetIdFromAuthResponse authResponse = validationResult.getResponse();
+        DeleteIdResponse authResponse = validationResult.getResponse();
 
         Optional<Registration> registrationRecord = this.registrationService.findById(authResponse.getIdA().toByteArray());
 
@@ -48,7 +50,7 @@ public class UnregisterControllerImpl implements IUnregisterController {
             Registration record = registrationRecord.get();
 
             // Unregister by deleting
-            registrationService.delete(record);
+            this.registrationService.delete(record);
 
             UnregisterResponseDto response = UnregisterResponseDto.builder().success(true).build();
 
