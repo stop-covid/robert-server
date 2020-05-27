@@ -1,6 +1,6 @@
 package fr.gouv.stopc.robert.config.service.impl;
 
-import java.util.Map;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -12,7 +12,8 @@ import com.netflix.discovery.shared.Application;
 import feign.Feign;
 import fr.gouv.stopc.robert.config.client.IRobertAppClient;
 import fr.gouv.stopc.robert.config.dao.IRobertConfigurationDao;
-import fr.gouv.stopc.robert.config.dto.ConfigurationHistory;
+import fr.gouv.stopc.robert.config.dto.ConfigurationHistoryEntry;
+import fr.gouv.stopc.robert.config.dto.FunctionalConfiguration;
 import fr.gouv.stopc.robert.config.service.IRobertConfigurationService;
 import fr.gouv.stopc.robert.config.util.IConfigurationUpdateResults;
 
@@ -63,27 +64,25 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 	 * {@inheritDoc}
 	 */
 	@Override
-	public ConfigurationHistory getHistory(String appName, String profile) {
-		ConfigurationHistory history = new ConfigurationHistory();
-		history.setAppName(appName);
-		history.setEntries(dao.getHistory(appName, profile));
-		return history;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String updateConfiguration(String appName, String profile, Map<String, Object> configuration) {
+	public String updateConfiguration(String profile, FunctionalConfiguration configuration) {
 		// Refresh the configuration associated to the profile
-		String updateResult = dao.updateConfiguration(appName, profile, configuration);
-		if (IConfigurationUpdateResults.CONFIGURATION_UPDATED.equals(updateResult)) {
+		List<String> updateResult = dao.updateConfiguration(profile, configuration);
+
+		if (updateResult == null) {
+			return IConfigurationUpdateResults.CONFIGURATION_UPDATE_FAILED;
+		}
+
+		if (updateResult.isEmpty()) {
+			return IConfigurationUpdateResults.NOTHING_TO_UPDATE;
+		}
+
+		for (String appName : updateResult) {
 			// Retrieve all instances of the application
 			Application eurekaApp = discoveryClient.getApplication(appName);
 			// For each instance call the /actuator/refresh endpoint to reload the
 			// configuration
-			if (CollectionUtils.isEmpty(eurekaApp.getInstances())) {
-				updateResult = IConfigurationUpdateResults.CONFIGURATION_UPDATED_NO_INSTANCE_TO_REFRESH;
+			if (eurekaApp == null || CollectionUtils.isEmpty(eurekaApp.getInstances())) {
+				return IConfigurationUpdateResults.CONFIGURATION_UPDATED_NO_INSTANCE_TO_REFRESH;
 			} else {
 				for (InstanceInfo instanceApp : eurekaApp.getInstances()) {
 					// Retrieve the hostname and port
@@ -99,7 +98,17 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 			}
 		}
 		// Refresh configuration
-		return updateResult;
+		return IConfigurationUpdateResults.CONFIGURATION_UPDATED;
+	}
+
+	@Override
+	public List<ConfigurationHistoryEntry> getHistory(String profile) {
+		return dao.getHistory(profile);
+	}
+
+	@Override
+	public FunctionalConfiguration getConfiguration(String profile) {
+		return dao.getConfiguration(profile);
 	}
 
 }
