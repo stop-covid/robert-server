@@ -104,10 +104,10 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
 
         try {
             GetIdFromAuthRequest request = GetIdFromAuthRequest.newBuilder()
-                        .setEbid(ByteString.copyFrom(authRequestVo.getEbid().getBytes()))
+                        .setEbid(ByteString.copyFrom(Base64.decode(authRequestVo.getEbid())))
                         .setEpochId(authRequestVo.getEpochId())
                         .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(authRequestVo.getTime()))))
-                        .setMac(ByteString.copyFrom(authRequestVo.getMac().getBytes()))
+                        .setMac(ByteString.copyFrom(Base64.decode(authRequestVo.getMac())))
                         .setRequestType(requestType.getValue())
                     .build();
 
@@ -133,10 +133,10 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
 
         try {
             DeleteIdRequest request = DeleteIdRequest.newBuilder()
-                    .setEbid(ByteString.copyFrom(authRequestVo.getEbid().getBytes()))
+                    .setEbid(ByteString.copyFrom(Base64.decode(authRequestVo.getEbid())))
                     .setEpochId(authRequestVo.getEpochId())
                     .setTime(Integer.toUnsignedLong(ByteUtils.bytesToInt(Base64.decode(authRequestVo.getTime()))))
-                    .setMac(ByteString.copyFrom(authRequestVo.getMac().getBytes()))
+                    .setMac(ByteString.copyFrom(Base64.decode(authRequestVo.getMac())))
                     .build();
 
             Optional<DeleteIdResponse> response = this.cryptoServerClient.deleteId(request);
