@@ -167,6 +167,7 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
                         .setMac(ByteString.copyFrom(Base64.decode(statusVo.getMac())))
                         .setFromEpochId(TimeUtils.getCurrentEpochFrom(this.serverConfigurationService.getServiceTimeStart()))
                         .setNumberOfEpochBundles(this.serverConfigurationService.getEpochBundleDuration())
+                        .setServerCountryCode(ByteString.copyFrom(new byte[] { this.serverConfigurationService.getServerCountryCode() }))
                     .build();
 
             Optional<GetIdFromStatusResponse> response = this.cryptoServerClient.getIdFromStatus(request);
