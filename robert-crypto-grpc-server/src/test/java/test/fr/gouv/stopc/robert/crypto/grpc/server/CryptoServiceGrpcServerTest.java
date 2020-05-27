@@ -52,6 +52,8 @@ import io.grpc.testing.GrpcCleanupRule;
 import test.fr.gouv.stopc.robert.crypto.grpc.server.utils.CryptoTestUtils;
 
 import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,7 +109,8 @@ class CryptoServiceGrpcServerTest {
 
         byte[] keyToEncodeKeys = new byte[32];
         new SecureRandom().nextBytes(keyToEncodeKeys);
-        when(this.cryptographicStorageService.getKeyForEncryptingKeys()).thenReturn(keyToEncodeKeys);
+        SecretKeySpec secretKey = new SecretKeySpec(keyToEncodeKeys, "AES");
+        when(this.cryptographicStorageService.getKeyForEncryptingClientKeys()).thenReturn(secretKey);
 
         String serverName = InProcessServerBuilder.generateName();
 

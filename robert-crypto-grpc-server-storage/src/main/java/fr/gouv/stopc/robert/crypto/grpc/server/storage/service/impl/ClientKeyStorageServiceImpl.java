@@ -1,22 +1,18 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl;
 
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.security.*;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.inject.Inject;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.exception.RobertServerStorageException;
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import org.bson.internal.Base64;
 import org.springframework.stereotype.Service;
 
@@ -44,14 +40,14 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
         this.cryptographicStorageService = cryptographicStorageService;
         this.clientIdentifierRepository = clientIdentifierRepository;
 
-        ClientIdentifier c = ClientIdentifier.builder()
-                .idA(Base64.encode(generateKey(5)))
-                .keyForMac(Base64.encode(generateRandomKey()))
-                .keyForTuples(Base64.encode(generateRandomKey()))
-                .build();
-        log.info("Trying to save the client identifier : {}", c);
-        c = this.clientIdentifierRepository.saveAndFlush(c);
-        this.clientIdentifierRepository.delete(c);
+//        ClientIdentifier c = ClientIdentifier.builder()
+//                .idA(Base64.encode(generateKey(5)))
+//                .keyForMac(Base64.encode(generateRandomKey()))
+//                .keyForTuples(Base64.encode(generateRandomKey()))
+//                .build();
+//        log.info("Trying to save the client identifier : {}", c);
+//        c = this.clientIdentifierRepository.saveAndFlush(c);
+//        this.clientIdentifierRepository.delete(c);
     }
 
     private byte[] generateRandomIdentifier() throws RobertServerStorageException {
@@ -114,14 +110,18 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
                 return Optional.empty();
             }
 
-            byte[] encryptedKeyForMac = this.performEncryption(Cipher.ENCRYPT_MODE, keyForMac, this.cryptographicStorageService.getKeyForEncryptingKeys());
+            byte[] encryptedKeyForMac = this.encryptKeyWithAES256GCMAndKek(
+                    keyForMac,
+                    this.cryptographicStorageService.getKeyForEncryptingClientKeys());
 
             if (Objects.isNull(encryptedKeyForMac)) {
                 log.error("The encrypted key for mac is null");
                 return Optional.empty();
             }
 
-            byte[] encryptedKeyForTuples = this.performEncryption(Cipher.ENCRYPT_MODE, keyForTuples, this.cryptographicStorageService.getKeyForEncryptingKeys());
+            byte[] encryptedKeyForTuples = this.encryptKeyWithAES256GCMAndKek(
+                    keyForTuples,
+                    this.cryptographicStorageService.getKeyForEncryptingClientKeys());
 
             if (Objects.isNull(encryptedKeyForTuples)) {
                 log.error("The encrypted key for tuples is null");
@@ -193,22 +193,22 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
         return this.clientIdentifierRepository.findByIdA(Base64.encode(id))
                 .map(client -> {
 
-                    byte[] secret = this.cryptographicStorageService.getKeyForEncryptingKeys();
-                    if(Objects.isNull(secret)) {
-                        log.error("The secret is null to decrypt the client");
+                    Key clientKek = this.cryptographicStorageService.getKeyForEncryptingClientKeys();
+                    if(Objects.isNull(clientKek)) {
+                        log.error("The clientKek to decrypt the client keys is null.");
                         return null;
                     }
 
-                    byte[] decryptedKeyForMac = this.performEncryption(Cipher.DECRYPT_MODE, Base64.decode(client.getKeyForMac()),
-                            secret);
+                    byte[] decryptedKeyForMac = this.decryptStoredKeyWithAES256GCMAndKek(Base64.decode(client.getKeyForMac()),
+                            clientKek);
 
                     if(Objects.isNull(decryptedKeyForMac)) {
                         log.error("The decrypted client key is null.");
                         return null;
                     }
 
-                    byte[] decryptedKeyForTuples = this.performEncryption(Cipher.DECRYPT_MODE, Base64.decode(client.getKeyForTuples()),
-                            secret);
+                    byte[] decryptedKeyForTuples = this.decryptStoredKeyWithAES256GCMAndKek(Base64.decode(client.getKeyForTuples()),
+                            clientKek);
 
                     if(Objects.isNull(decryptedKeyForTuples)) {
                         log.error("The decrypted client key for tuples is null.");
@@ -254,6 +254,48 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
             e.printStackTrace();
         } 
         return null;
+    }
+
+    private static final String AES_ENCRYPTION_CIPHER_SCHEME = "AES/GCM/NoPadding";
+    private static final String AES_ENCRYPTION_KEY_SCHEME = "AES";
+    private static final int IV_LENGTH = 12;
+    public byte[] decryptStoredKeyWithAES256GCMAndKek(byte[] storedKey, Key kek) {
+        AlgorithmParameterSpec algorithmParameterSpec = new GCMParameterSpec(128, storedKey, 0, IV_LENGTH);
+        byte[] toDecrypt = new byte[storedKey.length - IV_LENGTH];
+        System.arraycopy(storedKey, IV_LENGTH, toDecrypt, 0, storedKey.length - IV_LENGTH);
+        Cipher cipher = null;
+
+        try {
+
+            // Create cipher with AES encryption scheme.
+            cipher = Cipher.getInstance(AES_ENCRYPTION_CIPHER_SCHEME);
+            cipher.init(Cipher.DECRYPT_MODE, kek, algorithmParameterSpec);
+            return cipher.doFinal(toDecrypt);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException
+                | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException
+                | BadPaddingException e) {
+            log.error(String.format("Algorithm %s is not available", AES_ENCRYPTION_CIPHER_SCHEME));
+        }
+        return null;
+    }
+
+    public byte[] encryptKeyWithAES256GCMAndKek(byte[] keyToEncrypt, Key kek) {
+        Cipher cipher = null;
+
+        byte[] cipherText = null;
+        try {
+
+            // Create cipher with AES encryption scheme.
+            cipher = Cipher.getInstance(AES_ENCRYPTION_CIPHER_SCHEME);
+            cipher.init(Cipher.ENCRYPT_MODE, kek);
+            cipherText = cipher.doFinal(keyToEncrypt);
+            cipherText = ByteUtils.addAll(cipher.getIV(), cipherText);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException
+                | InvalidKeyException | IllegalBlockSizeException
+                | BadPaddingException e) {
+            log.error(String.format("Algorithm %s is not available", AES_ENCRYPTION_CIPHER_SCHEME));
+        }
+        return cipherText;
     }
 
 
