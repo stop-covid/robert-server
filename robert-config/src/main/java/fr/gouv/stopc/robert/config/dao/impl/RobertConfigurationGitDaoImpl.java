@@ -109,12 +109,14 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	@Override
 	public List<ConfigurationHistoryEntry> getHistory(String profile) {
 		try {
-			gitWrapper.checkout().setName(profile).call();
+			if (!gitWrapper.getRepository().getBranch().equals(profile)) {
+				gitWrapper.checkout().setName(profile).call();
+			}
 			Iterable<RevCommit> entries = gitWrapper.log().call();
 			return StreamSupport.stream(entries.spliterator(), false)
 					.filter(entry -> entry.getFullMessage().startsWith("[Configuration update]"))
 					.map(entry -> mapper.toHistoryEntry(entry)).collect(Collectors.toList());
-		} catch (GitAPIException e) {
+		} catch (GitAPIException | IOException e) {
 			log.error("Failed to get history : ", e);
 		}
 		return new ArrayList<>();
@@ -128,7 +130,9 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 		List<String> result = new ArrayList<>();
 		try {
 			// Checkout on the branch associated to the profile
-			gitWrapper.checkout().setName(profile).call();
+			if (!gitWrapper.getRepository().getBranch().equals(profile)) {
+				gitWrapper.checkout().setName(profile).call();
+			}
 			// Transform the new configuration object into a Map<String, String>
 			Properties newConf = propsMapper.writeValueAsProperties(newConfiguration);
 			// Store for each configuration file the comparison results. TreeSet is used to
@@ -178,25 +182,31 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 
 		List<ComparisonResult> result = new ArrayList<>();
 		if (confFileContent.getProximityTracing() != null && confFileContent.getProximityTracing().getBle() != null) {
-			//Update signalCalibrationPerModel if present in the current conf
+			// Update signalCalibrationPerModel if present in the current conf
 			if (!confFileContent.getProximityTracing().getBle().getSignalCalibrationPerModel()
 					.equals(newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.signalCalibrationPerModel");
-				signalCalibrationCompare.setCurrentValue(confFileContent.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
-				signalCalibrationCompare.setNewValue(newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
+				signalCalibrationCompare.setCurrentValue(
+						confFileContent.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
+				signalCalibrationCompare.setNewValue(
+						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
 				result.add(signalCalibrationCompare);
-				confFileContent.getProximityTracing().getBle().setSignalCalibrationPerModel(newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel());
+				confFileContent.getProximityTracing().getBle().setSignalCalibrationPerModel(
+						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel());
 			}
 			// Update delta if present in the current conf
 			if (!confFileContent.getProximityTracing().getBle().getDelta()
 					.equals(newConfiguration.getProximityTracing().getBle().getDelta())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.delta");
-				signalCalibrationCompare.setCurrentValue(confFileContent.getProximityTracing().getBle().getDelta().toString());
-				signalCalibrationCompare.setNewValue(newConfiguration.getProximityTracing().getBle().getDelta().toString());
+				signalCalibrationCompare
+						.setCurrentValue(confFileContent.getProximityTracing().getBle().getDelta().toString());
+				signalCalibrationCompare
+						.setNewValue(newConfiguration.getProximityTracing().getBle().getDelta().toString());
 				result.add(signalCalibrationCompare);
-				confFileContent.getProximityTracing().getBle().setDelta(newConfiguration.getProximityTracing().getBle().getDelta());
+				confFileContent.getProximityTracing().getBle()
+						.setDelta(newConfiguration.getProximityTracing().getBle().getDelta());
 			}
 		}
 
@@ -255,7 +265,9 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 
 		FunctionalConfiguration result;
 		try {
-			gitWrapper.checkout().setName(profile).call();
+			if (!gitWrapper.getRepository().getBranch().equals(profile)) {
+				gitWrapper.checkout().setName(profile).call();
+			}
 			for (File confFile : this.gitWrapper.getRepository().getWorkTree().listFiles(x -> x.isFile())) {
 				// Transform the current configuration object into a Map<String, String>
 				FunctionalConfiguration yamlConf = yamlMapper.readValue(confFile, FunctionalConfiguration.class);
