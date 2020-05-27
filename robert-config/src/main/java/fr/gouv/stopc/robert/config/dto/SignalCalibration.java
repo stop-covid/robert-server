@@ -1,5 +1,7 @@
 package fr.gouv.stopc.robert.config.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,15 +13,16 @@ import lombok.Setter;
 @NoArgsConstructor
 public class SignalCalibration {
 
-	private String model;
+	@JsonProperty("model_name")
+	private String modelName;
 	
-	private Integer emissionGain;
+	private Integer txGain;
 	
-	private Integer receptionGain;
+	private Integer rxGain;
 
 	@Override
 	public String toString() {
-		return String.format("{model: %s, emissionGain: %d, receptionGain: %d}", model, emissionGain, receptionGain);
+		return String.format("{model_name: %s, emissionGain: %d, txGain: %d}", modelName, txGain, rxGain);
 	}
 	
 }

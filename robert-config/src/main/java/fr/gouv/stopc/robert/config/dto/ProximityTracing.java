@@ -14,4 +14,8 @@ public class ProximityTracing {
 	private Float riskThreshold;
 	
 	private Integer rssi1m;
+	
+	private Integer mu0;
+	
+	private Float r0;
 }
