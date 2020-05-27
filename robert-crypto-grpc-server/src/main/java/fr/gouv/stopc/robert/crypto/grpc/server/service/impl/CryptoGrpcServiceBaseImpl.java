@@ -392,12 +392,13 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
     private byte[] generateHelloFromHelloMessageRequest(GetInfoFromHelloMessageRequest request) {
         byte[] hello = new byte[16];
+        byte[] ecc = request.getEcc().toByteArray();
         byte[] ebid = request.getEbid().toByteArray();
         byte[] mac = request.getMac().toByteArray();
-        System.arraycopy(new byte[] { DigestSaltEnum.HELLO.getValue() }, 0, hello, 0, 1);
-        System.arraycopy(ebid, 0, hello, 1, ebid.length);
-        System.arraycopy(ByteUtils.intToBytes(request.getTimeSent()), 2, hello, 1 + ebid.length, 2);
-        System.arraycopy(mac, 0, hello, 1 + ebid.length + 2, mac.length);
+        System.arraycopy(ecc, 0, hello, 0, ecc.length);
+        System.arraycopy(ebid, 0, hello, ecc.length, ebid.length);
+        System.arraycopy(ByteUtils.intToBytes(request.getTimeSent()), 2, hello, ecc.length + ebid.length, 2);
+        System.arraycopy(mac, 0, hello, ecc.length + ebid.length + 2, mac.length);
         return hello;
     }
 
