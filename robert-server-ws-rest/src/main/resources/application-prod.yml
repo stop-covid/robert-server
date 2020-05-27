@@ -1,0 +1,30 @@
+controller:
+  path:
+    prefix: /api/v1
+
+robert:
+  crypto:
+    server:
+      # The hostname of the crypto server
+      host: localhost
+      # The port of the crypto server
+      port: 9090
+
+  # Submission code server
+submission:
+  code:
+    server:
+      host: localhost
+      port: 8087
+      verify:
+        path: /api/v1/verify
+
+captcha:
+  secret: captcha
+  hostname: stopc.gouv.fr
+  verify:
+     url:  https://www.google.com/recaptcha/api/siteverify
+
+server:
+  port: 8086
+

@@ -3,20 +3,17 @@ package fr.gouv.stopc.robertserver.ws.config;
 import javax.inject.Inject;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
-import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 
-@Configuration
+@Component
 public class RobertServerWsConfiguration {
-	
-	@Inject
-	public RobertServerWsConfiguration(final PropertyLoader propertyLoader,
-			final ICryptoServerGrpcClient cryptoServerClient) {
-		
-		cryptoServerClient.init(propertyLoader.getCryptoServerHost(), Integer.parseInt( propertyLoader.getCryptoServerPort()));
+
+@Inject
+	public RobertServerWsConfiguration(ICryptoServerGrpcClient cryptoServerClient, ApplicationConfig config) {
+		cryptoServerClient.init(config.getRobertCryptoServerHost(), Integer.parseInt( config.getRobertCryptoServerPort()));
 	}
 
 	@Bean
@@ -24,5 +21,4 @@ public class RobertServerWsConfiguration {
 
 		return new RestTemplate();
 	}
-
 }

@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: application
+  cloud:
+    config:
+      uri: ${SPRING_CONFIG_URI:http://localhost:8888}
+
+data:
+  mongodb:
+      uri=${ROBERT_SERVER_DB_URI:mongodb\://${ROBERT_SERVER_DB_HOST:localhost}\:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
+
+controller:
+  path:
+    prefix: /api/v1
+
+robert:
+  crypto:
+    server:
+      # The hostname of the crypto server
+      host: localhost
+      # The port of the crypto server
+      port: 9090
+
+  # Submission code server
+submission:
+  code:
+    server:
+      host: localhost
+      port: 8087
+      verify:
+        path: /api/v1/verify
+
+captcha:
+  secret: captcha
+  hostname: stopc.gouv.fr
+  verify:
+    url:  https://www.google.com/recaptcha/api/siteverify
+
+server:
+  port: 8086
+
+register:
+  numberOfEpochs : 4 * 24 * 4
+
+report:
+  token:
+    short:
+      size: 6
+      type: "6-alphanum"
+    long:
+      size: 36
+      type: "UUIDv4"
+status:
+  epoch:
+    next:
+      days: 4
+  day: 4
+authentication:
+  size:
+    ebid: 8
+    time: 4
+    mac: 32

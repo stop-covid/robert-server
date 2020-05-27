@@ -2,7 +2,7 @@ package fr.gouv.stopc.robertserver.ws.controller.impl;
 
 import javax.inject.Inject;
 
-import org.springframework.beans.factory.annotation.Value;
+import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,18 +34,25 @@ public class ReportControllerImpl implements IReportController {
 
 	private RestTemplate restTemplate;
 
-	@Value("${submission.code.server.host}")
 	private String serverCodeHost;
 
-	@Value("${submission.code.server.port}")
 	private String serverCodePort;
 
-	@Value("${submission.code.server.verify.path}")
 	private String serverCodeVerificationUri;
+	private int tokenSizeShort;
+	private int tokenSizeLong;
+	private String tokenTypeShort;
+	private String tokenTypeLong;
 
 	@Inject
-	public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate) {
-
+	public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate, ApplicationConfig applicationConfig) {
+		this.serverCodeVerificationUri= applicationConfig.getSubmissionCodeServerVerifyPath();
+		this.serverCodeHost= applicationConfig.getSubmissionCodeServerHost();
+		this.serverCodePort= applicationConfig.getSubmissionCodeServerPort();
+		this.tokenSizeLong = Integer.valueOf(applicationConfig.getTokenSizeMax());
+		this.tokenSizeShort = Integer.valueOf(applicationConfig.getTokenSizeMin());
+		this.tokenTypeShort= applicationConfig.getTokenTypeShort();
+		this.tokenTypeLong= applicationConfig.getTokenTypeLong();
 		this.contactDtoService = contactDtoService;
 		this.restTemplate = restTemplate;
 	}
@@ -91,7 +98,7 @@ public class ReportControllerImpl implements IReportController {
 			throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
 		}
 
-		if (token.length() != 6 && token.length() != 36) {
+		if (token.length() != tokenSizeShort && token.length() != tokenSizeLong) {
 			log.warn("Token size is incorrect");
 			throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
 		}
@@ -108,7 +115,7 @@ public class ReportControllerImpl implements IReportController {
 
 	private String getCodeType(String token) {
 
-		return token.length() == 6 ? "6-alphanum" : "UUIDv4";
+		return token.length() == tokenSizeShort ? tokenTypeShort : tokenTypeLong;
 	}
 
 	private HttpEntity<VerifyRequestVo> initHttpEntity(String token) {

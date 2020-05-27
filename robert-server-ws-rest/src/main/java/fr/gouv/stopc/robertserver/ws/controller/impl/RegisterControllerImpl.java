@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
 import org.bson.internal.Base64;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,14 +48,16 @@ public class RegisterControllerImpl implements IRegisterController {
     private final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
 
     private  final ICryptoServerGrpcClient cryptoServerClient;
- 
+
+    private final int numberOfEpochs;
+
     @Inject
     public RegisterControllerImpl(final IRegistrationService registrationService,
                                   final IServerConfigurationService serverConfigurationService,
                                   final IApplicationConfigService applicationConfigService,
                                   final CaptchaService captchaService,
                                   final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
-                                  final ICryptoServerGrpcClient cryptoServerClient) {
+                                  final ICryptoServerGrpcClient cryptoServerClient, final ApplicationConfig applicationConfig) {
 
         this.registrationService = registrationService;
         this.serverConfigurationService = serverConfigurationService;
@@ -62,6 +65,7 @@ public class RegisterControllerImpl implements IRegisterController {
         this.captchaService = captchaService;
         this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
         this.cryptoServerClient = cryptoServerClient;
+        numberOfEpochs= Integer.valueOf(applicationConfig.getNumberOfEpochs());
 
     }
 
@@ -101,7 +105,6 @@ public class RegisterControllerImpl implements IRegisterController {
         final byte countrycode = this.serverConfigurationService.getServerCountryCode();
 
         final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-        final int numberOfEpochs = 4 * 24 * 4;
 
         final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
         

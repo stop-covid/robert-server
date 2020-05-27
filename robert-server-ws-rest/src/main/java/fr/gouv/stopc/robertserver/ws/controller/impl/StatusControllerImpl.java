@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -51,6 +53,10 @@ public class StatusControllerImpl implements IStatusController {
 	private final ICryptoServerGrpcClient cryptoServerClient;
 
 	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
+
+	private int epochNextDays;
+
+	private int epochDay;
 	
 	@Inject
 	public StatusControllerImpl(
@@ -59,7 +65,8 @@ public class StatusControllerImpl implements IStatusController {
 			final IApplicationConfigService applicationConfigService,
 			final AuthRequestValidationService authRequestValidationService,
 			final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
-			final ICryptoServerGrpcClient cryptoServerClient
+			final ICryptoServerGrpcClient cryptoServerClient,
+			ApplicationConfig applicationConfig
 	) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.registrationService = registrationService;
@@ -67,6 +74,8 @@ public class StatusControllerImpl implements IStatusController {
 		this.authRequestValidationService = authRequestValidationService;
 		this.cryptoServerClient = cryptoServerClient;
 		this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
+		this.epochDay=Integer.valueOf(applicationConfig.getEpochDay());
+		this.epochNextDays=Integer.valueOf(applicationConfig.getEpochNextDays());
 	}
 
 	@Override
@@ -173,7 +182,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			// Include new EBIDs and ECCs for next M epochs
 			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
-			includeEphemeralTuplesForNextMEpochs(statusResponse, record, 4);
+			includeEphemeralTuplesForNextMEpochs(statusResponse, record, epochNextDays);
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
 		}
@@ -195,7 +204,7 @@ public class StatusControllerImpl implements IStatusController {
 			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
 
 			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-			final int numberOfEpochs = 4 * 24 * numberOfDays;
+			final int numberOfEpochs = epochDay * 24 * numberOfDays;
 
 			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
 
