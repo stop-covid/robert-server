@@ -1,6 +1,6 @@
 package fr.gouv.stopc.robert.config.controller;
 
-import java.util.Map;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.yaml.snakeyaml.Yaml;
 
-import fr.gouv.stopc.robert.config.dto.ConfigurationHistory;
+import fr.gouv.stopc.robert.config.dto.ConfigurationHistoryEntry;
+import fr.gouv.stopc.robert.config.dto.FunctionalConfiguration;
 import fr.gouv.stopc.robert.config.service.IRobertConfigurationService;
 import fr.gouv.stopc.robert.config.util.IConfigurationUpdateResults;
 
@@ -36,13 +36,6 @@ public class RobertConfigurationController {
 	private IRobertConfigurationService service;
 
 	/**
-	 * A Yaml encoder/decoder
-	 * 
-	 * @since 0.0.1-SNAPSHOT
-	 */
-	private Yaml yamlCodec = new Yaml();
-
-	/**
 	 * Spring injection constructor
 	 * 
 	 * @param service the <code>IRobertConfigurationService</code> bean to use
@@ -53,20 +46,18 @@ public class RobertConfigurationController {
 	}
 
 	/**
-	 * Function updating the configuration of an application for a given profile
+	 * Update the functional configuration for a given profile
 	 * 
-	 * @param appName           the name of the application to update
-	 * @param profile           the profile the application is running on
-	 * @param yamlConfiguration the configuration in YAML format
+	 * @param appName          the name of the application to update
+	 * @param profile          the profile the application is running on
+	 * @param newConfiguration the configuration in json format
 	 * @return a message containing the result of the update operation
 	 */
-	@PutMapping(path = "/{appName}/{profile}", consumes = "application/x-yaml")
-	public ResponseEntity<String> updateConfiguration(@PathVariable("appName") String appName,
-			@PathVariable("profile") String profile, @RequestBody String yamlConfiguration) {
-
+	@PutMapping(path = "/{profile}")
+	public ResponseEntity<String> updateConfiguration(@PathVariable("profile") String profile,
+			@RequestBody FunctionalConfiguration newConfiguration) {
 		// Compute the key / value version of the configuration
-		Map<String, Object> configuration = yamlCodec.load(yamlConfiguration);
-		String result = service.updateConfiguration(appName, profile, configuration);
+		String result = service.updateConfiguration(profile, newConfiguration);
 		HttpStatus status = HttpStatus.OK;
 		if (IConfigurationUpdateResults.CONFIGURATION_UPDATE_FAILED.equals(result)) {
 			status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -75,17 +66,29 @@ public class RobertConfigurationController {
 	}
 
 	/**
-	 * Retrieve the history of modifications of an application for a given
-	 * application name and Spring profile
+	 * Retrieve the history of modifications of the functional configuration for a
+	 * given Spring profile
 	 * 
-	 * @param appName the name of the application
-	 * @param profile the profile the application is running on
+	 * @param profile the spring profile
 	 * @return the history of modifications
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@GetMapping(path = "/history/{appName}/{profile}")
-	public ResponseEntity<ConfigurationHistory> getConfigurationHistory(@PathVariable("appName") String appName,
+	@GetMapping(path = "/history/{profile}")
+	public ResponseEntity<List<ConfigurationHistoryEntry>> getFunctionalConfigurationHistory(
 			@PathVariable(name = "profile") String profile) {
-		return ResponseEntity.ok(service.getHistory(appName, profile));
+		return ResponseEntity.ok(service.getHistory(profile));
+	}
+
+	/**
+	 * Retrieve functionnal configuration for a Spring profile
+	 * 
+	 * @param profile the spring profile
+	 * @return the history of modifications
+	 * @since 0.0.1-SNAPSHOT
+	 */
+	@GetMapping(path = "/{profile}")
+	public ResponseEntity<FunctionalConfiguration> getFunctionalConfiguration(
+			@PathVariable(name = "profile") String profile) {
+		return ResponseEntity.ok(service.getConfiguration(profile));
 	}
 }

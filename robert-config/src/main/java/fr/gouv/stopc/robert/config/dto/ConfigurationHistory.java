@@ -14,8 +14,6 @@ public class ConfigurationHistory implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 2896290882288808665L;
-
-	private String appName;
 	
 	private List<ConfigurationHistoryEntry> entries;
 	

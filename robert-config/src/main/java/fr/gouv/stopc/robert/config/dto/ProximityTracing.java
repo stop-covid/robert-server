@@ -5,12 +5,13 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class ConfigurationUpdateRequest {
-
-	private String appName;
+public class ProximityTracing {
 	
-	private String profile;
+	private App app;
 	
-	private String propertiesAsBinary;
+	private Ble ble;
 	
+	private Float riskThreshold;
+	
+	private Integer rssi1m;
 }

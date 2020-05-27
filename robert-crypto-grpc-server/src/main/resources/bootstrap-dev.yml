@@ -12,7 +12,7 @@ spring:
     name: robert-crypto
   cloud:
     config:
-      label: default
+      label: dev
       uri: ${ROBERT_CONFIG_URI:http://localhost:8888/spring-config}
 eureka:
   client:

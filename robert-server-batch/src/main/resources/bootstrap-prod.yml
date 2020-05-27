@@ -3,5 +3,5 @@ spring:
     name: robert-batch
   cloud:
     config:
-      label: default
+      label: prod
       uri: ${ROBERT_CONFIG_URI:http://localhost:8888/spring-config}

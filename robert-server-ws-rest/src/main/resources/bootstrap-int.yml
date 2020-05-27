@@ -18,7 +18,7 @@ spring:
       uri: ${ROBERT_SERVER_DB_URI:mongodb://${ROBERT_SERVER_DB_HOST:localhost}:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
   cloud:
     config:
-      label: default
+      label: int
       uri: ${ROBERT_CONFIG_URI:http://localhost:8888/spring-config}
 
 eureka:
