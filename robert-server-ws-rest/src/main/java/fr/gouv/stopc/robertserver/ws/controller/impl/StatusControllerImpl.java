@@ -61,23 +61,30 @@ public class StatusControllerImpl implements IStatusController {
 
 	@Override
 	public ResponseEntity<StatusResponseDto> getStatus(StatusVo statusVo) {
+		log.info("Receiving status request");
+
 		AuthRequestValidationService.ValidationResult<GetIdFromStatusResponse> validationResult =
 				this.authRequestValidationService.validateStatusRequest(statusVo);
 
 		if (Objects.nonNull(validationResult.getError())) {
+			log.info("Status request authentication failed");
 			return ResponseEntity.badRequest().build();
 		}
+		log.info("Status request authentication passed");
 
 		GetIdFromStatusResponse response = validationResult.getResponse();
 
+		log.info("Finding record for status request");
 		Optional<Registration> record = this.registrationService.findById(response.getIdA().toByteArray());
 		if (record.isPresent()) {
 			try {
 				Optional<ResponseEntity> responseEntity = validate(record.get(), response.getEpochId(), response.getTuples().toByteArray());
 
 				if (responseEntity.isPresent()) {
+					log.info("Status request successful");
 					return responseEntity.get();
 				} else {
+					log.info("Status request failed validation");
 					return ResponseEntity.badRequest().build();
 				}
 			} catch (RobertServerException e) {
