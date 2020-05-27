@@ -3,11 +3,25 @@ package fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.im
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.*;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.ProviderException;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.*;
+import java.security.spec.EncodedKeySpec;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -15,11 +29,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import javax.crypto.*;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -30,6 +41,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import lombok.extern.slf4j.Slf4j;
 import sun.security.pkcs11.SunPKCS11;
@@ -43,9 +55,11 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     private static final int SERVER_KEY_SIZE = 24;
 
     // Because Java does not know Skinny64, specify AES instead
+    private static final String KEYSTORE_KEK_ALGONAME = "AES";
     private static final String KEYSTORE_SKINNY64_ALGONAME = "AES";
     private static final String SERVER_KEY_CERTIFICATE_CN = "CN=stopcovid.gouv.fr";
     private static final String ECDH_ALGORITHM = "EC";
+    private static final String KEY_FOR_KEYS = "KEK";
 
     private static final String ALIAS_SERVER_ECDH_PUBLIC_KEY = "serverECDHPublicKey";
     private static final String ALIAS_SERVER_ECDH_PRIVATE_KEY = "serverECDHPrivateKey";
@@ -87,7 +101,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         try {
             return this.keyStore.containsAlias(alias);
         } catch (KeyStoreException e) {
-            log.error("An expected error occured when trying to check containing the alias {} due to {}", alias, e.getMessage());
+            log.info("An expected error occured when trying to check containing the alias {} due to {}", alias, e.getMessage());
         }
         return false;
     }
@@ -129,9 +143,23 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
     }
 
-    // TODO: Remove
+    // TODO: Remove this if keys are already available in HSM (Java code should not create it)
+    public void addKekKeysIfNotExist(byte[] kekForKa, byte[] kekForKs) {
+        try {
+            if (!this.contains(ALIAS_CLIENT_KEK)) {
+                this.keyStore.setKeyEntry(ALIAS_CLIENT_KEK, new SecretKeySpec(kekForKa, KEYSTORE_KEK_ALGONAME), null, null);
+            }
+            if (!this.contains(ALIAS_SERVER_KEK)) {
+                this.keyStore.setKeyEntry(ALIAS_SERVER_KEK, new SecretKeySpec(kekForKs, KEYSTORE_KEK_ALGONAME), null, null);
+            }
+        } catch (KeyStoreException e) {
+            log.error("An expected error occurred when trying to store the kek keys in HSM due to {}", e.getMessage());
+        }
+    }
+
+    // TODO: Remove this if keys are already available in HSM (Java code should not create it)
     @Override
-    public void addKeys(String serverPublicKey, String serverPrivateKey) {
+    public void addECDHKeys(String serverPublicKey, String serverPrivateKey) {
 
         try {
             EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.decode(serverPrivateKey));
@@ -150,6 +178,9 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
                     if(!this.contains(ALIAS_SERVER_ECDH_PRIVATE_KEY)) {
                         this.keyStore.setKeyEntry(ALIAS_SERVER_ECDH_PRIVATE_KEY, privateKey, null, chain);
                         log.warn("Storing ECDH server key");
+                    }
+                    else  {
+                        log.info("Server ECDH key already stored");
                     }
                 } catch (KeyStoreException e) {
                     log.error("An expected error occured when trying to store the server public/private key due to {}", e.getMessage());
@@ -177,7 +208,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         } catch (KeyStoreException | UnrecoverableKeyException | NoSuchAlgorithmException e) {
             log.error("Unable to retrieve the server key pair due to {}", e.getMessage());
         }
-        
+
         return Optional.empty();
     }
 
@@ -223,6 +254,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         return this.provider;
     }
 
+    // TODO: use for encrypting K_S keys that would be stored in Postgre (instead of HSM) or remove
     @Override
     public Key getKeyForEncryptingServerKeys() {
         return getKeyForEncryptingKeys(ALIAS_SERVER_KEK,
@@ -236,7 +268,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     }
 
     private Key getKeyForEncryptingKeys(String alias, String errorMessage) {
-
         try {
             return this.keyStore.getKey(alias, null);
         } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | IllegalStateException e) {
@@ -244,21 +275,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         }
 
         return null;
-    }
-
-
-    public void storeServerKey(String alias, byte[] secret) {
-
-        if(Objects.isNull(secret)) {
-            log.error("Unable to store a null secret");
-        }
-
-        if (this.contains(alias)) {
-            log.warn("A Server key for this alias {} already exists, could not replace it", alias);
-            return ;
-        }
-        SecretKeySpec secretKey = new SecretKeySpec(secret, KEYSTORE_SKINNY64_ALGONAME);
-        
     }
 
     @Override
@@ -274,17 +290,27 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     }
 
     private byte[] getServerKey(LocalDate dateFromEpoch) {
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        byte[] serverKey = null;
+        try {
+            //            log.info("Try to getServerKey : {}", dateFromEpoch);
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            //            log.info("Try to getServerKey for the DateTimeFormatter {}", dateFormatter);
 
-        byte[] serverKey;
-        String alias = dateFromEpoch.format(dateFormatter);
-        if (!this.contains(alias)) {
-            log.info("Creating new server key with alias {}", alias);
-            serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
-            this.storeKey(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME));
-        } else {
-            log.debug("Fetching existing server key with alias {}", alias);
-            serverKey = this.getEntry(alias);
+            String alias = dateFromEpoch.format(dateFormatter);
+            //            log.info("Trying to fetch the key for this alias {}", alias);
+            if (!this.keyStore.containsAlias(alias)) {
+                //                log.info("Creating new server key with alias {}", alias);
+                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
+                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
+                return serverKey;
+            } else {
+                //                log.info("Fetching existing server key with alias {}", alias);
+                Key key = this.keyStore.getKey(alias, null);
+                //                log.info("The existing server key with alias {} is {} and to byte {}", alias, key, key.getEncoded());
+                serverKey = key.getEncoded();
+            }
+        } catch (Exception e) {
+            log.error("An expected error occured when trying to store the alias {} due to {}", dateFromEpoch, e.getMessage());
         }
 
         return serverKey;
@@ -292,7 +318,8 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
     @Override
     public byte[][] getServerKeys(int epochId, long timeStart, int nbDays) {
- 
+
+        //        log.info("Getting the server keys for the epoch {}, timestart {}, and nbEpochs {}", epochId, timeStart, nbDays );
         LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, timeStart);
         if(Objects.isNull(dateFromEpoch) ) {
             log.error("The date from epoch {} and the time start {} is null", epochId, timeStart);
@@ -302,9 +329,11 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         byte[][] keyMap = new byte[nbDays][SERVER_KEY_SIZE];
         for(int i = 0; i < nbDays; i++) {
             keyMap[i] = this.getServerKey(dateFromEpoch.plusDays(i));
+            //            log.info("Getting the ks for {} and is it empty {}", i,Objects.isNull(keyMap[i]) );
         }
+        //        log.info("keys for theses params  = {}", keyMap);
         return keyMap;
-        
+
     }
 
 }

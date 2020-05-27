@@ -2,15 +2,13 @@ package test.fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.model.ClientIdentifier;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.repository.ClientIdentiferRepository;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.repository.ClientIdentifierRepository;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl.ClientKeyStorageServiceImpl;
 import org.bson.internal.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
@@ -18,13 +16,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.security.SecureRandom;
-import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +35,7 @@ public class ClientKeyStorageImplTest {
     ICryptographicStorageService cryptographicStorageService;
 
     @Mock
-    ClientIdentiferRepository clientIdentiferRepository;
+    ClientIdentifierRepository clientIdentifierRepository;
 
     ClientKeyStorageServiceImpl clientKeyStorageService;
 
@@ -83,21 +78,21 @@ public class ClientKeyStorageImplTest {
 
     @Test
     void testCreateTwoClientIdsAndKeysDifferSucceeds() {
-        Optional<ClientIdentifierBundle> clientIdentifierBundle1 = this.clientKeyStorageService.createClientIdUsingKeys(generateKey(), generateKey());
-        assertTrue(clientIdentifierBundle1.isPresent());
-        ClientIdentifier encryptedClientIdentifier1 = this.mockClientIdentifierRepository.getLastSavedClientIdentifier();
+        Optional<ClientIdentifierBundle> clientIdentifierBundleWithDecryptedKeys1 = this.clientKeyStorageService.createClientIdUsingKeys(generateKey(), generateKey());
+        assertTrue(clientIdentifierBundleWithDecryptedKeys1.isPresent());
+        ClientIdentifier encryptedClientIdentifierWithEncryptedKeys1 = this.mockClientIdentifierRepository.getLastSavedClientIdentifier();
 
         this.mockClientIdentifierRepository.clearLastSavedClientIdentifier();
         Optional<ClientIdentifierBundle> clientIdentifierBundle2 = this.clientKeyStorageService.createClientIdUsingKeys(generateKey(), generateKey());
         assertTrue(clientIdentifierBundle2.isPresent());
         ClientIdentifier encryptedClientIdentifier2 = this.mockClientIdentifierRepository.getLastSavedClientIdentifier();
 
-        assertNotEquals(encryptedClientIdentifier1.getIdA(), encryptedClientIdentifier2.getIdA());
-        assertNotEquals(encryptedClientIdentifier1.getKeyForMac(), encryptedClientIdentifier2.getKeyForMac());
-        assertNotEquals(encryptedClientIdentifier1.getKeyForTuples(), encryptedClientIdentifier2.getKeyForTuples());
+        assertNotEquals(encryptedClientIdentifierWithEncryptedKeys1.getIdA(), encryptedClientIdentifier2.getIdA());
+        assertNotEquals(encryptedClientIdentifierWithEncryptedKeys1.getKeyForMac(), encryptedClientIdentifier2.getKeyForMac());
+        assertNotEquals(encryptedClientIdentifierWithEncryptedKeys1.getKeyForTuples(), encryptedClientIdentifier2.getKeyForTuples());
     }
 
-    private class MockClientIdentifierRepository implements ClientIdentiferRepository {
+    private class MockClientIdentifierRepository implements ClientIdentifierRepository {
 
         private ClientIdentifier lastSavedClientIdentifier;
 

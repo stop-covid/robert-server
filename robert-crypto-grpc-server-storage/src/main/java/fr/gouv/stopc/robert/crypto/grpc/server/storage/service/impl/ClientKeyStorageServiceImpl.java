@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.model.ClientIdentifier;
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.repository.ClientIdentiferRepository;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.repository.ClientIdentifierRepository;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
 import lombok.extern.slf4j.Slf4j;
@@ -31,11 +31,11 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
 
     private ICryptographicStorageService cryptographicStorageService;
 
-    private ClientIdentiferRepository clientIdentifierRepository;
+    private ClientIdentifierRepository clientIdentifierRepository;
 
     @Inject
     public ClientKeyStorageServiceImpl(final ICryptographicStorageService cryptographicStorageService,
-            final ClientIdentiferRepository clientIdentifierRepository) {
+            final ClientIdentifierRepository clientIdentifierRepository) {
 
         this.cryptographicStorageService = cryptographicStorageService;
         this.clientIdentifierRepository = clientIdentifierRepository;
@@ -199,7 +199,8 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
                         return null;
                     }
 
-                    byte[] decryptedKeyForMac = this.decryptStoredKeyWithAES256GCMAndKek(Base64.decode(client.getKeyForMac()),
+                    byte[] decryptedKeyForMac = this.decryptStoredKeyWithAES256GCMAndKek(
+                            Base64.decode(client.getKeyForMac()),
                             clientKek);
 
                     if(Objects.isNull(decryptedKeyForMac)) {
@@ -207,7 +208,8 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
                         return null;
                     }
 
-                    byte[] decryptedKeyForTuples = this.decryptStoredKeyWithAES256GCMAndKek(Base64.decode(client.getKeyForTuples()),
+                    byte[] decryptedKeyForTuples = this.decryptStoredKeyWithAES256GCMAndKek(
+                            Base64.decode(client.getKeyForTuples()),
                             clientKek);
 
                     if(Objects.isNull(decryptedKeyForTuples)) {
@@ -229,35 +231,7 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
         this.clientIdentifierRepository.findByIdA(Base64.encode(id)).ifPresent(this.clientIdentifierRepository::delete);
     }
 
-    // TODO: use AES256-GCM?
-    private byte[] performEncryption(int mode, byte[] toEncrypt, byte[] key) {
-
-        try {
-//            log.info("To Encrypt = {}",toEncrypt);
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-//            log.info("KEY encoded = {}",  key);
-            SecretKeySpec secret = new SecretKeySpec(key, "AES");
-            cipher.init(mode, secret);
-
-            byte[] encrypted = cipher.doFinal(toEncrypt);
-//            log.info("Encrypted data = {}", encrypted);
-//            
-//            cipher.init(Cipher.DECRYPT_MODE, secret);
-//            
-//            log.info("Decrypted data = {}", cipher.doFinal(encrypted));
-
-            return encrypted;
-        } catch (IllegalArgumentException | InvalidKeyException | NoSuchAlgorithmException
-                | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
-
-            log.error("An expected error occurred when trying to perform encryption operation with the mode {} due to {}", mode, e.getMessage());
-            e.printStackTrace();
-        } 
-        return null;
-    }
-
     private static final String AES_ENCRYPTION_CIPHER_SCHEME = "AES/GCM/NoPadding";
-    private static final String AES_ENCRYPTION_KEY_SCHEME = "AES";
     private static final int IV_LENGTH = 12;
     public byte[] decryptStoredKeyWithAES256GCMAndKek(byte[] storedKey, Key kek) {
         AlgorithmParameterSpec algorithmParameterSpec = new GCMParameterSpec(128, storedKey, 0, IV_LENGTH);

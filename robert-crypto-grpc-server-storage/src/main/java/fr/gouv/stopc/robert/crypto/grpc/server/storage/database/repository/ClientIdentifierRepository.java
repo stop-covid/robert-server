@@ -9,7 +9,7 @@ import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.model.ClientIden
 
 
 @Repository
-public interface ClientIdentiferRepository extends JpaRepository<ClientIdentifier, Long> {
+public interface ClientIdentifierRepository extends JpaRepository<ClientIdentifier, Long> {
 
     Optional<ClientIdentifier> findByIdA(String idA);
 }

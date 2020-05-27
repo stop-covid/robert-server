@@ -22,7 +22,8 @@ public interface ICryptographicStorageService {
  
     byte[] getEntry(String alias);
 
-    void addKeys(String serverPublicKey, String serverPrivateKey);
+    void addECDHKeys(String serverPublicKey, String serverPrivateKey);
+    void addKekKeysIfNotExist(byte[] kekForKa, byte[] kekForKs);
 
     Optional<KeyPair> getServerKeyPair();
 
