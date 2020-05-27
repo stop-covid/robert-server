@@ -88,7 +88,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("1-minute encounter (4 messages over 1 minute): %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < 1.0 && score > 0.75);
     }
 
     @Test
@@ -260,7 +260,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("One early, one late: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < 4.0 && score > 3.9);
     }
 
     @Test

@@ -382,7 +382,8 @@ public class ContactProcessorTest {
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertTrue(expectedRegistration.get().getExposedEpochs().size() == 2);
-			assertFalse(expectedRegistration.get().isAtRisk());
+
+			assertRiskThresholdExceededBasedOnConfiguration(expectedRegistration.get());
 
 			verify(this.cryptoServerClient, times(messages.size())).getInfoFromHelloMessage(any());
 
@@ -659,7 +660,9 @@ public class ContactProcessorTest {
 
 			final int currentEpochId = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime);
 
-			final int previousEpoch = TimeUtils.getNumberOfEpochsBetween(tpstStart, currentTime - 900);
+			final int previousEpoch = TimeUtils.getNumberOfEpochsBetween(
+					tpstStart,
+					currentTime - this.serverConfigurationService.getEpochDurationSecs());
 
 			Registration registrationWithEE = this.registration.get();
 			registrationWithEE.setExposedEpochs(Arrays.asList(EpochExposition.builder()
@@ -744,9 +747,11 @@ public class ContactProcessorTest {
 			Optional<Registration> expectedRegistration = this.registrationService
 					.findById(registrationWithEE.getPermanentIdentifier());
 			assertTrue(expectedRegistration.isPresent());
+
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertEquals(nbOfExposedEpochs, expectedRegistration.get().getExposedEpochs().size());
-			assertFalse(expectedRegistration.get().isAtRisk());
+
+			assertRiskThresholdExceededBasedOnConfiguration(expectedRegistration.get());
 
 			verify(this.cryptoServerClient, times(contact.getMessageDetails().size())).getInfoFromHelloMessage(any());
 
@@ -848,7 +853,8 @@ public class ContactProcessorTest {
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertEquals(expectedRegistration.get().getExposedEpochs().size(), nbOfExposedEpochsBefore - 1 + 1);
-			assertFalse(expectedRegistration.get().isAtRisk());
+
+			assertRiskThresholdExceededBasedOnConfiguration(expectedRegistration.get());
 
 			verify(this.cryptoServerClient, times(contact.getMessageDetails().size())).getInfoFromHelloMessage(any());
 
@@ -928,5 +934,21 @@ public class ContactProcessorTest {
 		}
 
 		return messages;
+	}
+
+	private void assertRiskThresholdExceededBasedOnConfiguration(Registration expectedRegistration) {
+		boolean atRisk = expectedRegistration.isAtRisk();
+		if (this.serverConfigurationService.getRiskThreshold() >= sumRiskScores(expectedRegistration.getExposedEpochs())) {
+			assertFalse(atRisk);
+		} else {
+			assertTrue(atRisk);
+		}
+	}
+
+	private Double sumRiskScores(List<EpochExposition> epochExpositions) {
+		return epochExpositions.stream()
+				.map(EpochExposition::getExpositionScores)
+				.map(item -> item.stream().mapToDouble(Double::doubleValue).sum())
+				.reduce(0.0, (a,b) -> a + b);
 	}
 }

@@ -1032,19 +1032,19 @@ class CryptoServiceGrpcServerTest {
         when(this.cryptographicStorageService.getServerKeys(epochId, this.serverConfigurationService.getServiceTimeStart(), 4)).thenReturn(new byte[][] { serverKey, serverKey, serverKey, serverKey });
         when(this.cryptographicStorageService.getServerKey(epochId, this.serverConfigurationService.getServiceTimeStart())).thenReturn(serverKey);
 
-        byte[] hello = new byte[16];
-        System.arraycopy(new byte[] { digestSalt.getValue() }, 0, hello, 0, 1);
-        System.arraycopy(ebid, 0, hello, 1, ebid.length);
-        System.arraycopy(ByteUtils.longToBytes(time), 6, hello, 1 + ebid.length, 2);
-
         byte[] mac;
         byte[] ecc;
         try {
-            mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(keyForMac), hello);
+            byte[] hello = new byte[16];
             ecc = this.cryptoService.encryptCountryCode(
                     new CryptoAESOFB(this.serverConfigurationService.getFederationKey()),
                     ebid,
                     SERVER_COUNTRY_CODE[0]);
+            System.arraycopy(ecc, 0, hello, 0, 1);
+            System.arraycopy(ebid, 0, hello, 1, ebid.length);
+            System.arraycopy(ByteUtils.longToBytes(time), 6, hello, 1 + ebid.length, 2);
+            mac = this.cryptoService.generateMACHello(new CryptoHMACSHA256(keyForMac), hello);
+
         } catch (RobertServerCryptoException e) {
             return null;
         }
