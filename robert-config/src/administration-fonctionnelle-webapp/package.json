@@ -1,0 +1,61 @@
+{
+  "name": "scs-backoffice-webapp",
+  "version": "0.1.0",
+  "proxy": "http://localhost:8080",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.3.2",
+    "@testing-library/user-event": "^7.1.2",
+    "@types/bootstrap": "^4.3.2",
+    "@types/jest": "^24.0.0",
+    "@types/node": "^12.0.0",
+    "@types/react": "^16.9.0",
+    "@types/react-bootstrap": "^1.0.1",
+    "@types/react-dom": "^16.9.0",
+    "@types/react-router-dom": "^5.1.5",
+    "@typescript-eslint/parser": "^3.0.1",
+    "axios": "^0.19.0",
+    "bootstrap": "^4.4.1",
+    "bootstrap-sass": "^3.4.1",
+    "eslint": "6.6.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-react": "^7.16.0",
+    "node-sass": "^4.12.0",
+    "react": "^16.13.1",
+    "react-bootstrap": "^1.0.1",
+    "react-dom": "^16.13.1",
+    "react-json-editor-ajrm": "^2.5.9",
+    "react-router-dom": "latest",
+    "react-scripts": "3.4.1",
+    "typescript": "~3.7.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "build": "react-scripts build",
+    "build:windows": "react-scripts build",
+    "postbuild:windows": "npm run clean-old-build:windows && npm run create-static:windows && npm run copy-build:windows && npm run clean-new-build:windows",
+    "clean-old-build:windows": "rmdir /Q /S  \"..\\main\\resources\\static\" 2>nul || echo \"clean-old-build failed.\"",
+    "create-static:windows": "md \"..\\main\\resources\\static\\\" || echo \"clean-old-build failed.\"",
+    "copy-build:windows": "xcopy /E build ..\\main\\resources\\static\\",
+    "clean-new-build:windows": "rmdir /Q /S build || echo \"clean-old-build failed.\" ",
+    "lint": "npm run eslint",
+    "lint:fix": "npm run eslint:fix",
+    "eslint": "eslint src/*.ts* ",
+    "eslint:fix": "npm run eslint -- --fix"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

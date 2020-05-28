@@ -29,3 +29,5 @@ build/
 
 ### VS Code ###
 .vscode/
+
+src/administration-fonctionnelle-webapp/node_modules
