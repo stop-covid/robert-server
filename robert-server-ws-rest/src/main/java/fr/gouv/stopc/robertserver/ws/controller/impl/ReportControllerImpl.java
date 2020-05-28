@@ -38,21 +38,14 @@ public class ReportControllerImpl implements IReportController {
 
 	private String serverCodePort;
 
-	private String serverCodeVerificationUri;
-	private int tokenSizeShort;
-	private int tokenSizeLong;
-	private String tokenTypeShort;
-	private String tokenTypeLong;
+	private ApplicationConfig applicationConfig;
+
 
 	@Inject
 	public ReportControllerImpl(ContactDtoService contactDtoService, RestTemplate restTemplate, ApplicationConfig applicationConfig) {
-		this.serverCodeVerificationUri= applicationConfig.getSubmissionCodeServerVerifyPath();
 		this.serverCodeHost= applicationConfig.getSubmissionCodeServerHost();
 		this.serverCodePort= applicationConfig.getSubmissionCodeServerPort();
-		this.tokenSizeLong = Integer.valueOf(applicationConfig.getTokenSizeMax());
-		this.tokenSizeShort = Integer.valueOf(applicationConfig.getTokenSizeMin());
-		this.tokenTypeShort= applicationConfig.getTokenTypeShort();
-		this.tokenTypeLong= applicationConfig.getTokenTypeLong();
+		this.applicationConfig=applicationConfig;
 		this.contactDtoService = contactDtoService;
 		this.restTemplate = restTemplate;
 	}
@@ -98,7 +91,7 @@ public class ReportControllerImpl implements IReportController {
 			throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
 		}
 
-		if (token.length() != tokenSizeShort && token.length() != tokenSizeLong) {
+		if (token.length() != applicationConfig.getReportTokenSizeMin() && token.length() != applicationConfig.getReportTokenSizeMax()) {
 			log.warn("Token size is incorrect");
 			throw new RobertServerBadRequestException(MessageConstants.INVALID_DATA.getValue());
 		}
@@ -115,7 +108,7 @@ public class ReportControllerImpl implements IReportController {
 
 	private String getCodeType(String token) {
 
-		return token.length() == tokenSizeShort ? tokenTypeShort : tokenTypeLong;
+		return token.length() == applicationConfig.getReportTokenSizeMin() ? applicationConfig.getReportTokenTypeShort() : applicationConfig.getReportTokenTypeLong();
 	}
 
 	private HttpEntity<VerifyRequestVo> initHttpEntity(String token) {
@@ -128,7 +121,7 @@ public class ReportControllerImpl implements IReportController {
 
 	private String constructUri() {
 
-		return UriComponentsBuilder.newInstance().scheme("http").host(serverCodeHost).port(serverCodePort).path(serverCodeVerificationUri).build().toString();
+		return UriComponentsBuilder.newInstance().scheme("http").host(serverCodeHost).port(serverCodePort).path(applicationConfig.getSubmissionCodeServerVerifyPath()).build().toString();
 	}
 
 	@NoArgsConstructor

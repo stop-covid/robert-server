@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,7 +18,6 @@ import org.springframework.web.client.RestTemplate;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.ws.dto.CaptchaDto;
 import fr.gouv.stopc.robertserver.ws.service.CaptchaService;
-import fr.gouv.stopc.robertserver.ws.utils.PropertyLoader;
 import fr.gouv.stopc.robertserver.ws.vo.RegisterVo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,18 +28,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CaptchaServiceImpl implements CaptchaService {
 
+	private static final long CONVERSIONTIMEMS = 1000L;
 	private RestTemplate restTemplate;
 
 	private IServerConfigurationService serverConfigurationService;
 
-	private PropertyLoader propertyLoader;
+	private ApplicationConfig applicationConfig;
 
 	@Inject
-	public CaptchaServiceImpl(RestTemplate restTemplate, IServerConfigurationService serverConfigurationService, PropertyLoader propertyLoader) {
+	public CaptchaServiceImpl(RestTemplate restTemplate, IServerConfigurationService serverConfigurationService, ApplicationConfig applicationConfig) {
 
 		this.restTemplate = restTemplate;
 		this.serverConfigurationService = serverConfigurationService;
-		this.propertyLoader = propertyLoader;
+		this.applicationConfig = applicationConfig;
 	}
 
 	@Override
@@ -50,12 +51,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 		// must be called for test
 		return true || Optional.ofNullable(registerVo).map(item -> {
 
-			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.propertyLoader.getCaptchaSecret()).toString(), initHttpHeaders());
+			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.applicationConfig.getCaptchaSecret()).toString(), initHttpHeaders());
 			Date sendingDate = new Date();
 
 			ResponseEntity<CaptchaDto> response = null;
 			try {
-				response = this.restTemplate.postForEntity(this.propertyLoader.getCaptchaVerificationUrl(), request, CaptchaDto.class);
+				response = this.restTemplate.postForEntity(this.applicationConfig.getCaptchaVerifyUrl(), request, CaptchaDto.class);
 			} catch(RestClientException e) {
 				log.error(e.getMessage());
 				return false;
@@ -80,8 +81,8 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 	private boolean isSuccess(CaptchaDto captchaDto, Date sendingDate) {
 
-		return this.propertyLoader.getCaptchaHostname().equals(captchaDto.getHostname()) && Math
-				.abs(sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance() * 1000L;
+		return this.applicationConfig.getCaptchaHostname().equals(captchaDto.getHostname()) && Math
+				.abs(sendingDate.getTime() - captchaDto.getChallengeTimestamp().getTime()) <= this.serverConfigurationService.getCaptchaChallengeTimestampTolerance() * CONVERSIONTIMEMS;
 	}
 
 	@NoArgsConstructor

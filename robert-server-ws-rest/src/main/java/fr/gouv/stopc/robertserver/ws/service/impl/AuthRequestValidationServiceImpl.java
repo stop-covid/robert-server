@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robertserver.ws.utils.AuthConstants;
 import org.bson.internal.Base64;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -54,19 +55,19 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
         }
 
         byte[] ebid = Base64.decode(authRequestVo.getEbid());
-        if (ByteUtils.isEmpty(ebid) || ebid.length != 8) {
+        if (ByteUtils.isEmpty(ebid) || ebid.length != AuthConstants.EBID.getSize()) {
             log.info("Discarding authenticated request because of invalid EBID field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
         byte[] time = Base64.decode(authRequestVo.getTime());
-        if (ByteUtils.isEmpty(time) || time.length != 4) {
+        if (ByteUtils.isEmpty(time) || time.length != AuthConstants.TIME.getSize()) {
             log.info("Discarding authenticated request because of invalid Time field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
 
         byte[] mac = Base64.decode(authRequestVo.getMac());
-        if (ByteUtils.isEmpty(mac) || mac.length != 32) {
+        if (ByteUtils.isEmpty(mac) || mac.length != AuthConstants.MAC.getSize()) {
             log.info("Discarding authenticated request because of invalid MAC field size");
             return Optional.of(ResponseEntity.badRequest().build());
         }
@@ -84,8 +85,8 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
             DecryptEBIDRequest request = DecryptEBIDRequest.newBuilder().setEbid(ByteString.copyFrom(ebid)).build();
             byte[] decrytedEbid = this.cryptoServerClient.decryptEBID(request);
 
-            byte[] epochId = new byte[4];
-            byte[] idA = new byte[5];
+            byte[] epochId = new byte[AuthConstants.EPOCHID.getSize()];
+            byte[] idA = new byte[AuthConstants.IDA.getSize()];
             System.arraycopy(decrytedEbid, 0, epochId, 1, epochId.length - 1);
             System.arraycopy(decrytedEbid, epochId.length - 1, idA, 0, idA.length);
             ByteBuffer wrapped = ByteBuffer.wrap(epochId);
@@ -98,9 +99,9 @@ public class AuthRequestValidationServiceImpl implements AuthRequestValidationSe
                 byte[] ka = record.get().getSharedKey();
 
                 // Step #5: Verify MAC
-                byte[] toCheck = new byte[12];
-                System.arraycopy(ebid, 0, toCheck, 0, 8);
-                System.arraycopy(time, 0, toCheck, 8, 4);
+                byte[] toCheck = new byte[AuthConstants.CHECKMAC.getSize()];
+                System.arraycopy(ebid, 0, toCheck, 0, AuthConstants.EBID.getSize());
+                System.arraycopy(time, 0, toCheck, 8, AuthConstants.TIME.getSize());
 
                 boolean isMacValid = macValidator.validate(ka, toCheck, mac);
 

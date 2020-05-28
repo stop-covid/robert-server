@@ -54,9 +54,7 @@ public class StatusControllerImpl implements IStatusController {
 
 	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
 
-	private int epochNextDays;
-
-	private int epochDay;
+	private ApplicationConfig applicationConfig;
 	
 	@Inject
 	public StatusControllerImpl(
@@ -66,7 +64,7 @@ public class StatusControllerImpl implements IStatusController {
 			final AuthRequestValidationService authRequestValidationService,
 			final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
 			final ICryptoServerGrpcClient cryptoServerClient,
-			ApplicationConfig applicationConfig
+			final ApplicationConfig applicationConfig
 	) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.registrationService = registrationService;
@@ -74,8 +72,7 @@ public class StatusControllerImpl implements IStatusController {
 		this.authRequestValidationService = authRequestValidationService;
 		this.cryptoServerClient = cryptoServerClient;
 		this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
-		this.epochDay=Integer.valueOf(applicationConfig.getEpochDay());
-		this.epochNextDays=Integer.valueOf(applicationConfig.getEpochNextDays());
+		this.applicationConfig=applicationConfig;
 	}
 
 	@Override
@@ -182,7 +179,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			// Include new EBIDs and ECCs for next M epochs
 			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
-			includeEphemeralTuplesForNextMEpochs(statusResponse, record, epochNextDays);
+			includeEphemeralTuplesForNextMEpochs(statusResponse, record, applicationConfig.getStatusEpochNextDays() );
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
 		}
@@ -204,7 +201,7 @@ public class StatusControllerImpl implements IStatusController {
 			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
 
 			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-			final int numberOfEpochs = epochDay * 24 * numberOfDays;
+			final int numberOfEpochs = applicationConfig.getStatusEpochDay() * applicationConfig.getStatusHours() * applicationConfig.getStatusEpochNextDays();
 
 			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
 

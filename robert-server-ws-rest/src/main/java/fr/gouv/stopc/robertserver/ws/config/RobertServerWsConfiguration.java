@@ -13,7 +13,7 @@ public class RobertServerWsConfiguration {
 
 @Inject
 	public RobertServerWsConfiguration(ICryptoServerGrpcClient cryptoServerClient, ApplicationConfig config) {
-		cryptoServerClient.init(config.getRobertCryptoServerHost(), Integer.parseInt( config.getRobertCryptoServerPort()));
+		cryptoServerClient.init(config.getCryptoServerHost(), Integer.parseInt( config.getCryptoServerPort()));
 	}
 
 	@Bean

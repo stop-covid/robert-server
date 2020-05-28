@@ -18,10 +18,10 @@ public class ApplicationConfig {
     private String controllerPathPrefix;
 
     @Value("${robert.crypto.server.host}")
-    private String robertCryptoServerHost;
+    private String cryptoServerHost;
 
     @Value("${robert.crypto.server.port}")
-    private String robertCryptoServerPort;
+    private String cryptoServerPort;
 
     @Value("${submission.code.server.host}")
     private String submissionCodeServerHost;
@@ -32,29 +32,43 @@ public class ApplicationConfig {
     @Value("${submission.code.server.verify.path}")
     private String submissionCodeServerVerifyPath;
 
-    @Value("${register.numberOfEpochs}")
-    private String numberOfEpochs;
+    @Value("${robert.register.server.number.epoch}")
+    private int registerNumberOfEpoch;
 
-    @Value("${report.token.short.size}")
-    private String tokenSizeMin;
+    @Value("${robert.register.server.number.hours}")
+    private int registerNumberOfHours;
 
-    @Value("${report.token.long.size}")
-    private String tokenSizeMax;
+    @Value("${robert.register.server.number.day}")
+    private int registerNumberOfDay;
 
-    @Value("${report.token.short.type}")
-    private String tokenTypeShort;
+    @Value("${robert.report.server.token.short.size}")
+    private int reportTokenSizeMin;
 
-    @Value("${report.token.long.type}")
-    private String tokenTypeLong;
+    @Value("${robert.report.server.token.long.size}")
+    private int reportTokenSizeMax;
 
-    @Value("${status.epoch.next.days}")
-    private String epochNextDays;
+    @Value("${robert.report.server.token.short.type}")
+    private String reportTokenTypeShort;
 
-    @Value("${status.epoch.day}")
-    private String epochDay;
+    @Value("${robert.report.server.token.long.type}")
+    private String reportTokenTypeLong;
 
-    @Value("$authentication.size.ebid")
-    private String sizeEbid;
+    @Value("${robert.status.server.number.next.days}")
+    private int statusEpochNextDays;
 
+    @Value("${robert.status.server.number.epoch.oneday}")
+    private int statusEpochDay;
+
+    @Value("${robert.captcha.server.secret}")
+    private String captchaSecret;
+
+    @Value("${robert.captcha.server.hostname}")
+    private String captchaHostname;
+
+    @Value("${robert.captcha.server.verify.url}")
+    private String captchaVerifyUrl;
+
+    @Value("${robert.status.server.number.hours}")
+    private int statusHours;
 
 }

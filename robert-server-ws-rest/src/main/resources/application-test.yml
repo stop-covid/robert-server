@@ -9,6 +9,9 @@ data:
   mongodb:
       uri=${ROBERT_SERVER_DB_URI:mongodb\://${ROBERT_SERVER_DB_HOST:localhost}\:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
 
+server:
+  port: 8086
+
 controller:
   path:
     prefix: /api/v1
@@ -21,7 +24,41 @@ robert:
       # The port of the crypto server
       port: 9090
 
-  # Submission code server
+  status:
+    server:
+      number:
+        epoch:
+          oneday: 4
+        next:
+          days: 4
+        hours: 24
+
+
+  captcha:
+    server:
+      secret: captcha
+      hostname: stopc.gouv.fr
+      verify:
+        url:  https://www.google.com/recaptcha/api/siteverify
+
+  register:
+    server:
+      number:
+        epoch: 4
+        hours: 24
+        day: 4
+
+  report:
+    server:
+      token:
+        short:
+          size: 6
+          type: "6-alphanum"
+        long:
+          size: 36
+          type: "UUIDv4"
+
+# Submission code server
 submission:
   code:
     server:
@@ -30,33 +67,10 @@ submission:
       verify:
         path: /api/v1/verify
 
-captcha:
-  secret: captcha
-  hostname: stopc.gouv.fr
-  verify:
-    url:  https://www.google.com/recaptcha/api/siteverify
 
-server:
-  port: 8086
 
-register:
-  numberOfEpochs : 4 * 24 * 4
 
-report:
-  token:
-    short:
-      size: 6
-      type: "6-alphanum"
-    long:
-      size: 36
-      type: "UUIDv4"
-status:
-  epoch:
-    next:
-      days: 4
-  day: 4
-authentication:
-  size:
-    ebid: 8
-    time: 4
-    mac: 32
+
+
+
+

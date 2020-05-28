@@ -49,7 +49,7 @@ public class RegisterControllerImpl implements IRegisterController {
 
     private  final ICryptoServerGrpcClient cryptoServerClient;
 
-    private final int numberOfEpochs;
+    private final ApplicationConfig applicationConfig;
 
     @Inject
     public RegisterControllerImpl(final IRegistrationService registrationService,
@@ -65,8 +65,7 @@ public class RegisterControllerImpl implements IRegisterController {
         this.captchaService = captchaService;
         this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
         this.cryptoServerClient = cryptoServerClient;
-        numberOfEpochs= Integer.valueOf(applicationConfig.getNumberOfEpochs());
-
+        this.applicationConfig=applicationConfig;
     }
 
     @Override
@@ -114,7 +113,7 @@ public class RegisterControllerImpl implements IRegisterController {
                 .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
                 .setCurrentEpochID(currentEpochId)
                 .setIdA(ByteString.copyFrom(registration.getPermanentIdentifier()))
-                .setNumberOfEpochsToGenerate(numberOfEpochs)
+                .setNumberOfEpochsToGenerate(applicationConfig.getRegisterNumberOfEpoch()* applicationConfig.getRegisterNumberOfHours()* applicationConfig.getRegisterNumberOfDay())
                 .build();
 
         Optional<EphemeralTupleResponse> tupleResponse = this.cryptoServerClient.generateEphemeralTuple(request);
