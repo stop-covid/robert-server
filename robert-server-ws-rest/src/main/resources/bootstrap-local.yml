@@ -1,20 +1,32 @@
-<<<<<<< HEAD
-eureka:
-  client:
-    enabled: false
- 
 spring:
-  application:
-    name: robert-server
-  cloud:
-    config:
-      enabled: false
-=======
-spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/protectedRobertDB
   cloud:
     config:
       enabled: false
 eureka:
   client:
     enabled: false
->>>>>>> branch 'feat-hot-reload-configuration' of git@plant-stopcovid.gitlab.inria.fr:stopcovid19/robert-server.git
+server:
+  port: 8086
+
+captcha:
+  hostname: stopc.gouv.fr
+  secret: 123456
+  verify-url: https://www.google.com/recaptcha/api/siteverify
+
+debug: false
+
+robert:
+  server:
+    controller-path-prefix: /api/v1
+  crypto:
+      hostname: localhost
+      port: 9090
+
+submissionCode:
+    server:
+      hostname: localhost
+      port: 8087
+      verify-path: /api/v1/verify

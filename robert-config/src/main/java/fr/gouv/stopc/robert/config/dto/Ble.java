@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Ble {
 
-	@JsonProperty("nContacts")
-	private Integer nContacts;
+	private Integer simultaneousContacts;
 
 	private List<SignalCalibration> signalCalibrationPerModel = new ArrayList<>();
-
-	private Integer twin;
+	
+	@JsonProperty("tWin")
+	private Integer tWin;
 
 	@JsonProperty("tOverlap")
 	private Integer tOverlap;
@@ -28,29 +28,27 @@ public class Ble {
 
 	private Integer minSampling;
 
-	private Integer a;
-
 	private Integer b;
 
 	private Integer maxSampleSize;
 
-	private Float riskSeuilLow;
+	private Float riskThresholdlLow;
 
-	private Float riskSeuilMax;
+	private Float riskThresholdMax;
 
 	private Integer riskMin;
 
 	private Integer riskMax;
 
-	@JsonProperty("dSeuil")
-	private Integer dSeuil;
+	@JsonProperty("dThreshold")
+	private Integer dThreshold;
 
-	private Integer rssiSeuil;
+	private Integer rssiThreshold;
 
-	private Integer g0tx;
+	private Integer tagPeak;
 
-	private Integer tagPeaks;
-
-	private Integer tagCalib;
+	private Integer flagCalib;
+	
+	private String flagMode;
 
 }
