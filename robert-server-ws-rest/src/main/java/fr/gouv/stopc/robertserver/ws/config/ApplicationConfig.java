@@ -32,15 +32,6 @@ public class ApplicationConfig {
     @Value("${submission.code.server.verify.path}")
     private String submissionCodeServerVerifyPath;
 
-    @Value("${robert.register.server.number.epoch}")
-    private int registerNumberOfEpoch;
-
-    @Value("${robert.register.server.number.hours}")
-    private int registerNumberOfHours;
-
-    @Value("${robert.register.server.number.day}")
-    private int registerNumberOfDay;
-
     @Value("${robert.report.server.token.short.size}")
     private int reportTokenSizeMin;
 
@@ -53,12 +44,6 @@ public class ApplicationConfig {
     @Value("${robert.report.server.token.long.type}")
     private String reportTokenTypeLong;
 
-    @Value("${robert.status.server.number.next.days}")
-    private int statusEpochNextDays;
-
-    @Value("${robert.status.server.number.epoch.oneday}")
-    private int statusEpochDay;
-
     @Value("${robert.captcha.server.secret}")
     private String captchaSecret;
 
@@ -67,8 +52,5 @@ public class ApplicationConfig {
 
     @Value("${robert.captcha.server.verify.url}")
     private String captchaVerifyUrl;
-
-    @Value("${robert.status.server.number.hours}")
-    private int statusHours;
 
 }

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.server.common.RobertProtocolConstant;
 import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
 import org.bson.internal.Base64;
 import org.springframework.http.HttpStatus;
@@ -49,15 +50,13 @@ public class RegisterControllerImpl implements IRegisterController {
 
     private  final ICryptoServerGrpcClient cryptoServerClient;
 
-    private final ApplicationConfig applicationConfig;
-
     @Inject
     public RegisterControllerImpl(final IRegistrationService registrationService,
                                   final IServerConfigurationService serverConfigurationService,
                                   final IApplicationConfigService applicationConfigService,
                                   final CaptchaService captchaService,
                                   final EpochKeyBundleDtoMapper epochKeyBundleDtoMapper,
-                                  final ICryptoServerGrpcClient cryptoServerClient, final ApplicationConfig applicationConfig) {
+                                  final ICryptoServerGrpcClient cryptoServerClient) {
 
         this.registrationService = registrationService;
         this.serverConfigurationService = serverConfigurationService;
@@ -65,7 +64,6 @@ public class RegisterControllerImpl implements IRegisterController {
         this.captchaService = captchaService;
         this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
         this.cryptoServerClient = cryptoServerClient;
-        this.applicationConfig=applicationConfig;
     }
 
     @Override
@@ -113,7 +111,7 @@ public class RegisterControllerImpl implements IRegisterController {
                 .setCountryCode(ByteString.copyFrom(new byte[] {countrycode}))
                 .setCurrentEpochID(currentEpochId)
                 .setIdA(ByteString.copyFrom(registration.getPermanentIdentifier()))
-                .setNumberOfEpochsToGenerate(applicationConfig.getRegisterNumberOfEpoch()* applicationConfig.getRegisterNumberOfHours()* applicationConfig.getRegisterNumberOfDay())
+                .setNumberOfEpochsToGenerate(RobertProtocolConstant.EPOCH.getValue() * RobertProtocolConstant.HOURSEPOCH.getValue()* RobertProtocolConstant.DAYSEPOCH.getValue())
                 .build();
 
         Optional<EphemeralTupleResponse> tupleResponse = this.cryptoServerClient.generateEphemeralTuple(request);

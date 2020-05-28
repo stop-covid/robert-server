@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import fr.gouv.stopc.robert.server.common.RobertProtocolConstant;
 import fr.gouv.stopc.robertserver.ws.config.ApplicationConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -54,8 +55,7 @@ public class StatusControllerImpl implements IStatusController {
 
 	private EpochKeyBundleDtoMapper epochKeyBundleDtoMapper;
 
-	private ApplicationConfig applicationConfig;
-	
+
 	@Inject
 	public StatusControllerImpl(
 			final IServerConfigurationService serverConfigurationService,
@@ -72,7 +72,6 @@ public class StatusControllerImpl implements IStatusController {
 		this.authRequestValidationService = authRequestValidationService;
 		this.cryptoServerClient = cryptoServerClient;
 		this.epochKeyBundleDtoMapper = epochKeyBundleDtoMapper;
-		this.applicationConfig=applicationConfig;
 	}
 
 	@Override
@@ -179,7 +178,7 @@ public class StatusControllerImpl implements IStatusController {
 
 			// Include new EBIDs and ECCs for next M epochs
 			StatusResponseDto statusResponse = StatusResponseDto.builder().atRisk(atRisk).build();
-			includeEphemeralTuplesForNextMEpochs(statusResponse, record, applicationConfig.getStatusEpochNextDays() );
+			includeEphemeralTuplesForNextMEpochs(statusResponse, record, RobertProtocolConstant.DAYSEPOCH.getValue());
 
 			return Optional.of(ResponseEntity.ok(statusResponse));
 		}
@@ -201,7 +200,7 @@ public class StatusControllerImpl implements IStatusController {
 			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
 
 			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-			final int numberOfEpochs = applicationConfig.getStatusEpochDay() * applicationConfig.getStatusHours() * applicationConfig.getStatusEpochNextDays();
+			final int numberOfEpochs = RobertProtocolConstant.EPOCH.getValue() * RobertProtocolConstant.HOURSEPOCH.getValue() * RobertProtocolConstant.DAYSEPOCH.getValue();
 
 			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
 

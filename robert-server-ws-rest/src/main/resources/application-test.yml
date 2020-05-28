@@ -1,16 +1,12 @@
 spring:
   application:
     name: application
-  cloud:
-    config:
-      uri: ${SPRING_CONFIG_URI:http://localhost:8888}
-
-data:
-  mongodb:
-      uri=${ROBERT_SERVER_DB_URI:mongodb\://${ROBERT_SERVER_DB_HOST:localhost}\:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
+  data:
+    mongodb:
+        uri=${ROBERT_SERVER_DB_URI:mongodb\://${ROBERT_SERVER_DB_HOST:localhost}\:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
 
 server:
-  port: 8086
+  port: ${ROBERT_SERVER_PORT:8086}
 
 controller:
   path:
@@ -20,33 +16,16 @@ robert:
   crypto:
     server:
       # The hostname of the crypto server
-      host: localhost
+      host: ${ROBERT_CRYPTO_SERVER_HOST:localhost}
       # The port of the crypto server
-      port: 9090
-
-  status:
-    server:
-      number:
-        epoch:
-          oneday: 4
-        next:
-          days: 4
-        hours: 24
-
+      port: ${ROBERT_CRYPTO_SERVER_PORT:9090}
 
   captcha:
     server:
-      secret: captcha
-      hostname: stopc.gouv.fr
+      secret: ${CAPTCHA_SECRET:captcha}
+      hostname: ${CAPTCHA_HOSTNAME:stopc.gouv.fr}
       verify:
-        url:  https://www.google.com/recaptcha/api/siteverify
-
-  register:
-    server:
-      number:
-        epoch: 4
-        hours: 24
-        day: 4
+            url: ${VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
 
   report:
     server:
@@ -62,8 +41,8 @@ robert:
 submission:
   code:
     server:
-      host: localhost
-      port: 8087
+      host: ${SUBMISSION_CODE_SERVER_HOST:localhost}
+      port: ${SUBMISSION_CODE_SERVER_PORT:8087}
       verify:
         path: /api/v1/verify
 
