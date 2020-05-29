@@ -14,14 +14,13 @@ public class PropertyLoader {
     private String cryptoServerPort;
 
     @Value("${robert.crypto.server.keystore.password}")
-    private String keyStrorePassword;
+    private String keyStorePassword;
 
     @Value("${robert.crypto.server.keystore.config.file}")
-    private String keyStroreConfigFile;
+    private String keyStoreConfigFile;
 
     @Value("${robert.crypto.server.public.key}")
     private String serverPublicKey;
-
 
     @Value("${robert.crypto.server.private.key}")
     private String serverPrivateKey;

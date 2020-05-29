@@ -2,15 +2,7 @@ package fr.gouv.stopc.robert.crypto.grpc.server.storage.database.model;
 
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+import javax.persistence.*;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -23,7 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "IDENTITY")
+@Table(name = "IDENTITY", indexes = { @Index(name = "IDX_IDA", columnList = "idA") })
 @Data
 @Builder
 @NoArgsConstructor

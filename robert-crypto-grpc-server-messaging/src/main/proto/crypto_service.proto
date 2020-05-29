@@ -39,6 +39,7 @@ message CreateRegistrationRequest {
 message CreateRegistrationResponse {
 	bytes idA = 1;
 	bytes tuples = 2;
+	bytes serverPublicKey = 3;
 }
 
 message GetIdFromAuthRequest {

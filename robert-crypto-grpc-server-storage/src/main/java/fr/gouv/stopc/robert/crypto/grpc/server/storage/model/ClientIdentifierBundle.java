@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.security.PublicKey;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -14,5 +16,6 @@ public class ClientIdentifierBundle {
     private byte[] id;
     private byte[] keyForMac;
     private byte[] keyForTuples;
+    private PublicKey serverPublicKey;
 
 }

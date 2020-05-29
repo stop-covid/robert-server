@@ -64,25 +64,25 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
         try {
             // Derive K_A and K_A_Tuples from client public key for the new registration
-            Optional<ClientIdentifierBundle> clientIdentifierBundle = this.keyService.deriveKeysFromClientPublicKey(request.getClientPublicKey().toByteArray());
+            Optional<ClientIdentifierBundle> clientIdentifierBundleWithPublicKey = this.keyService.deriveKeysFromClientPublicKey(request.getClientPublicKey().toByteArray());
 
-            if (!clientIdentifierBundle.isPresent()) {
+            if (!clientIdentifierBundleWithPublicKey.isPresent()) {
                 responseObserver.onError(new RobertServerCryptoException("Unable to create keys for registration"));
                 return;
             }
 
-            clientIdentifierBundle = this.clientStorageService.createClientIdUsingKeys(
-                    clientIdentifierBundle.get().getKeyForMac(),
-                    clientIdentifierBundle.get().getKeyForTuples());
+            Optional<ClientIdentifierBundle>clientIdentifierBundleFromDb = this.clientStorageService.createClientIdUsingKeys(
+                    clientIdentifierBundleWithPublicKey.get().getKeyForMac(),
+                    clientIdentifierBundleWithPublicKey.get().getKeyForTuples());
 
-            if(!clientIdentifierBundle.isPresent()) {
+            if(!clientIdentifierBundleFromDb.isPresent()) {
                 responseObserver.onError(new RobertServerCryptoException("Unable to create a registration"));
                 return;
             }
 
             Optional<TuplesGenerationResult> encryptedTuples = generateEncryptedTuples(
-                    clientIdentifierBundle.get().getKeyForTuples(),
-                    clientIdentifierBundle.get().getId(),
+                    clientIdentifierBundleFromDb.get().getKeyForTuples(),
+                    clientIdentifierBundleFromDb.get().getId(),
                     request.getFromEpochId(),
                     request.getNumberOfDaysForEpochBundles(),
                     request.getServerCountryCode().byteAt(0));
@@ -94,8 +94,9 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
             CreateRegistrationResponse response = CreateRegistrationResponse
                     .newBuilder()
-                    .setIdA(ByteString.copyFrom(clientIdentifierBundle.get().getId()))
+                    .setIdA(ByteString.copyFrom(clientIdentifierBundleFromDb.get().getId()))
                     .setTuples(ByteString.copyFrom(encryptedTuples.get().getEncryptedTuples()))
+                    .setServerPublicKey(ByteString.copyFrom(clientIdentifierBundleWithPublicKey.get().getServerPublicKey().getEncoded()))
                     .build();
 
             responseObserver.onNext(response);

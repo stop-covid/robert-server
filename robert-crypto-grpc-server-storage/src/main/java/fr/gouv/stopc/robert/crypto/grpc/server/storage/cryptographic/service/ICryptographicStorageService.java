@@ -31,4 +31,11 @@ public interface ICryptographicStorageService {
 
     Key getKeyForEncryptingClientKeys();
     Key getKeyForEncryptingServerKeys();
+
+    /**
+     * Prefer usage of deriveKeysFromClientPublicKey in IECDHKeyService to retrieve the server public ECDH key
+     * when single derivation operation is performed
+     * @return
+     */
+    byte[] getServerPublicECDHKey();
 }
