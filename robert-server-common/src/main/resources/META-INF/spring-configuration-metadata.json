@@ -1,0 +1,86 @@
+{
+	"groups": [],
+	"properties": [
+		{
+			"name": "robert.server.country-code",
+			"description": "Robert server country code",
+			"type": "java.lang.Byte",
+			"defaultValue": "0x33"
+		},
+		{
+			"name": "robert.protocol.hello-message-timestamp-tolerance",
+			"description": "Timestamp tolerance for Hello Messages in seconds",
+			"type": "java.lang.Integer",
+			"defaultValue": "180"
+		},
+		{
+			"name": "robert.protocol.contagious-period",
+			"description": "Contagious period duration in days",
+			"type": "java.lang.Integer",
+			"defaultValue": "14"
+		},
+		{
+			"name": "robert.protocol.epoch-duration",
+			"description": "Epoch duration in seconds",
+			"type": "java.lang.Integer",
+			"defaultValue": "900"
+		},
+		{
+			"name": "robert.server.request-time-delta-tolerance",
+			"description": "Requests time delta tolerance in seconds",
+			"type": "java.lang.Integer",
+			"defaultValue": "60"
+		},
+		{
+			"name": "robert.server.status-request-minimum-epoch-gap",
+			"description": "Minimum number of epoch between two Status Requests",
+			"type": "java.lang.Integer",
+			"defaultValue": "2"
+		},
+		{
+			"name": "robert.protocol.epoch-bundle-duration",
+			"description": "Number of seconds in a day / duration of an epoch in seconds * number of days for which to generates bundle",
+			"type": "java.lang.Integer",
+			"defaultValue": "4"
+		},
+		{
+			"name": "robert.server.captcha-challenge-timestamp-tolerance",
+			"description": "Timestamp tolerance for the Captcha Challenge in seconds",
+			"type": "java.lang.Integer",
+			"defaultValue": "60"
+		},
+		{
+			"name": "robert.protocol.risk-threshold",
+			"description": "Risk Threshold value",
+			"type": "java.lang.Double",
+			"defaultValue": "15.0"
+		}
+	],
+	"hints": [
+		{
+			"name": "spring.jpa.hibernate.ddl-auto",
+			"values": [
+				{
+					"value": "none",
+					"description": "Disable DDL handling."
+				},
+				{
+					"value": "validate",
+					"description": "Validate the schema, make no changes to the database."
+				},
+				{
+					"value": "update",
+					"description": "Update the schema if necessary."
+				},
+				{
+					"value": "create",
+					"description": "Create the schema and destroy previous data."
+				},
+				{
+					"value": "create-drop",
+					"description": "Create and then destroy the schema at the end of the session."
+				}
+			]
+		}
+	]
+}

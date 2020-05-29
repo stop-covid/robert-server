@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
@@ -16,6 +17,33 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 @Service
 public class ServerConfigurationServiceImpl implements IServerConfigurationService {
 
+	@Value("${robert.server.country-code:0x33}")
+	private byte serverCountryCode;
+
+	@Value("${robert.protocol.hello-message-timestamp-tolerance:180}")
+	private Integer helloMessageTimeStampTolerance;
+
+	@Value("${robert.protocol.contagious-period:14}")
+	private Integer contagiousPeriod;
+
+	@Value("${robert.protocol.epoch-duration:900}")
+	private Integer epochDuration;
+
+	@Value("${robert.server.request-time-delta-tolerance:60}")
+	private Integer requestTimeDeltaTolerance;
+
+	@Value("${robert.server.status-request-minimum-epoch-gap:2}")
+	private Integer statusRequestMinimumEpochGap;
+	
+	@Value("${robert.server.captcha-challenge-timestamp-tolerance:60}")
+	private Integer captchaChallengeTimestampTolerance;
+	
+	@Value("${robert.protocol.risk-threshold:15.0}")
+	private Double riskThreshold;
+
+	@Value("${robert.protocol.epoch-bundle-duration:4}")
+	private Integer epochBundleDurationInDays;
+	
     private final byte[] serverKey;
 
     private final byte[] federationKey;
@@ -62,49 +90,49 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public byte getServerCountryCode() {
-        return (byte) 0x33;
+        return this.serverCountryCode;
     }
 
     @Override
     public int getHelloMessageTimeStampTolerance() {
-        return 180;
+        return this.helloMessageTimeStampTolerance;
     }
 
     @Override
     public int getContagiousPeriod() {
-        return 14;
+        return this.contagiousPeriod;
     }
 
     @Override
     public int getEpochDurationSecs() {
-        return TimeUtils.EPOCH_DURATION_SECS;
+        return this.epochDuration;
     }
 
     @Override
     public int getEpochBundleDurationInDays() {
         // number of seconds in a day / duration of an epoch in seconds * number of days for which to generates bundle
         // (to be configurable)
-        return 4;
+        return this.epochBundleDurationInDays;
     }
 
     @Override
     public int getRequestTimeDeltaTolerance() {
-        return 60;
+        return this.requestTimeDeltaTolerance;
     }
 
     @Override
     public int getStatusRequestMinimumEpochGap() {
-        return 2;
+        return this.statusRequestMinimumEpochGap;
     }
 
     @Override
     public int getCaptchaChallengeTimestampTolerance() {
-        return 60;
+        return this.captchaChallengeTimestampTolerance;
     }
 
     // Issue #TODO: store all values of this risk threshold to track any configuration change over time
     @Override
     public double getRiskThreshold() {
-        return 0.5;
+        return this.riskThreshold;
     }
 }
