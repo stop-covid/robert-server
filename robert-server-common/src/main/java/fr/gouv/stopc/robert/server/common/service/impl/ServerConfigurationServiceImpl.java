@@ -105,13 +105,11 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public int getEpochDurationSecs() {
-        return this.epochDuration;
+        return TimeUtils.EPOCH_DURATION_SECS;
     }
 
     @Override
     public int getEpochBundleDurationInDays() {
-        // number of seconds in a day / duration of an epoch in seconds * number of days for which to generates bundle
-        // (to be configurable)
         return this.epochBundleDurationInDays;
     }
 
