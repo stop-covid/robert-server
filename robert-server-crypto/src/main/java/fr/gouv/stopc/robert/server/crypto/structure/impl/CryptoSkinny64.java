@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robert.server.crypto.structure.impl;
 
+import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
@@ -94,4 +95,10 @@ public class CryptoSkinny64 extends CryptoCipherStructureAbstract {
 	public AlgorithmParameterSpec getAlgorithmParameterSpec() {
 		return null;
 	}
+
+    @Override
+    public Cipher getDecryptCypher() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }
