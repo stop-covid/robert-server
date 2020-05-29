@@ -57,30 +57,5 @@
 		}
 	],
 	"hints": [
-		{
-			"name": "spring.jpa.hibernate.ddl-auto",
-			"values": [
-				{
-					"value": "none",
-					"description": "Disable DDL handling."
-				},
-				{
-					"value": "validate",
-					"description": "Validate the schema, make no changes to the database."
-				},
-				{
-					"value": "update",
-					"description": "Update the schema if necessary."
-				},
-				{
-					"value": "create",
-					"description": "Create the schema and destroy previous data."
-				},
-				{
-					"value": "create-drop",
-					"description": "Create and then destroy the schema at the end of the session."
-				}
-			]
-		}
 	]
 }
