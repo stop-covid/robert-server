@@ -106,18 +106,18 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
     public Optional<ClientIdentifierBundle> createClientIdUsingKeys(byte[] keyForMac, byte[] keyForTuples) {
         
         int failureCounter = 0;
-        Optional<ClientIdentifierBundle> ClientIdentifierBundle = Optional.empty();
+        Optional<ClientIdentifierBundle> clientIdentifierBundle = Optional.empty();
         do {
-            ClientIdentifierBundle = createClientIdentifier(keyForMac, keyForTuples);
+            clientIdentifierBundle = createClientIdentifier(keyForMac, keyForTuples);
             failureCounter++;
-        } while (!ClientIdentifierBundle.isPresent() && failureCounter < MAX_ID_CREATION_ATTEMPTS);
+        } while (!clientIdentifierBundle.isPresent() && failureCounter < MAX_ID_CREATION_ATTEMPTS);
 
         if (MAX_ID_CREATION_ATTEMPTS == failureCounter) {
             log.error(
                     String.format("Could not generate an clientIdentfier within max attempts %s", MAX_ID_CREATION_ATTEMPTS));
         }
         
-        return ClientIdentifierBundle;
+        return clientIdentifierBundle;
         
     }
 

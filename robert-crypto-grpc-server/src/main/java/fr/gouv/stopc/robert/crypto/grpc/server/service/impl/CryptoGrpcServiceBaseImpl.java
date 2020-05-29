@@ -71,7 +71,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 return;
             }
 
-            Optional<ClientIdentifierBundle>clientIdentifierBundleFromDb = this.clientStorageService.createClientIdUsingKeys(
+            Optional<ClientIdentifierBundle> clientIdentifierBundleFromDb = this.clientStorageService.createClientIdUsingKeys(
                     clientIdentifierBundleWithPublicKey.get().getKeyForMac(),
                     clientIdentifierBundleWithPublicKey.get().getKeyForTuples());
 
