@@ -307,7 +307,7 @@ public class ContactProcessorTest {
 			assertTrue(expectedRegistration.isPresent());
 			assertFalse(CollectionUtils.isEmpty(expectedRegistration.get().getExposedEpochs()));
 			assertTrue(expectedRegistration.get().getExposedEpochs().size() == 2);
-			assertTrue(expectedRegistration.get().isAtRisk());
+			assertRiskThresholdExceededBasedOnConfiguration(expectedRegistration.get());
 			verify(this.cryptoServerClient, times(messages.size())).getInfoFromHelloMessage(any());
 
 		} catch (Exception e) {
