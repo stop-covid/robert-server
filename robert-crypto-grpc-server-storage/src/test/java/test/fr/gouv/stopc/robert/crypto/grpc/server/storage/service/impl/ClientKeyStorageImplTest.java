@@ -34,27 +34,14 @@ public class ClientKeyStorageImplTest {
     @Mock
     ICryptographicStorageService cryptographicStorageService;
 
-    @Mock
-    ClientIdentifierRepository clientIdentifierRepository;
-
     ClientKeyStorageServiceImpl clientKeyStorageService;
-
-    Optional<ClientIdentifier> clientIdentifier;
 
     MockClientIdentifierRepository mockClientIdentifierRepository;
 
     @BeforeEach
     void beforeEach() {
         this.mockClientIdentifierRepository = new MockClientIdentifierRepository();
-        ClientIdentifier clientIdentifier = ClientIdentifier.builder()
-                .idA("a")
-                .id(1L)
-                .keyForMac(Base64.encode(generateKey()))
-                .keyForTuples(Base64.encode(generateKey()))
-                .build();
 
-        // return value that was passed
-        //when(this.clientIdentiferRepository.saveAndFlush(any())).thenAnswer(i -> i.getArguments()[0]);
         this.clientKeyStorageService = new ClientKeyStorageServiceImpl(cryptographicStorageService, mockClientIdentifierRepository);
         this.mockClientIdentifierRepository.clearLastSavedClientIdentifier();
 
@@ -103,9 +90,8 @@ public class ClientKeyStorageImplTest {
         public void clearLastSavedClientIdentifier() { this.lastSavedClientIdentifier = null; }
 
         @Override
-        public <S extends ClientIdentifier> S saveAndFlush(S c) {
-            this.lastSavedClientIdentifier = c;
-            return c;
+        public <S extends ClientIdentifier> S saveAndFlush(S s) {
+           return save(s);
         }
 
         @Override
@@ -180,7 +166,8 @@ public class ClientKeyStorageImplTest {
 
         @Override
         public <S extends ClientIdentifier> S save(S s) {
-            return null;
+            this.lastSavedClientIdentifier = s;
+            return s;
         }
 
         @Override
