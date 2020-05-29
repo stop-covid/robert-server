@@ -5,8 +5,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.healthcheck.HealthCheckGrpcService;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.healthcheck.HealthGrpc;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
