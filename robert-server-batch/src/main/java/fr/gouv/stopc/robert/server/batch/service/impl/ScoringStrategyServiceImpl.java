@@ -1,16 +1,17 @@
 package fr.gouv.stopc.robert.server.batch.service.impl;
 
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.springframework.stereotype.Service;
+
 import fr.gouv.stopc.robert.server.batch.exception.RobertScoringException;
 import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import javax.inject.Inject;
-import java.util.List;
 
 
 /**

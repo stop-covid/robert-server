@@ -9,16 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import fr.gouv.stopc.robert.server.batch.service.impl.ScoringStrategyServiceImpl;
-import fr.gouv.stopc.robert.server.common.service.impl.ServerConfigurationServiceImpl;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -32,25 +26,24 @@ import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@ContextConfiguration(classes = { RobertServerBatchApplication.class })
+@TestPropertySource("classpath:application.properties")
 @ExtendWith(SpringExtension.class)
 public class RSSICalibratedScoringStrategyTest {
 
     private final static String FAIL_EXCEPTION = "Should not fail";
 
-    private ScoringStrategyServiceImpl scoringStrategyService;
+    @Autowired
+    private ScoringStrategyService scoringStrategyService;
 
-    private ServerConfigurationServiceImpl serverConfigurationService;
+    @Autowired
+    private IServerConfigurationService serverConfigurationService;
 
     private Long randomReferenceEpochStartTime;
 
-    private Double riskThreshold;
-
     @BeforeEach
     public void beforeEach() {
-        this.serverConfigurationService = new ServerConfigurationServiceImpl();
-        this.scoringStrategyService = new ScoringStrategyServiceImpl(this.serverConfigurationService);
         this.randomReferenceEpochStartTime = this.serverConfigurationService.getServiceTimeStart() + new Random().nextInt(20) * this.serverConfigurationService.getEpochDurationSecs();
-        this.riskThreshold = this.serverConfigurationService.getRiskThreshold();
     }
 
     @Test
@@ -194,7 +187,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("Short encounter (2 messages over 5 seconds): %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < this.serverConfigurationService.getRiskThreshold());
     }
 
     @Test
@@ -283,7 +276,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("One message, early: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < this.serverConfigurationService.getRiskThreshold());
     }
 
     @Test
@@ -306,7 +299,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("One message, late: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < this.serverConfigurationService.getRiskThreshold());
     }
 
     @Test
@@ -329,7 +322,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("Just after half way of epoch: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < this.serverConfigurationService.getRiskThreshold());
     }
 
     @Test
@@ -352,7 +345,7 @@ public class RSSICalibratedScoringStrategyTest {
         }
 
         log.info(String.format("Just before half way of epoch: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < this.serverConfigurationService.getRiskThreshold());
     }
 
     @Test
