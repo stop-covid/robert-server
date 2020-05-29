@@ -28,6 +28,7 @@ public interface CryptoService {
             CryptoCipherStructureAbstract cryptoForEBID,
             CryptoCipherStructureAbstract cryptoForECC,
             int epochId, byte[] idA, byte countryCode) throws RobertServerCryptoException;
+ 
 
     /**
      * @param cryptoForEBID instance of Crypto algo to encrypt EBID with, using KS (server key)

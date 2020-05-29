@@ -93,4 +93,10 @@ public class Crypto3DES extends CryptoCipherStructureAbstract {
     public SecretKey getSecretKey() {
         return this.key;
     }
+
+    @Override
+    public Cipher getDecryptCypher() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }
