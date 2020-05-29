@@ -33,6 +33,7 @@ import java.util.stream.Stream;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -323,12 +324,13 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             }
             //            log.info("Trying to fetch the key for this alias {}", alias);
             if (!this.keyStore.containsAlias(alias)) {
-                log.error("Key store does not contain key for alias {}", alias);
-                //                log.info("Creating new server key with alias {}", alias);
-//                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
-//                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
-//                this.serverKeyCache.put(alias, serverKey);
-//                return serverKey;
+                // TODO: this should be done by an external process to work with many cryptoBE and their HSM
+                //log.error("Key store does not contain key for alias {}", alias);
+                log.info("Creating new server key with alias {}", alias);
+                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
+                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
+                this.serverKeyCache.put(alias, serverKey);
+                return serverKey;
             } else {
                 //                log.info("Fetching existing server key with alias {}", alias);
                 Key key = this.keyStore.getKey(alias, null);
