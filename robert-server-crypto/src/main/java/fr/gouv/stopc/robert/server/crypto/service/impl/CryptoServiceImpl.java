@@ -12,7 +12,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.server.common.DigestSaltEnum;
@@ -23,7 +22,6 @@ import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
 import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
 import lombok.extern.slf4j.Slf4j;
-import java.util.Arrays;
 
 @Service
 @Slf4j

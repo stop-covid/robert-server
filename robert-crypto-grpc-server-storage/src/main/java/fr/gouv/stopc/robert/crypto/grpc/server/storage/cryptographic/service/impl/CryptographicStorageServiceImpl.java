@@ -25,6 +25,8 @@ import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -65,6 +67,10 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     private static final String ALIAS_SERVER_ECDH_PRIVATE_KEY = "serverECDHPrivateKey";
     private static final String ALIAS_SERVER_KEK = "serverKEK";
     private static final String ALIAS_CLIENT_KEK = "clientKEK";
+    private KeyPair keyPair;
+    private byte[] clientKEK;
+    private Map<String, byte[]> keyBytesMap;
+    private Map<String, Key> keyMap;
 
     private Provider provider;
 
@@ -93,6 +99,8 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             throw new RuntimeException("could not add security provider");
         } 
 
+        keyBytesMap = new HashMap<String, byte[]>();
+        keyMap = new HashMap<String, Key>();
     }
 
     @Override
@@ -201,10 +209,16 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     @Override
     public Optional<KeyPair> getServerKeyPair() {
 
+        if (this.keyPair != null) {
+//            log.info("The server KeyPair already known");
+            return Optional.of(this.keyPair);
+        }
         try {
             PrivateKey privateKey = (PrivateKey) this.keyStore.getKey(ALIAS_SERVER_ECDH_PRIVATE_KEY, null);
             PublicKey publicKey = this.keyStore.getCertificate(ALIAS_SERVER_ECDH_PRIVATE_KEY).getPublicKey();
-            return Optional.ofNullable(new KeyPair(publicKey, privateKey));
+            
+            this.keyPair  = new KeyPair(publicKey, privateKey);
+            return Optional.ofNullable(this.keyPair);
         } catch (KeyStoreException | UnrecoverableKeyException | NoSuchAlgorithmException e) {
             log.error("Unable to retrieve the server key pair due to {}", e.getMessage());
         }
@@ -268,8 +282,14 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     }
 
     private Key getKeyForEncryptingKeys(String alias, String errorMessage) {
+        
+        if(this.keyMap.containsKey(alias)) {
+            return this.keyMap.get(alias);
+        }
         try {
-            return this.keyStore.getKey(alias, null);
+            Key  key = this.keyStore.getKey(alias, null);
+            this.keyMap.put(alias, key);
+            return key;
         } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | IllegalStateException e) {
             log.error(errorMessage);
         }
@@ -297,17 +317,22 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             //            log.info("Try to getServerKey for the DateTimeFormatter {}", dateFormatter);
 
             String alias = dateFromEpoch.format(dateFormatter);
+            if(this.keyBytesMap.containsKey(alias)) {
+                return this.keyBytesMap.get(alias);
+            }
             //            log.info("Trying to fetch the key for this alias {}", alias);
             if (!this.keyStore.containsAlias(alias)) {
                 //                log.info("Creating new server key with alias {}", alias);
                 serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
                 this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
+                this.keyBytesMap.put(alias, serverKey);
                 return serverKey;
             } else {
                 //                log.info("Fetching existing server key with alias {}", alias);
                 Key key = this.keyStore.getKey(alias, null);
                 //                log.info("The existing server key with alias {} is {} and to byte {}", alias, key, key.getEncoded());
                 serverKey = key.getEncoded();
+                this.keyBytesMap.put(alias, serverKey);
             }
         } catch (Exception e) {
             log.error("An expected error occured when trying to store the alias {} due to {}", dateFromEpoch, e.getMessage());

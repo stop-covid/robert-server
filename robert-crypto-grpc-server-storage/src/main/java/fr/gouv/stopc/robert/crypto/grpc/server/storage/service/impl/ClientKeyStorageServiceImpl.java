@@ -1,26 +1,33 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.storage.service.impl;
 
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.crypto.*;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import javax.inject.Inject;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.storage.exception.RobertServerStorageException;
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import org.bson.internal.Base64;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICryptographicStorageService;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.model.ClientIdentifier;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.database.repository.ClientIdentifierRepository;
+import fr.gouv.stopc.robert.crypto.grpc.server.storage.exception.RobertServerStorageException;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.service.IClientKeyStorageService;
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -46,7 +53,7 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
                 .keyForMac(Base64.encode(generateRandomKey()))
                 .keyForTuples(Base64.encode(generateRandomKey()))
                 .build();
-        log.info("Trying to save the client identifier : {}", c);
+//        log.info("Trying to save the client identifier : {}", c);
         c = this.clientIdentifierRepository.saveAndFlush(c);
         this.clientIdentifierRepository.delete(c);
     }
@@ -97,55 +104,21 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
 
     @Override
     public Optional<ClientIdentifierBundle> createClientIdUsingKeys(byte[] keyForMac, byte[] keyForTuples) {
-        try {
-            log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            byte[] id = generateRandomIdentifier();
-            log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            if (Objects.isNull(keyForMac)) {
-                log.error("Provided key for mac is null");
-                return Optional.empty();
-            }
+        
+        int failureCounter = 0;
+        Optional<ClientIdentifierBundle> ClientIdentifierBundle = Optional.empty();
+        do {
+            ClientIdentifierBundle = createClientIdentifier(keyForMac, keyForTuples);
+            failureCounter++;
+        } while (!ClientIdentifierBundle.isPresent() && failureCounter < MAX_ID_CREATION_ATTEMPTS);
 
-            if (Objects.isNull(keyForTuples)) {
-                log.error("Provided key for tuples is null");
-                return Optional.empty();
-            }
-
-            byte[] encryptedKeyForMac = this.encryptKeyWithAES256GCMAndKek(
-                    keyForMac,
-                    this.cryptographicStorageService.getKeyForEncryptingClientKeys());
-
-            if (Objects.isNull(encryptedKeyForMac)) {
-                log.error("The encrypted key for mac is null");
-                return Optional.empty();
-            }
-
-            byte[] encryptedKeyForTuples = this.encryptKeyWithAES256GCMAndKek(
-                    keyForTuples,
-                    this.cryptographicStorageService.getKeyForEncryptingClientKeys());
-
-            if (Objects.isNull(encryptedKeyForTuples)) {
-                log.error("The encrypted key for tuples is null");
-                return Optional.empty();
-            }
-
-            ClientIdentifier c = ClientIdentifier.builder()
-                    .idA(Base64.encode(id))
-                    .keyForMac(Base64.encode(encryptedKeyForMac))
-                    .keyForTuples(Base64.encode(encryptedKeyForTuples))
-                    .build();
-            log.info("Trying to save the client identifier : {}", c);
-            this.clientIdentifierRepository.saveAndFlush(c);
-            log.info("Saving the client identifier");
-            return Optional.of(ClientIdentifierBundle.builder()
-                    .id(id)
-                    .keyForMac(keyForMac)
-                    .keyForTuples(keyForTuples)
-                    .build());
-        } catch (RobertServerStorageException e) {
-            log.error("Storage error when creating registration");
+        if (MAX_ID_CREATION_ATTEMPTS == failureCounter) {
+            log.error(
+                    String.format("Could not generate an clientIdentfier within max attempts %s", MAX_ID_CREATION_ATTEMPTS));
         }
-        return Optional.empty();
+        
+        return ClientIdentifierBundle;
+        
     }
 
 //    @Override
@@ -189,6 +162,57 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
 //                .build());
 //    }
 
+    private Optional<ClientIdentifierBundle> createClientIdentifier(byte[] keyForMac, byte[] keyForTuples) {
+        try {
+//          log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+          byte[] id = generateKey(5);
+//          log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+          if (Objects.isNull(keyForMac)) {
+              log.error("Provided key for mac is null");
+              return Optional.empty();
+          }
+
+          if (Objects.isNull(keyForTuples)) {
+              log.error("Provided key for tuples is null");
+              return Optional.empty();
+          }
+
+          byte[] encryptedKeyForMac = this.encryptKeyWithAES256GCMAndKek(
+                  keyForMac,
+                  this.cryptographicStorageService.getKeyForEncryptingClientKeys());
+
+          if (Objects.isNull(encryptedKeyForMac)) {
+              log.error("The encrypted key for mac is null");
+              return Optional.empty();
+          }
+
+          byte[] encryptedKeyForTuples = this.encryptKeyWithAES256GCMAndKek(
+                  keyForTuples,
+                  this.cryptographicStorageService.getKeyForEncryptingClientKeys());
+
+          if (Objects.isNull(encryptedKeyForTuples)) {
+              log.error("The encrypted key for tuples is null");
+              return Optional.empty();
+          }
+
+          ClientIdentifier c = ClientIdentifier.builder()
+                  .idA(Base64.encode(generateKey(5)))
+                  .keyForMac(Base64.encode(encryptedKeyForMac))
+                  .keyForTuples(Base64.encode(encryptedKeyForTuples))
+                  .build();
+//          log.info("Trying to save the client identifier : {}", c);
+          this.clientIdentifierRepository.save(c);
+//          log.info("Saving the client identifier");
+          return Optional.of(ClientIdentifierBundle.builder()
+                  .id(id)
+                  .keyForMac(keyForMac)
+                  .keyForTuples(keyForTuples)
+                  .build());
+      } catch (Exception e) {
+          log.error("Storage error when creating registration");
+      }
+      return Optional.empty();
+    }
     @Override
     public Optional<ClientIdentifierBundle> findKeyById(byte[] id) {
         return this.clientIdentifierRepository.findByIdA(Base64.encode(id))
