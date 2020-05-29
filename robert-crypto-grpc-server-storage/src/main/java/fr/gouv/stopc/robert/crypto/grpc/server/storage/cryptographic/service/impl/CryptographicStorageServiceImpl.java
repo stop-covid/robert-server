@@ -299,10 +299,11 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             String alias = dateFromEpoch.format(dateFormatter);
             //            log.info("Trying to fetch the key for this alias {}", alias);
             if (!this.keyStore.containsAlias(alias)) {
+                log.error("Key store does not contain key for alias {}", alias);
                 //                log.info("Creating new server key with alias {}", alias);
-                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
-                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
-                return serverKey;
+//                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
+//                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
+//                return serverKey;
             } else {
                 //                log.info("Fetching existing server key with alias {}", alias);
                 Key key = this.keyStore.getKey(alias, null);
@@ -336,4 +337,14 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
 
     }
 
+    @Override
+    public byte[] getServerPublicECDHKey() {
+        PublicKey publicKey = null;
+        try {
+            publicKey = this.keyStore.getCertificate(ALIAS_SERVER_ECDH_PRIVATE_KEY).getPublicKey();
+        } catch (KeyStoreException e) {
+            log.error("Could not retrieve Server Public ECDH Key");
+        }
+        return publicKey.getEncoded();
+    }
 }

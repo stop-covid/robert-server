@@ -20,7 +20,7 @@ public class CryptoServiceConfiguration {
             ICryptographicStorageService  cryptoStorageService) throws IOException, InterruptedException {
 
          // Init the cryptographic Storage
-        cryptoStorageService.init(propertyLoader.getKeyStrorePassword(), propertyLoader.getKeyStroreConfigFile());
+        cryptoStorageService.init(propertyLoader.getKeyStorePassword(), propertyLoader.getKeyStoreConfigFile());
 
         // Store if does not exist the public and key 
         cryptoStorageService.addECDHKeys(propertyLoader.getServerPublicKey(), propertyLoader.getServerPrivateKey());

@@ -13,6 +13,9 @@ import fr.gouv.stopc.robert.crypto.grpc.server.storage.cryptographic.service.ICr
 import fr.gouv.stopc.robert.crypto.grpc.server.storage.model.ClientIdentifierBundle;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import fr.gouv.stopc.robert.crypto.grpc.server.service.IECDHKeyService;
@@ -42,24 +45,35 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
         return sha256Mac.encrypt(HASH_TUPLES.getBytes());
     }
 
-    private byte[] generateSharedSecret(byte[] clientPublicKey) {
-        Optional<KeyPair> keyPair = this.cryptographicStorageService.getServerKeyPair();
+    @Builder
+    @AllArgsConstructor
+    @Getter
+    public static class SharedSecretAndServerPublicKey {
+        byte[] sharedSecret;
+        PublicKey serverPublicKey;
+    }
 
-        if (!keyPair.isPresent()) {
+    private SharedSecretAndServerPublicKey generateSharedSecret(byte[] clientPublicKey) {
+        Optional<KeyPair> serverKeyPair = this.cryptographicStorageService.getServerKeyPair();
+
+        if (!serverKeyPair.isPresent()) {
             log.error("Could not retrieve server key pair");
             return null;
         }
 
-        PrivateKey serverPrivateKey = keyPair.get().getPrivate();
+        PrivateKey serverPrivateKey = serverKeyPair.get().getPrivate();
 
         try {
-            KeyAgreement ka = KeyAgreement.getInstance("ECDH");
-            ka.init(serverPrivateKey);
+            KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+            keyAgreement.init(serverPrivateKey);
             X509EncodedKeySpec pkSpec = new X509EncodedKeySpec(clientPublicKey);
             KeyFactory kf = KeyFactory.getInstance("EC");
-            PublicKey publicKey = kf.generatePublic(pkSpec);
-            ka.doPhase(publicKey, true);
-            return ka.generateSecret();
+            PublicKey clientPublicKeyAsKey = kf.generatePublic(pkSpec);
+            keyAgreement.doPhase(clientPublicKeyAsKey, true);
+            return SharedSecretAndServerPublicKey.builder()
+                    .sharedSecret(keyAgreement.generateSecret())
+                    .serverPublicKey(serverKeyPair.get().getPublic())
+                    .build();
         } catch (NoSuchAlgorithmException | InvalidKeySpecException
                 | InvalidKeyException | IllegalStateException e) {
             log.error("Unable to generate ECDH Keys due to {}", e.getMessage());
@@ -68,23 +82,32 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
         return null;
     }
 
+    /**
+     * @param clientPublicKey
+     * @return keys generated from shared secret and the server public key
+     * @throws RobertServerCryptoException
+     */
     @Override
     public Optional<ClientIdentifierBundle> deriveKeysFromClientPublicKey(byte[] clientPublicKey)
             throws RobertServerCryptoException {
-        byte[] sharedSecret = generateSharedSecret(clientPublicKey);
+        SharedSecretAndServerPublicKey sharedSecretAndServerPublicKey = generateSharedSecret(clientPublicKey);
 
-        if (Objects.isNull(sharedSecret)) {
+        if (Objects.isNull(sharedSecretAndServerPublicKey)) {
             return Optional.empty();
         }
 
-        byte[] kaMac = deriveKeyForMacFromClientPublicKey(sharedSecret);
-        byte[] kaTuples = deriveKeyForTuplesFromClientPublicKey(sharedSecret);
+        byte[] kaMac = deriveKeyForMacFromClientPublicKey(sharedSecretAndServerPublicKey.getSharedSecret());
+        byte[] kaTuples = deriveKeyForTuplesFromClientPublicKey(sharedSecretAndServerPublicKey.getSharedSecret());
 
         if (Objects.isNull(kaMac) || Objects.isNull(kaTuples)) {
             return Optional.empty();
         }
 
-        return Optional.of(ClientIdentifierBundle.builder().keyForMac(kaMac).keyForTuples(kaTuples).build());
+        return Optional.of(ClientIdentifierBundle.builder()
+                .keyForMac(kaMac)
+                .keyForTuples(kaTuples)
+                .serverPublicKey(sharedSecretAndServerPublicKey.getServerPublicKey())
+                .build());
     }
 
 }

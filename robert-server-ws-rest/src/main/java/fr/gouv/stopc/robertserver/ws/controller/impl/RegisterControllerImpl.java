@@ -121,6 +121,7 @@ public class RegisterControllerImpl implements IRegisterController {
             }
 
             registerResponseDto.setTuples(Base64.encode(identity.getTuples().toByteArray()));
+            registerResponseDto.setServerPublicECDHKey(Base64.encode(identity.getServerPublicKey().toByteArray()));
             registerResponseDto.setTimeStart(this.serverConfigurationService.getServiceTimeStart());
             return ResponseEntity.status(HttpStatus.CREATED).body(registerResponseDto);
         }
