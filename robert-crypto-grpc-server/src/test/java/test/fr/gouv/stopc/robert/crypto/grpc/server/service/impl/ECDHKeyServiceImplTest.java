@@ -62,7 +62,6 @@ public class ECDHKeyServiceImplTest {
         assertTrue(clientIdentifierBundle.isPresent());
         assertNotNull(clientIdentifierBundle.get().getKeyForTuples());
         assertNotNull(clientIdentifierBundle.get().getKeyForMac());
-        assertNotNull(clientIdentifierBundle.get().getServerPublicKey());
     }
 
     /**

@@ -96,7 +96,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                     .newBuilder()
                     .setIdA(ByteString.copyFrom(clientIdentifierBundleFromDb.get().getId()))
                     .setTuples(ByteString.copyFrom(encryptedTuples.get().getEncryptedTuples()))
-                    .setServerPublicKey(ByteString.copyFrom(clientIdentifierBundleWithPublicKey.get().getServerPublicKey().getEncoded()))
                     .build();
 
             responseObserver.onNext(response);

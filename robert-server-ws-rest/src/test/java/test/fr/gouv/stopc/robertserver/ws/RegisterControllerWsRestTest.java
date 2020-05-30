@@ -248,7 +248,6 @@ public class RegisterControllerWsRestTest {
 		
 		Registration reg = Registration.builder()
 				.permanentIdentifier(id)
-				.exposedEpochs(new ArrayList<>())
 				.isNotified(false)
 				.atRisk(false)
 				.build();

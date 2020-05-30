@@ -74,7 +74,10 @@ public class RegistrationService implements IRegistrationService {
 	public Optional<Registration> createRegistration(byte[] id) {
 		return Optional.ofNullable(Registration.builder()
 					.permanentIdentifier(id)
+<<<<<<< robert-server-database/src/main/java/fr/gouv/stopc/robertserver/database/service/impl/RegistrationService.java
 					.exposedEpochs(new ArrayList<>())
+=======
+>>>>>>> robert-server-database/src/main/java/fr/gouv/stopc/robertserver/database/service/impl/RegistrationService.java
 					.build())
 				.map(this.registrationRepository::insert);
 	}

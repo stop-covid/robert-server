@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.database.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.*;
@@ -24,7 +25,13 @@ public class Registration {
 	private int lastStatusRequestEpoch;
 
 	private int latestRiskEpoch;
+<<<<<<< robert-server-database/src/main/java/fr/gouv/stopc/robertserver/database/model/Registration.java
 	
 	private List<EpochExposition> exposedEpochs;
+=======
+
+	@Builder.Default
+	private List<EpochExposition> exposedEpochs = new ArrayList<>();
+>>>>>>> robert-server-database/src/main/java/fr/gouv/stopc/robertserver/database/model/Registration.java
 	
 }

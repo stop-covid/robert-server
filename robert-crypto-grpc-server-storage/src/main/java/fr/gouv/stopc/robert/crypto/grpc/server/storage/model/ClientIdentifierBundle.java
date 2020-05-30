@@ -16,6 +16,5 @@ public class ClientIdentifierBundle {
     private byte[] id;
     private byte[] keyForMac;
     private byte[] keyForTuples;
-    private PublicKey serverPublicKey;
 
 }

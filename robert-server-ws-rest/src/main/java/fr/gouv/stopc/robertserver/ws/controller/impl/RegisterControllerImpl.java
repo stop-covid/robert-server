@@ -102,7 +102,6 @@ public class RegisterControllerImpl implements IRegisterController {
 
         Registration registration = Registration.builder()
                 .permanentIdentifier(identity.getIdA().toByteArray())
-                .exposedEpochs(new ArrayList<>())
                 .build();
 
         Optional<Registration> registered = this.registrationService.saveRegistration(registration);
@@ -121,7 +120,6 @@ public class RegisterControllerImpl implements IRegisterController {
             }
 
             registerResponseDto.setTuples(Base64.encode(identity.getTuples().toByteArray()));
-            registerResponseDto.setServerPublicECDHKey(Base64.encode(identity.getServerPublicKey().toByteArray()));
             registerResponseDto.setTimeStart(this.serverConfigurationService.getServiceTimeStart());
             return ResponseEntity.status(HttpStatus.CREATED).body(registerResponseDto);
         }

@@ -163,8 +163,6 @@ class CryptoServiceGrpcServerTest {
         byte[] tuples = createRegistrationResponse.getTuples().toByteArray();
         assertTrue(ByteUtils.isNotEmpty(tuples));
         assertTrue(checkTuples(createRegistrationResponse.getIdA().toByteArray(), tuples));
-        log.info("{}", createRegistrationResponse.getServerPublicKey().toByteArray());
-        assertNotNull(createRegistrationResponse.getServerPublicKey().toByteArray());
     }
 
     private boolean checkTuples(byte[] id, byte[] tuples) {
@@ -1283,23 +1281,6 @@ class CryptoServiceGrpcServerTest {
                 .id(id)
                 .keyForMac(kaMac)
                 .keyForTuples(kaTuples)
-                .serverPublicKey(new PublicKey() {
-                    @Override
-                    public String getAlgorithm() {
-                        return null;
-                    }
-
-                    @Override
-                    public String getFormat() {
-                        return null;
-                    }
-
-                    @Override
-                    public byte[] getEncoded() {
-                        // Public ECDH Key is 91-bytes long
-                        return generateKey(91);
-                    }
-                })
                 .build();
         this.idKeyHashMap.put(new ByteArray(id), clientBundle);
         return Optional.of(clientBundle);

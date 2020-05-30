@@ -212,7 +212,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     public Optional<KeyPair> getServerKeyPair() {
 
         if (this.keyPair != null) {
-//            log.info("The server KeyPair already known");
             return Optional.of(this.keyPair);
         }
         try {
@@ -314,15 +313,12 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     private byte[] getServerKey(LocalDate dateFromEpoch) {
         byte[] serverKey = null;
         try {
-            //            log.info("Try to getServerKey : {}", dateFromEpoch);
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-            //            log.info("Try to getServerKey for the DateTimeFormatter {}", dateFormatter);
 
             String alias = dateFromEpoch.format(dateFormatter);
-            if(this.serverKeyCache.containsKey(alias)) {
+            if (this.serverKeyCache.containsKey(alias)) {
                 return this.serverKeyCache.get(alias);
             }
-            //            log.info("Trying to fetch the key for this alias {}", alias);
             if (!this.keyStore.containsAlias(alias)) {
                 // TODO: this should be done by an external process to work with many cryptoBE and their HSM
                 //log.error("Key store does not contain key for alias {}", alias);
@@ -332,9 +328,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
                 this.serverKeyCache.put(alias, serverKey);
                 return serverKey;
             } else {
-                //                log.info("Fetching existing server key with alias {}", alias);
                 Key key = this.keyStore.getKey(alias, null);
-                //                log.info("The existing server key with alias {} is {} and to byte {}", alias, key, key.getEncoded());
                 serverKey = key.getEncoded();
                 this.serverKeyCache.put(alias, serverKey);
             }
@@ -348,7 +342,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     @Override
     public byte[][] getServerKeys(int epochId, long timeStart, int nbDays) {
 
-        //        log.info("Getting the server keys for the epoch {}, timestart {}, and nbEpochs {}", epochId, timeStart, nbDays );
         LocalDate dateFromEpoch = TimeUtils.getDateFromEpoch(epochId, timeStart);
         if(Objects.isNull(dateFromEpoch) ) {
             log.error("The date from epoch {} and the time start {} is null", epochId, timeStart);
@@ -358,21 +351,9 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         byte[][] keyMap = new byte[nbDays][SERVER_KEY_SIZE];
         for(int i = 0; i < nbDays; i++) {
             keyMap[i] = this.getServerKey(dateFromEpoch.plusDays(i));
-            //            log.info("Getting the ks for {} and is it empty {}", i,Objects.isNull(kekCache[i]) );
         }
-        //        log.info("keys for theses params  = {}", kekCache);
         return keyMap;
 
     }
 
-    @Override
-    public byte[] getServerPublicECDHKey() {
-        PublicKey publicKey = null;
-        try {
-            publicKey = this.keyStore.getCertificate(ALIAS_SERVER_ECDH_PRIVATE_KEY).getPublicKey();
-        } catch (KeyStoreException e) {
-            log.error("Could not retrieve Server Public ECDH Key");
-        }
-        return publicKey.getEncoded();
-    }
 }

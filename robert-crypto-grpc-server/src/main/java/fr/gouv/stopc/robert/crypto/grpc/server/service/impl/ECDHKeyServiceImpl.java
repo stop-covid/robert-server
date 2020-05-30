@@ -45,15 +45,8 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
         return sha256Mac.encrypt(HASH_TUPLES.getBytes());
     }
 
-    @Builder
-    @AllArgsConstructor
-    @Getter
-    public static class SharedSecretAndServerPublicKey {
-        byte[] sharedSecret;
-        PublicKey serverPublicKey;
-    }
 
-    private SharedSecretAndServerPublicKey generateSharedSecret(byte[] clientPublicKey) {
+    private byte[] generateSharedSecret(byte[] clientPublicKey) {
         Optional<KeyPair> serverKeyPair = this.cryptographicStorageService.getServerKeyPair();
 
         if (!serverKeyPair.isPresent()) {
@@ -70,10 +63,7 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
             KeyFactory kf = KeyFactory.getInstance("EC");
             PublicKey clientPublicKeyAsKey = kf.generatePublic(pkSpec);
             keyAgreement.doPhase(clientPublicKeyAsKey, true);
-            return SharedSecretAndServerPublicKey.builder()
-                    .sharedSecret(keyAgreement.generateSecret())
-                    .serverPublicKey(serverKeyPair.get().getPublic())
-                    .build();
+            return keyAgreement.generateSecret();
         } catch (NoSuchAlgorithmException | InvalidKeySpecException
                 | InvalidKeyException | IllegalStateException e) {
             log.error("Unable to generate ECDH Keys due to {}", e.getMessage());
@@ -90,14 +80,14 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
     @Override
     public Optional<ClientIdentifierBundle> deriveKeysFromClientPublicKey(byte[] clientPublicKey)
             throws RobertServerCryptoException {
-        SharedSecretAndServerPublicKey sharedSecretAndServerPublicKey = generateSharedSecret(clientPublicKey);
+        byte[] sharedSecret = this.generateSharedSecret(clientPublicKey);
 
-        if (Objects.isNull(sharedSecretAndServerPublicKey)) {
+        if (Objects.isNull(sharedSecret)) {
             return Optional.empty();
         }
 
-        byte[] kaMac = deriveKeyForMacFromClientPublicKey(sharedSecretAndServerPublicKey.getSharedSecret());
-        byte[] kaTuples = deriveKeyForTuplesFromClientPublicKey(sharedSecretAndServerPublicKey.getSharedSecret());
+        byte[] kaMac = deriveKeyForMacFromClientPublicKey(sharedSecret);
+        byte[] kaTuples = deriveKeyForTuplesFromClientPublicKey(sharedSecret);
 
         if (Objects.isNull(kaMac) || Objects.isNull(kaTuples)) {
             return Optional.empty();
@@ -106,7 +96,6 @@ public class ECDHKeyServiceImpl implements IECDHKeyService {
         return Optional.of(ClientIdentifierBundle.builder()
                 .keyForMac(kaMac)
                 .keyForTuples(kaTuples)
-                .serverPublicKey(sharedSecretAndServerPublicKey.getServerPublicKey())
                 .build());
     }
 
