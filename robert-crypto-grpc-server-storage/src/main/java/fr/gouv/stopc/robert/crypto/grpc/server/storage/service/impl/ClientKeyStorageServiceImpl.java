@@ -165,7 +165,8 @@ public class ClientKeyStorageServiceImpl implements IClientKeyStorageService {
     private Optional<ClientIdentifierBundle> createClientIdentifier(byte[] keyForMac, byte[] keyForTuples) {
         try {
 //          log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-          byte[] id = generateKey(5);
+//            byte[] id = generateKey(5);
+          byte[] id = generateRandomIdentifier();
 //          log.info("//////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
           if (Objects.isNull(keyForMac)) {
               log.error("Provided key for mac is null");
