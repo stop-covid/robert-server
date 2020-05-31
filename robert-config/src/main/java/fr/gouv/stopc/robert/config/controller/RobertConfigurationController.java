@@ -2,6 +2,8 @@ package fr.gouv.stopc.robert.config.controller;
 
 import java.util.List;
 
+import javax.annotation.security.RolesAllowed;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,6 +55,7 @@ public class RobertConfigurationController {
 	 * @param newConfiguration the configuration in json format
 	 * @return a message containing the result of the update operation
 	 */
+	@RolesAllowed("${robert.config.authorized-roles}")
 	@PutMapping(path = "/{profile}")
 	public ResponseEntity<String> updateConfiguration(@PathVariable("profile") String profile,
 			@RequestBody FunctionalConfiguration newConfiguration) {
@@ -73,6 +76,7 @@ public class RobertConfigurationController {
 	 * @return the history of modifications
 	 * @since 0.0.1-SNAPSHOT
 	 */
+	@RolesAllowed("functionnal-admin")
 	@GetMapping(path = "/history/{profile}")
 	public ResponseEntity<List<ConfigurationHistoryEntry>> getFunctionalConfigurationHistory(
 			@PathVariable(name = "profile") String profile) {
@@ -86,6 +90,7 @@ public class RobertConfigurationController {
 	 * @return the history of modifications
 	 * @since 0.0.1-SNAPSHOT
 	 */
+	@RolesAllowed("functionnal-admin")
 	@GetMapping(path = "/{profile}")
 	public ResponseEntity<FunctionalConfiguration> getFunctionalConfiguration(
 			@PathVariable(name = "profile") String profile) {

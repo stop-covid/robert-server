@@ -1,0 +1,47 @@
+# Web server configuration
+server:
+  port: ${ROBERT_CONFIG_PORT:8888}
+
+# Spring configuration :
+# - Backend with Git
+# - Spring cloud config endpoints have a prefix to allow specific Robert-config endpoints
+spring:
+  application:
+    name: robert-config
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${ROBERT_CONFIG_GIT_REPO_URI:file:///C:\Users\mrouanet\git\config-server-repo}
+        prefix: /spring-config
+
+# Robert config configuration
+robert:
+  config:
+    authorized-roles: ${ROBERT_SERVER_USER_ROLES:user_roles}
+
+# Eureka configuration :
+# - Robert Config don't need to register in Eureka. It just need the registry content. 
+# - fetchRegistry allows Robert-Config to work even if Eureka goes down
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    registerWithEureka: false
+    fetchRegistry: true
+  instance:
+    prefer-ip-address: true
+
+# Keycloak configuration
+# - can be disabled on developpers environnement
+# - ssl-required for external connexions
+# - based on bearer token in authentication header
+keycloak:
+  enabled: ${ROBERT_CONFIG_KEYCLOAK_ENABLED:false}
+  auth-server-url: ${KEYCLOAK_AUTH_URL:http://localhost:8180/auth}
+  realm: ${ROBERT_CONFIG_KEYCLOAK_REALM:keycloak_realm}
+  ssl-required: external
+  resource: ${ROBERT_CONFIG_KEYCLOAK_CLIENT:keycloak_client}
+  bearer-only: true
+  use-resource-role-mappings: true
+  credentials:    secret: ${ROBERT_CONFIG_KEYCLOAK_CLIENT_SECRET:client_secret}

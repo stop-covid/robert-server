@@ -19,7 +19,7 @@ import javax.annotation.PostConstruct;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -33,7 +33,6 @@ import fr.gouv.stopc.robert.config.dto.ComparisonResult;
 import fr.gouv.stopc.robert.config.dto.ConfigurationHistoryEntry;
 import fr.gouv.stopc.robert.config.dto.FunctionalConfiguration;
 import fr.gouv.stopc.robert.config.util.RobertConfigMapper;
-import fr.gouv.stopc.robert.config.util.RobertConfigurationServerConfig;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -44,8 +43,10 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Repository
-@Profile("git")
 public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
+
+	@Value("${spring.cloud.config.server.git.uri}")
+	private String gitUri;
 
 	/**
 	 * Git Wrapper to manipulate the configuration repo
@@ -54,10 +55,17 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	 */
 	private Git gitWrapper;
 
+	/**
+	 * Mapper to load configuration files as java objects
+	 * 
+	 * @since 0.0.1-SNAPSHOT
+	 */
 	private ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
 
 	/**
+	 * Mapper to load objects as properties
 	 * 
+	 * @since 0.0.1-SNAPSHOT
 	 */
 	private JavaPropsMapper propsMapper = new JavaPropsMapper();
 
@@ -69,22 +77,13 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	private final RobertConfigMapper mapper;
 
 	/**
-	 * The configuration of the config server
-	 * 
-	 * @since 0.0.1-SNAPSHOT
-	 */
-	private final RobertConfigurationServerConfig config;
-
-	/**
 	 * Spring Injection constructor
 	 * 
-	 * @param config
-	 * @param mapper
+	 * @param mapper the DTO mapper to use
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	public RobertConfigurationGitDaoImpl(RobertConfigurationServerConfig config, RobertConfigMapper mapper) {
+	public RobertConfigurationGitDaoImpl(RobertConfigMapper mapper) {
 		this.mapper = mapper;
-		this.config = config;
 	}
 
 	/**
@@ -95,7 +94,7 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	@PostConstruct
 	public void initGitConnection() {
 		try {
-			gitWrapper = Git.open(Paths.get(new URL(config.getGitUri()).toURI()).toFile());
+			gitWrapper = Git.open(Paths.get(new URL(gitUri).toURI()).toFile());
 			log.info("Connected to the Git repository");
 		} catch (IOException | URISyntaxException e) {
 			log.error("Failed to connect to the Git repository : ", e);
@@ -158,9 +157,9 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 
 			}
 
-			// Compute the commit message and commit the updated
+			// Compute the commit message and commit the updated configuration files
 			if (!CollectionUtils.isEmpty(comparisonResults)) {
-				String message = computeCommitMessage(profile, comparisonResults);
+				String message = computeCommitMessage(comparisonResults);
 				gitWrapper.add().addFilepattern(".").call();
 				gitWrapper.commit().setMessage(message).call();
 			}
@@ -172,40 +171,44 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	}
 
 	/**
+	 * Function used to update parameters stored as lists. If there are differences
+	 * -> new values list is the reference
 	 * 
-	 * @param confFileContent
-	 * @param newConfiguration
-	 * @return
+	 * @param currentConfiguration current configuration (from Git)
+	 * @param newConfiguration     new configuration (from GUI)
+	 * @return the comparison results for each parameters stored as lists
+	 * @since 0.0.1-SNAPSHOT
 	 */
-	private List<ComparisonResult> updateListParameters(FunctionalConfiguration confFileContent,
+	private List<ComparisonResult> updateListParameters(FunctionalConfiguration currentConfiguration,
 			FunctionalConfiguration newConfiguration) {
 
 		List<ComparisonResult> result = new ArrayList<>();
-		if (confFileContent.getProximityTracing() != null && confFileContent.getProximityTracing().getBle() != null) {
+		if (currentConfiguration.getProximityTracing() != null
+				&& currentConfiguration.getProximityTracing().getBle() != null) {
 			// Update signalCalibrationPerModel if present in the current conf
-			if (!confFileContent.getProximityTracing().getBle().getSignalCalibrationPerModel()
+			if (!currentConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel()
 					.equals(newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.signalCalibrationPerModel");
 				signalCalibrationCompare.setCurrentValue(
-						confFileContent.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
+						currentConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
 				signalCalibrationCompare.setNewValue(
 						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
 				result.add(signalCalibrationCompare);
-				confFileContent.getProximityTracing().getBle().setSignalCalibrationPerModel(
+				currentConfiguration.getProximityTracing().getBle().setSignalCalibrationPerModel(
 						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel());
 			}
 			// Update delta if present in the current conf
-			if (!confFileContent.getProximityTracing().getBle().getDelta()
+			if (!currentConfiguration.getProximityTracing().getBle().getDelta()
 					.equals(newConfiguration.getProximityTracing().getBle().getDelta())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.delta");
 				signalCalibrationCompare
-						.setCurrentValue(confFileContent.getProximityTracing().getBle().getDelta().toString());
+						.setCurrentValue(currentConfiguration.getProximityTracing().getBle().getDelta().toString());
 				signalCalibrationCompare
 						.setNewValue(newConfiguration.getProximityTracing().getBle().getDelta().toString());
 				result.add(signalCalibrationCompare);
-				confFileContent.getProximityTracing().getBle()
+				currentConfiguration.getProximityTracing().getBle()
 						.setDelta(newConfiguration.getProximityTracing().getBle().getDelta());
 			}
 		}
@@ -214,12 +217,42 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 	}
 
 	/**
-	 * 
-	 * @param profile
-	 * @param results
-	 * @return
+	 * {@inheritDoc}
 	 */
-	public String computeCommitMessage(String profile, Set<ComparisonResult> results) {
+	@Override
+	public FunctionalConfiguration getConfiguration(String profile) {
+		Properties agregatedProps = new Properties();
+
+		FunctionalConfiguration result;
+		try {
+			if (!gitWrapper.getRepository().getBranch().equals(profile)) {
+				// Checkout the branch corresponding to the profile if not already on this
+				// branch
+				gitWrapper.checkout().setName(profile).call();
+			}
+			for (File confFile : this.gitWrapper.getRepository().getWorkTree().listFiles(x -> x.isFile())) {
+				// Transform the current configuration into object then into a Properties
+				FunctionalConfiguration yamlConf = yamlMapper.readValue(confFile, FunctionalConfiguration.class);
+				Properties currentConf = propsMapper.writeValueAsProperties(yamlConf);
+				currentConf.entrySet().forEach(entry -> agregatedProps.put(entry.getKey(), entry.getValue()));
+			}
+			// When all files have been agregated, transform the properties into java object
+			result = propsMapper.readPropertiesAs(agregatedProps, FunctionalConfiguration.class);
+		} catch (GitAPIException | IOException e) {
+			log.error("Error retrieving the configuration");
+			result = null;
+		}
+		return result;
+	}
+
+	/**
+	 * Function computing the commit message to use
+	 * 
+	 * @param results list of configuration updates
+	 * @return the computed commit message
+	 * @since 0.0.1-SNAPSHOT
+	 */
+	private String computeCommitMessage(Set<ComparisonResult> results) {
 		StringBuffer sb = new StringBuffer("[Configuration update]");
 		for (ComparisonResult result : results) {
 			sb.append("\n-").append(result.getKey());
@@ -252,32 +285,6 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 				// Update the current configuration
 				currentConfiguration.put(newConfEntry.getKey(), newConfEntry.getValue());
 			}
-		}
-		return result;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public FunctionalConfiguration getConfiguration(String profile) {
-		Properties agregatedProps = new Properties();
-
-		FunctionalConfiguration result;
-		try {
-			if (!gitWrapper.getRepository().getBranch().equals(profile)) {
-				gitWrapper.checkout().setName(profile).call();
-			}
-			for (File confFile : this.gitWrapper.getRepository().getWorkTree().listFiles(x -> x.isFile())) {
-				// Transform the current configuration object into a Map<String, String>
-				FunctionalConfiguration yamlConf = yamlMapper.readValue(confFile, FunctionalConfiguration.class);
-				Properties currentConf = propsMapper.writeValueAsProperties(yamlConf);
-				currentConf.entrySet().forEach(entry -> agregatedProps.put(entry.getKey(), entry.getValue()));
-			}
-			result = propsMapper.readPropertiesAs(agregatedProps, FunctionalConfiguration.class);
-		} catch (GitAPIException | IOException e) {
-			log.error("Error retrieving the configuration");
-			result = null;
 		}
 		return result;
 	}

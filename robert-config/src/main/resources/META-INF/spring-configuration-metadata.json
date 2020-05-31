@@ -1,0 +1,9 @@
+{
+	"properties": [
+		{
+			"name": "robert.config.authorized-roles",
+			"type": "java.lang.List",
+			"description": "Roles allowed to query the configuration server. List of strings separated by comma"
+		}
+	]
+}

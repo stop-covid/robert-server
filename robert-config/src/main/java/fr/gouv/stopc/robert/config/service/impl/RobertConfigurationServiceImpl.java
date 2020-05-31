@@ -65,25 +65,30 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 	 */
 	@Override
 	public String updateConfiguration(String profile, FunctionalConfiguration configuration) {
-		// Refresh the configuration associated to the profile
+		// Refresh the configuration associated to the profile and return the list of
+		// applications to notify
 		List<String> updateResult = dao.updateConfiguration(profile, configuration);
 
 		if (updateResult == null) {
+			// Application list is null -> update failed
 			return IConfigurationUpdateResults.CONFIGURATION_UPDATE_FAILED;
 		}
 
 		if (updateResult.isEmpty()) {
+			// Application list is empty -> update ok but parameters had same value as
+			// before
 			return IConfigurationUpdateResults.NOTHING_TO_UPDATE;
 		}
 
 		for (String appName : updateResult) {
-			// Retrieve all instances of the application
+			// Retrieve all instances of the application with name appName
 			Application eurekaApp = discoveryClient.getApplication(appName);
-			// For each instance call the /actuator/refresh endpoint to reload the
-			// configuration
 			if (eurekaApp == null || CollectionUtils.isEmpty(eurekaApp.getInstances())) {
+				// Application is not registered on Eureka or no instance is available
 				return IConfigurationUpdateResults.CONFIGURATION_UPDATED_NO_INSTANCE_TO_REFRESH;
 			} else {
+				// For each instance call the /actuator/refresh endpoint to reload the
+				// configuration
 				for (InstanceInfo instanceApp : eurekaApp.getInstances()) {
 					// Retrieve the hostname and port
 					String hostName = instanceApp.getHostName();
@@ -97,15 +102,21 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 				}
 			}
 		}
-		// Refresh configuration
+		// Configuration is updated and applications instances are refreshed
 		return IConfigurationUpdateResults.CONFIGURATION_UPDATED;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public List<ConfigurationHistoryEntry> getHistory(String profile) {
 		return dao.getHistory(profile);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public FunctionalConfiguration getConfiguration(String profile) {
 		return dao.getConfiguration(profile);
