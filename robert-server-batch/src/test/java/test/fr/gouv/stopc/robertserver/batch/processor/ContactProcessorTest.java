@@ -19,10 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import com.google.protobuf.ByteString;
-import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetInfoFromHelloMessageResponse;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,15 +32,21 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.util.CollectionUtils;
 
+import com.google.protobuf.ByteString;
+
 import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcClient;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.GetInfoFromHelloMessageResponse;
 import fr.gouv.stopc.robert.server.batch.RobertServerBatchApplication;
 import fr.gouv.stopc.robert.server.batch.processor.ContactProcessor;
 import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
+import fr.gouv.stopc.robert.server.batch.utils.PropertyLoader;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESOFB;
 import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.EpochExposition;
 import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
@@ -84,6 +86,9 @@ public class ContactProcessorTest {
 	@Autowired
 	private ScoringStrategyService scoringStrategyService;
 
+	@Autowired
+    private PropertyLoader propertyLoader;
+
 	private byte[] serverKey;
 	private byte[] federationKey;
 	private byte countryCode;
@@ -103,7 +108,9 @@ public class ContactProcessorTest {
 				registrationService,
 				contactService,
 				cryptoServerClient,
-				scoringStrategyService);
+				scoringStrategyService,
+				propertyLoader
+				);
 
 		this.epochDuration = this.serverConfigurationService.getEpochDurationSecs();
 		this.serviceTimeStart = this.serverConfigurationService.getServiceTimeStart();
