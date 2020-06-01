@@ -37,7 +37,7 @@ public class RobertKpiGenerationServiceImpl implements IRobertKpiGenerationServi
 	 * 
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@Value("${robertServer.api-url}")
+	@Value("${robert.rs.api-url}")
 	private String robertServerApiUrl;
 
 	/**
@@ -45,7 +45,7 @@ public class RobertKpiGenerationServiceImpl implements IRobertKpiGenerationServi
 	 * 
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@Value("${submissionCodeServer.api-url}")
+	@Value("${robert.scs.api-url}")
 	private String submissionCodeServerApiUrl;
 
 	/**

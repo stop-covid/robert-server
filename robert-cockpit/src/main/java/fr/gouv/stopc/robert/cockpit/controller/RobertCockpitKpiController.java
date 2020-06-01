@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
@@ -67,6 +68,7 @@ public class RobertCockpitKpiController {
 	 * @since 0.0.1-SNAPSHOT
 	 */
 	@GetMapping("/kpi")
+	@RolesAllowed("${robert.cockpit.authorized-roles}")
 	public void getKpi(@RequestParam(name = "fromDate", required = false) LocalDateTime fromDate,
 			@RequestParam(name = "fromDate", required = false) LocalDateTime toDate,
 			@RequestParam("format") String format, HttpServletResponse response) throws UnknownKpiFormatException {
@@ -88,6 +90,7 @@ public class RobertCockpitKpiController {
 			} else if ("json".equals(StringUtils.lowerCase(format))) {
 				response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 				response.setCharacterEncoding("UTF-8");
+				// Map the object into json & write it into the response
 				ObjectMapper mapper = new ObjectMapper();
 				mapper.writeValue(response.getWriter(), kpis);
 			} else {

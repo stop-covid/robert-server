@@ -22,7 +22,7 @@ public interface RobertServerClient {
 	 * @return the list of dated Kpi produced by Robert Server
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@RequestLine("GET /kpi?{parameters}")
+	@RequestLine("GET ${robert.rs.kpi-endpoint}?{parameters}")
 	public List<RobertServerKpi> getKpi(@QueryMap Map<String, Object> parameters);
 
 }

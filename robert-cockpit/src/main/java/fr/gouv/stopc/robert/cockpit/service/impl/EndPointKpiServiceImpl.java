@@ -37,7 +37,7 @@ public class EndPointKpiServiceImpl implements IEndPointKpiService {
 	 * 
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@Value("${supervision.elasticsearch-api-url}")
+	@Value("${robert.supervision.elasticsearch-api-url}")
 	private String supervisionEsUrl;
 
 	/**

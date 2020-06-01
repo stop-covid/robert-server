@@ -3,11 +3,30 @@ server:
 
 spring:  application:    name: robert-cockpit
 
-supervision:
-  elasticsearch-api-url: http://${SUPERVISION_ES_HOST:localhost}:${SUPERVISION_ES_PORT:9200}
-
-submissionCodeServer:
-       api-url: http://${SUBMISSION_CODE_SERVER_HOST:localhost}:${SUBMISSION_CODE_SERVER_PORT:8087}${SUBMISSION_CODE_SERVER_KPI_URI:/api/v1}
+# Robert config configuration
+robert:
+  cockpit:
+    authorized-roles: ${ROBERT_SERVER_USER_ROLES:user_roles}
+  supervision:
+     elasticsearch-api-url: http://${ROBERT_SUPERVISION_ES_HOST:localhost}:${ROBERT_SUPERVISION_ES_PORT:9200}
+  scs:
+     api-url: http://${SUBMISSION_CODE_SERVER_HOST:localhost}:${SUBMISSION_CODE_SERVER_PORT:8087}${SUBMISSION_CODE_SERVER_KPI_URI:/api/v1}
+     kpi-endpoint: /kpi
+  rs:
+     api-url: http://${ROBERT_SERVER_HOST:localhost}:${ROBERT_SERVER_PORT:8087}${ROBERT_SERVER_KPI_URI:/api/v1}
+     kpi-endpoint: /kpi
        
-robertServer:
-       api-url: http://${ROBERT_SERVER_HOST:localhost}:${ROBERT_SERVER_PORT:8087}${ROBERT_SERVER_KPI_URI:/api/v1}
+# Keycloak configuration
+# - can be disabled on developpers environnement
+# - ssl-required for external connexions
+# - based on bearer token in authentication header
+keycloak:
+  enabled: ${ROBERT_COCKPIT_KEYCLOAK_ENABLED:false}
+  auth-server-url: ${KEYCLOAK_AUTH_URL:http://localhost:8180/auth}
+  realm: ${ROBERT_COCKPIT_KEYCLOAK_REALM:keycloak_realm}
+  ssl-required: external
+  resource: ${ROBERT_COCKPIT_KEYCLOAK_CLIENT:keycloak_client}
+  bearer-only: true
+  use-resource-role-mappings: true
+  credentials:    
+    secret: ${ROBERT_COCKPIT_KEYCLOAK_CLIENT_SECRET:client_secret}

@@ -22,7 +22,7 @@ public interface SubmissionCodeServerClient {
 	 * @return the list of dated Kpi produced by Submission Code Server
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@RequestLine("GET /kpi?{parameters}")
+	@RequestLine("GET ${robert.scs.kpi-endpoint}?{parameters}")
 	public List<SubmissionCodeServerKpi> getKpi(@QueryMap Map<String, Object> parameter);
 
 }
