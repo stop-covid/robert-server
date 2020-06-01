@@ -1,5 +1,6 @@
 package fr.gouv.stopc.robertserver.ws.service.impl;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,7 +53,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 		return Optional.ofNullable(registerVo).map(RegisterVo::getCaptcha).map(captcha -> {
 
-			HttpEntity<RegisterVo> request = new HttpEntity(null, initHttpHeaders());
+			HttpEntity request = new HttpEntity(initHttpHeaders());
 			Date sendingDate = new Date();
 
 			ResponseEntity<CaptchaDto> response = null;
@@ -112,13 +113,15 @@ public class CaptchaServiceImpl implements CaptchaService {
 											* 1000L;
 	}
 
-	private String constructUri(String captcha) {
+	private URI constructUri(String captcha) {
 
 
-		return UriComponentsBuilder.fromHttpUrl(this.propertyLoader.getCaptchaVerificationUrl())
-								   .queryParam("secret", this.propertyLoader.getCaptchaSecret())
-								   .queryParam("response", captcha)
-								   .toString();
+	    return UriComponentsBuilder.fromHttpUrl(this.propertyLoader.getCaptchaVerificationUrl())
+                .queryParam("secret", this.propertyLoader.getCaptchaSecret())
+                .queryParam("response", captcha)
+                .build()
+                .encode()
+                .toUri();
 	}
 
 }
