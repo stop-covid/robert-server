@@ -1,12 +1,11 @@
 package fr.gouv.stopc.robert.server.crypto.callable;
 
+import java.util.concurrent.Callable;
+
+import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
 import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
 import fr.gouv.stopc.robert.server.crypto.service.CryptoService;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
-import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
-
-import java.util.concurrent.Callable;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
 
 /**
  * Callable to create encrypted key using #CryptoService
@@ -31,36 +30,51 @@ public class TupleCallable implements Callable<EphemeralTuple> {
     private final int epoch;
 
     /**
-     * Declared list of Crypto3DES instances threadSafe
+     * Declared list of Crypto instances to process EBID threadSafe
      */
-    private final CryptoStructureConcurrentArray<Crypto3DES> cryptoStructure3DESList;
+//    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForEBIDList;
 
     /**
-     * Declared list of CryptoAES instances threadSafe
+     * Declared list of Crypto instances to process ECC threadSafe
      */
-    private final CryptoStructureConcurrentArray<CryptoAES> cryptoStructureAESList;
+//    private final CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForECCList;
 
     /**
      * Country code (ex. : FR -> 0x33)
      */
     private byte countryCode;
 
+    private CryptoCipherStructureAbstract cryptoStructureForEBID;
+
+    private CryptoCipherStructureAbstract cryptoStructureForECC;
+
     /**
      * Share instance of {@link #cryptoService} for multi thread for memory performance.
      * keysToEncrypt is corresponding to the key that would be encrypted by {@link #cryptoService}
      */
+//    public TupleCallable(CryptoService cryptoService,
+//            CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForEBIDList,
+//            CryptoStructureConcurrentArray<CryptoCipherStructureAbstract> cryptoStructureForECCList,
+//            byte[] idA, int epochId, byte countryCode) {
+//        this.cryptoService = cryptoService;
+//        this.idA = idA;
+//        this.epoch = epochId;
+//        this.countryCode = countryCode;
+//        this.cryptoStructureForEBIDList = cryptoStructureForEBIDList;
+//        this.cryptoStructureForECCList = cryptoStructureForECCList;
+//    }
+
     public TupleCallable(CryptoService cryptoService,
-                         CryptoStructureConcurrentArray<Crypto3DES> cryptoStructure3DESList,
-                         CryptoStructureConcurrentArray<CryptoAES> cryptoStructureAESList,
-                         byte[] idA, int epochId, byte countryCode) {
+            CryptoCipherStructureAbstract cryptoStructureForEBID,
+            CryptoCipherStructureAbstract cryptoStructureForECC,
+            byte[] idA, int epochId, byte countryCode) {
         this.cryptoService = cryptoService;
         this.idA = idA;
         this.epoch = epochId;
         this.countryCode = countryCode;
-        this.cryptoStructure3DESList = cryptoStructure3DESList;
-        this.cryptoStructureAESList = cryptoStructureAESList;
+        this.cryptoStructureForEBID = cryptoStructureForEBID;
+        this.cryptoStructureForECC = cryptoStructureForECC;
     }
-
     /**
      * Generate ephemeralTuple.
      * This callable is using a thread safe array service of CryptoStructureList.
@@ -71,16 +85,16 @@ public class TupleCallable implements Callable<EphemeralTuple> {
     @Override
     public EphemeralTuple call() throws RobertServerCryptoException {
 
-        final String threadName = Thread.currentThread().getName();
+//        final String threadName = Thread.currentThread().getName();
 
-        final Crypto3DES c3DESs = this.cryptoStructure3DESList.getCryptoStructure(threadName);
-        final CryptoAES cAESsc = this.cryptoStructureAESList.getCryptoStructure(threadName);
+//        final CryptoCipherStructureAbstract cryptoStructureForEBID = this.cryptoStructureForEBIDList.getCryptoStructure(threadName);
+//        final CryptoCipherStructureAbstract cryptoStructureForECC = this.cryptoStructureForECCList.getCryptoStructure(threadName);
 
         return this.cryptoService.generateEphemeralTuple(
-                c3DESs,
-                cAESsc,
+                cryptoStructureForEBID,
+                cryptoStructureForECC,
                 this.epoch, this.idA, this.countryCode
-        );
+                );
     }
 
 }

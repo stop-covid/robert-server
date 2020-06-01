@@ -26,16 +26,29 @@ public class PropertyLoader {
 
 	/**
 	 * 
-	 * @return the secret to be sent to the captcha server along with challenge response
+	 * @return the secret to be sent to the captcha server along with challenge
+	 *         response
 	 */
 	@Value("${captcha.secret}")
 	private String captchaSecret;
 
 	/**
 	 * 
-	 * @return the hostname of the site to check against the response from the captcha server
+	 * @return the hostname of the site to check against the response from the
+	 *         captcha server
 	 */
 	@Value("${captcha.hostname}")
 	private String captchaHostname;
 
+	@Value("${submission.code.server.host}")
+	private String serverCodeHost;
+
+	@Value("${submission.code.server.port}")
+	private String serverCodePort;
+
+	@Value("${submission.code.server.verify.path}")
+	private String serverCodeVerificationPath;
+
+	@Value("${robert.esr.limit}")
+	private Integer esrLimit;
 }

@@ -1,4 +1,0 @@
-robert:
-  crypto:
-    server:
-      port: ${ROBERT_CRYPTO_SERVER_PORT:9090}

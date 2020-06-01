@@ -59,6 +59,12 @@
 
 		<dependency>
 			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>robert-crypto-grpc-server-storage</artifactId>
+			<version>${project.parent.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
 			<artifactId>robert-server-crypto</artifactId>
 			<version>${project.parent.version}</version>
 		</dependency>
@@ -83,6 +89,10 @@
 				<exclusion>
 					<groupId>org.junit.vintage</groupId>
 					<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>junit</groupId>
+					<artifactId>junit</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -131,6 +141,16 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -160,38 +180,27 @@
 					</execution>
 				</executions>
 			</plugin>
-<!-- 			<plugin> -->
-<!-- 				<groupId>org.apache.maven.plugins</groupId> -->
-<!-- 				<artifactId>maven-enforcer-plugin</artifactId> -->
-<!-- 				<version>1.4.1</version> -->
-<!-- 				<executions> -->
-<!-- 					<execution> -->
-<!-- 						<id>enforce</id> -->
-<!-- 						<goals> -->
-<!-- 							<goal>enforce</goal> -->
-<!-- 						</goals> -->
-<!-- 						<configuration> -->
-<!-- 							<rules> -->
-<!-- 								<requireUpperBoundDeps /> -->
-<!-- 							</rules> -->
-<!-- 						</configuration> -->
-<!-- 					</execution> -->
-<!-- 				</executions> -->
-<!-- 			</plugin> -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireUpperBoundDeps />
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			<!-- javax.annotation-api verified as CCDL 1.1 -->
-			<!-- protobuf-java-util verified as BDS 3 -->
-			<!-- Disabled because fails when not executed from each module's directory -->
-			<!-- <plugin> <groupId>org.complykit</groupId> <artifactId>license-check-maven-plugin</artifactId> 
-				<version>0.5.3</version> <executions> <execution> <phase>verify</phase> <goals> 
-				<goal>os-check</goal> </goals> </execution> </executions> <configuration> 
-				<blacklist> <param>agpl-3.0</param> <param>gpl-2.0</param> <param>gpl-3.0</param> 
-				</blacklist> <excludes> <param>javax.annotation:javax.annotation-api:1.3.2</param> 
-				<param>com.google.protobuf:protobuf-java-util:${protobuf.version}</param> 
-				</excludes> </configuration> </plugin> -->
 		</plugins>
 	</build>
 </project>

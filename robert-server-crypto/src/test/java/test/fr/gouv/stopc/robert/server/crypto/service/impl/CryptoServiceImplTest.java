@@ -1,27 +1,33 @@
 package test.fr.gouv.stopc.robert.server.crypto.service.impl;
 
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
-import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
-import fr.gouv.stopc.robert.server.crypto.RobertServerCryptoApplication;
-import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
-import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
-import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.Crypto3DES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAES;
-import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoAES;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoAESECB;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
+import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
+import fr.gouv.stopc.robert.server.crypto.callable.TupleGenerator;
+import fr.gouv.stopc.robert.server.crypto.model.EphemeralTuple;
+import fr.gouv.stopc.robert.server.crypto.service.impl.CryptoServiceImpl;
+import fr.gouv.stopc.robert.server.crypto.structure.CryptoCipherStructureAbstract;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoHMACSHA256;
+import fr.gouv.stopc.robert.server.crypto.structure.impl.CryptoSkinny64;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -57,7 +63,7 @@ class CryptoServiceImplTest {
         final int currentEpoch = TimeUtils.getNumberOfEpochsBetween(0, TimeUtils.convertUnixMillistoNtpSeconds(new Date().getTime()));
         int numberOfEpochs = 4 * 24 * 4;
 
-        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, federationKey, 50);
+        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, new SecretKeySpec(federationKey, CryptoAES.AES_ENCRYPTION_KEY_SCHEME));
         final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(idA, currentEpoch, numberOfEpochs, (byte) 0x33);
         tupleGenerator.stop();
 
@@ -73,7 +79,7 @@ class CryptoServiceImplTest {
 
         System.out.println("ECC     size : " + referenceET.getEncryptedCountryCode().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEncryptedCountryCode()));
         System.out.println("EBID    size : " + referenceET.getEbid().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEbid()));
-        System.out.println("EPOCH : " + referenceET.getEpoch());
+        System.out.println("EPOCH : " + referenceET.getEpochId());
 
         final byte[] referenceTime = new byte[2];
         random.nextBytes(referenceTime);
@@ -116,7 +122,7 @@ class CryptoServiceImplTest {
         final int currentEpoch = TimeUtils.getNumberOfEpochsBetween(0, TimeUtils.convertUnixMillistoNtpSeconds(new Date().getTime()));
         int numberOfEpochs = 4 * 24 * 4;
 
-        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, federationKey, 50);
+        final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, new SecretKeySpec(federationKey, CryptoAES.AES_ENCRYPTION_KEY_SCHEME));
         final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(idA, currentEpoch, numberOfEpochs, (byte) 0x33);
         tupleGenerator.stop();
 
@@ -130,7 +136,7 @@ class CryptoServiceImplTest {
 
         System.out.println("ECC     size : " + referenceET.getEncryptedCountryCode().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEncryptedCountryCode()));
         System.out.println("EBID    size : " + referenceET.getEbid().length * 8 + "-bits" + " " + Arrays.toString(referenceET.getEbid()));
-        System.out.println("EPOCH : " + referenceET.getEpoch());
+        System.out.println("EPOCH : " + referenceET.getEpochId());
 
         final byte[] referenceTime = new byte[2];
         random.nextBytes(referenceTime);
@@ -140,8 +146,8 @@ class CryptoServiceImplTest {
 
         final byte[] hello = ByteUtils.addAll(referenceET.getEncryptedCountryCode(), ByteUtils.addAll(referenceET.getEbid(), ByteUtils.addAll(referenceTime, referenceMAC)));
 
-        final Crypto3DES crypto3DES = new Crypto3DES(serverKey);
-        final CryptoAES cryptoAES = new CryptoAES(federationKey);
+        final CryptoCipherStructureAbstract cryptoForEBID = new CryptoSkinny64(serverKey);
+        final CryptoCipherStructureAbstract cryptoForECC = new CryptoAESECB(federationKey);
 
         //Verify that the message has the right length :
         assert hello.length == (8 + 64 + 16 + 40) / 8;
@@ -159,12 +165,12 @@ class CryptoServiceImplTest {
 
         //2. decrypts eccA
         System.out.println("------ ECC DECRYPTED ------");
-        final byte[] countryCode = this.cryptoService.decryptCountryCode(cryptoAES, ebid, encryptedCountryCode[0]);
+        final byte[] countryCode = this.cryptoService.decryptCountryCode(cryptoForECC, ebid, encryptedCountryCode[0]);
         System.out.println("country code : " + countryCode[0]);
 
         // 3. computes ENC-1(KS; ebidA)
         System.out.println("------ EBID DECRYPTED ------");
-        final byte[] concatIdAAndEpoch = this.cryptoService.decryptEBID(crypto3DES, ebid);
+        final byte[] concatIdAAndEpoch = this.cryptoService.decryptEBID(cryptoForEBID, ebid);
         final byte[] epoch = Arrays.copyOfRange(concatIdAAndEpoch, 0, 3); // 24/8
         final byte[] decryptedIdA = Arrays.copyOfRange(concatIdAAndEpoch, 3, concatIdAAndEpoch.length); // 24/8
         System.out.println(Arrays.toString(epoch) + Arrays.toString(decryptedIdA));
@@ -180,7 +186,7 @@ class CryptoServiceImplTest {
 
         // 8. verifies if the MAC, macA
         System.out.println("------ MAC VALIDATION ------");
-        boolean isValid = this.cryptoService.macHelloValidation(new CryptoHMACSHA256(applicationKey), hello);
+        boolean isValid = cryptoService.macHelloValidation(new CryptoHMACSHA256(applicationKey), hello);
         System.out.println("mac valid : " + (isValid ? "yes" : "no"));
     }
 
@@ -191,4 +197,38 @@ class CryptoServiceImplTest {
 
         assertEquals(Integer.BYTES, valAsBytes.length);
     }
+    
+
+   @Test
+   public void testPerformAESEncryption() {
+
+       // Given
+       byte [] toEncrypt = ByteUtils.generateRandom(16);
+
+       // When
+       byte [] encrypted = cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, toEncrypt, ByteUtils.generateRandom(32));
+
+       // Then
+       assertNotNull(encrypted);
+       assertEquals(32, encrypted.length);
+       assertFalse(Arrays.equals(encrypted, toEncrypt));
+   }
+
+   @Test
+   public void testPerformAESDecryption() {
+
+       // Given
+       byte [] toEncrypt = ByteUtils.generateRandom(16);
+       byte [] key = ByteUtils.generateRandom(32);
+       byte [] encrypted = cryptoService.performAESOperation(Cipher.ENCRYPT_MODE, toEncrypt, key);
+       assertNotNull(encrypted);
+
+       // When
+       byte [] decrypted = cryptoService.performAESOperation(Cipher.DECRYPT_MODE, encrypted, key  );
+
+       // Then
+       assertNotNull(decrypted);
+       assertEquals(16, decrypted.length);
+       assertTrue(Arrays.equals(decrypted, toEncrypt));
+   }
 }

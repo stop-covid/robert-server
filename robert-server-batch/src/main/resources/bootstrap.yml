@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: robert-batch
+  data:
+    mongodb:
+      uri: ${ROBERT_SERVER_DB_URI:mongodb://${ROBERT_SERVER_DB_HOST:localhost}:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
+  cloud:
+    config:
+      label: ${ROBERT_CONFIG_LABEL:dev}
+      uri: ${ROBERT_CONFIG_URI:http://localhost:8888/spring-config}
+
+robert:
+  crypto:
+      hostname: ${ROBERT_CRYPTO_SERVER_HOST:localhost}
+      port: ${ROBERT_CRYPTO_SERVER_PORT:9090}
+  protocol:
+    risk-threshold: ${ROBERT_PROTOCOL_SCORING_THRESHOLD:15.0}
+    scoring-algo-rssi: ${ROBERT_PROTOCOL_SCORING_ALGO_RSSI:-40}
