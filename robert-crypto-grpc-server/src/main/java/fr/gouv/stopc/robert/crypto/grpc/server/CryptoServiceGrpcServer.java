@@ -7,7 +7,7 @@ import javax.inject.Inject;
 
 import org.springframework.stereotype.Service;
 
-import fr.gouv.stopc.robert.crypto.grpc.server.service.impl.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
+import fr.gouv.stopc.robert.crypto.grpc.server.messaging.CryptoGrpcServiceImplGrpc.CryptoGrpcServiceImplImplBase;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -20,11 +20,13 @@ public class CryptoServiceGrpcServer {
 	private int port;
 	private Server server;
 
-	private CryptoGrpcServiceImplImplBase service;
-	
+	private CryptoGrpcServiceImplImplBase cryptoService;
+	//private HealthGrpc.HealthImplBase healthService;
+
 	@Inject
-	public CryptoServiceGrpcServer(final CryptoGrpcServiceImplImplBase service) {
-		this.service = service;
+	public CryptoServiceGrpcServer(final CryptoGrpcServiceImplImplBase cryptoService) {
+		this.cryptoService = cryptoService;
+		//this.healthService = healthService;
 	}
 	
 	public CryptoServiceGrpcServer(int port) {
@@ -32,9 +34,11 @@ public class CryptoServiceGrpcServer {
 	}
 	
 	public CryptoServiceGrpcServer(ServerBuilder<?> serverBuilder, int port) {
-		this.server = serverBuilder.addService(service).build();
+		this.server = serverBuilder
+				.addService(cryptoService)
+				//.addService(healthService)
+				.build();
 		this.port = port;
-
 	}
 
 	public CryptoServiceGrpcServer(ServerBuilder<?> serverBuilder, int port, BindableService cryptoService) {
@@ -47,7 +51,11 @@ public class CryptoServiceGrpcServer {
 
 	public void initPort(int port) {
 		this.port = port;
-		this.server = ServerBuilder.forPort(port).addService(service).build();
+		this.server = ServerBuilder
+				.forPort(port)
+				.addService(cryptoService)
+				//.addService(healthService)
+				.build();
 	}
 	public void start() throws IOException {
 		server.start();
