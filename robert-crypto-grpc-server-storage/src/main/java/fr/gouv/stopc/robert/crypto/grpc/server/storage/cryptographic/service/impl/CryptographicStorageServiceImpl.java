@@ -47,7 +47,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
     private static final String ECDH_ALGORITHM = "EC";
 
     //private static final String ALIAS_SERVER_ECDH_PUBLIC_KEY = "server-ecdh-key";
-    private static final String ALIAS_SERVER_ECDH_PRIVATE_KEY = "register-key"; // ECDH
+    private static final String ALIAS_SERVER_ECDH_PRIVATE_KEY = "serverECDHPrivateKey"; // ECDH
     //private static final String ALIAS_SERVER_KEK = "server-key-encryption-key;
     private static final String ALIAS_CLIENT_KEK = "key-encryption-key"; // KEK
     private static final String ALIAS_FEDERATION_KEY = "federation-key"; // K_G
