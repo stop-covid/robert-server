@@ -17,7 +17,7 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 @Service
 public class ServerConfigurationServiceImpl implements IServerConfigurationService {
 
-	@Value("${robert.server.country-code:0x33}")
+	@Value("${robert.server.country-code}")
 	private byte serverCountryCode;
 
 	@Value("${robert.protocol.hello-message-timestamp-tolerance:180}")
@@ -26,16 +26,13 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 	@Value("${robert.protocol.contagious-period:14}")
 	private Integer contagiousPeriod;
 
-	@Value("${robert.protocol.epoch-duration:900}")
-	private Integer epochDuration;
-
 	@Value("${robert.server.request-time-delta-tolerance:60}")
 	private Integer requestTimeDeltaTolerance;
 
-	@Value("${robert.server.status-request-minimum-epoch-gap:2}")
+	@Value("${robert.server.status-request-minimum-epoch-gap:48}")
 	private Integer statusRequestMinimumEpochGap;
 	
-	@Value("${robert.server.captcha-challenge-timestamp-tolerance:60}")
+	@Value("${robert.server.captcha-challenge-timestamp-tolerance:15}")
 	private Integer captchaChallengeTimestampTolerance;
 	
 	@Value("${robert.protocol.risk-threshold:15.0}")
@@ -83,6 +80,7 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public long getServiceTimeStart() {
+    	// Passer en UTC
         final LocalDateTime ldt = LocalDateTime.of(2020, 4, 14, 00, 00);
         final ZonedDateTime zdt = ldt.atZone(ZoneId.of("Europe/Paris"));
         return TimeUtils.convertUnixMillistoNtpSeconds(zdt.toInstant().toEpochMilli());

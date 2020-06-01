@@ -20,12 +20,6 @@
 			"defaultValue": "14"
 		},
 		{
-			"name": "robert.protocol.epoch-duration",
-			"description": "Epoch duration in seconds",
-			"type": "java.lang.Integer",
-			"defaultValue": "900"
-		},
-		{
 			"name": "robert.server.request-time-delta-tolerance",
 			"description": "Requests time delta tolerance in seconds",
 			"type": "java.lang.Integer",
