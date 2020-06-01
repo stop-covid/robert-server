@@ -12,6 +12,7 @@ import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -173,9 +174,17 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         }
         try {
             PrivateKey privateKey = (PrivateKey) this.keyStore.getKey(ALIAS_SERVER_ECDH_PRIVATE_KEY, null);
-            PublicKey publicKey = this.keyStore.getCertificate(ALIAS_SERVER_ECDH_PRIVATE_KEY).getPublicKey();
-            
-            this.keyPair  = new KeyPair(publicKey, privateKey);
+            Certificate cert = this.keyStore.getCertificate(ALIAS_SERVER_ECDH_PRIVATE_KEY);
+
+            PublicKey publicKey = null;
+            if (!Objects.isNull(cert)) {
+
+                publicKey = cert.getPublicKey();
+            } else {
+                log.error("Could not retrieve cert from keystore");
+            }
+
+            this.keyPair = new KeyPair(publicKey, privateKey);
             return Optional.ofNullable(this.keyPair);
         } catch (KeyStoreException | UnrecoverableKeyException | NoSuchAlgorithmException e) {
             log.error("Unable to retrieve the server key pair due to {}", e.getMessage());
