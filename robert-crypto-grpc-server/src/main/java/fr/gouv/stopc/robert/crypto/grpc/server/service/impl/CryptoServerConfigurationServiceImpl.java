@@ -19,8 +19,8 @@ public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfig
 
     @Override
     public long getServiceTimeStart() {
-        final LocalDateTime ldt = LocalDateTime.of(2020, 4, 14, 00, 00);
-        final ZonedDateTime zdt = ldt.atZone(ZoneId.of("Europe/Paris"));
+        final LocalDateTime ldt = LocalDateTime.of(2020, 6, 1, 00, 00);
+        final ZonedDateTime zdt = ldt.atZone(ZoneId.of("UTC"));
         return TimeUtils.convertUnixMillistoNtpSeconds(zdt.toInstant().toEpochMilli());
     }
 }
