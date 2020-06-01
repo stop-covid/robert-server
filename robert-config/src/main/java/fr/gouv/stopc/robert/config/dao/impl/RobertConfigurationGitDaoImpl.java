@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
@@ -147,6 +148,7 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 				Properties currentConf = propsMapper.writeValueAsProperties(confFileContent);
 				results.addAll(compareAndUpdateConfigurations(currentConf, newConf));
 				if (!CollectionUtils.isEmpty(results)) {
+					filterEmptyProperties(currentConf);
 					confFileContent = propsMapper.readPropertiesAs(currentConf, FunctionalConfiguration.class);
 					// The configuration need to be updated, add the application name to the list
 					result.add(confFile.getName().substring(0, confFile.getName().lastIndexOf("-")));
@@ -183,7 +185,8 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 			FunctionalConfiguration newConfiguration) {
 
 		List<ComparisonResult> result = new ArrayList<>();
-		if (currentConfiguration.getProximityTracing() != null
+		// Configuration can be null if conf file is empty
+		if (currentConfiguration != null && currentConfiguration.getProximityTracing() != null
 				&& currentConfiguration.getProximityTracing().getBle() != null) {
 			// Update signalCalibrationPerModel if present in the current conf
 			if (!currentConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel()
@@ -216,6 +219,13 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 		return result;
 	}
 
+	private void filterEmptyProperties(Properties confToFilter) {
+		Set<Entry<Object, Object>> filtered = confToFilter.entrySet().stream()
+				.filter(x -> !StringUtils.isEmpty(x.getValue())).collect(Collectors.toSet());
+		confToFilter.entrySet().clear();
+		filtered.forEach(x -> confToFilter.put(x.getKey(), x.getValue()));
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -233,8 +243,11 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 			for (File confFile : this.gitWrapper.getRepository().getWorkTree().listFiles(x -> x.isFile())) {
 				// Transform the current configuration into object then into a Properties
 				FunctionalConfiguration yamlConf = yamlMapper.readValue(confFile, FunctionalConfiguration.class);
-				Properties currentConf = propsMapper.writeValueAsProperties(yamlConf);
-				currentConf.entrySet().forEach(entry -> agregatedProps.put(entry.getKey(), entry.getValue()));
+				if (yamlConf != null) {
+					Properties currentConf = propsMapper.writeValueAsProperties(yamlConf);
+					currentConf.entrySet().stream().filter(x -> !StringUtils.isEmpty(x.getValue()))
+							.forEach(entry -> agregatedProps.put(entry.getKey(), entry.getValue()));
+				}
 			}
 			// When all files have been agregated, transform the properties into java object
 			result = propsMapper.readPropertiesAs(agregatedProps, FunctionalConfiguration.class);
@@ -277,7 +290,8 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 		List<ComparisonResult> result = new ArrayList<>();
 		for (Entry<Object, Object> newConfEntry : newConfiguration.entrySet()) {
 			if (currentConfiguration.containsKey(newConfEntry.getKey())
-					&& !newConfEntry.getValue().equals(currentConfiguration.get(newConfEntry.getKey()))) {
+					&& !newConfEntry.getValue().equals(currentConfiguration.get(newConfEntry.getKey()))
+					&& !StringUtils.isEmpty(currentConfiguration.get(newConfEntry.getKey()))) {
 				// Values are different -> create a new result
 				result.add(new ComparisonResult((String) newConfEntry.getKey(),
 						String.valueOf(currentConfiguration.get(newConfEntry.getKey())),

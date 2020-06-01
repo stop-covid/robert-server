@@ -32,7 +32,7 @@ public class Ble {
 
 	private Integer maxSampleSize;
 
-	private Float riskThresholdlLow;
+	private Float riskThresholdLow;
 
 	private Float riskThresholdMax;
 
