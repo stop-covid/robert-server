@@ -86,7 +86,7 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             this.keyStore.load(null, keyStorePassword);
         } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException | ProviderException  e) {
 
-            log.error("An expected error occured when trying to initialize the keyStore {} due to {}", e.getClass(), e.getMessage());
+            log.error("An expected error occurred when trying to initialize the keyStore {} due to {}", e.getClass(), e.getMessage());
             throw new RuntimeException("could not add security provider");
         } 
 
@@ -100,68 +100,13 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         try {
             return this.keyStore.containsAlias(alias);
         } catch (KeyStoreException e) {
-            log.info("An expected error occured when trying to check containing the alias {} due to {}", alias, e.getMessage());
+            log.info("An expected error occurred when trying to check containing the alias {} due to {}", alias, e.getMessage());
         }
         return false;
     }
 
-//    // TODO: Remove this if keys are already available in HSM (Java code should not create it)
-//    public void addKekKeysIfNotExist(byte[] kekForKa, byte[] kekForKs) {
-//        try {
-//            if (!this.contains(ALIAS_CLIENT_KEK)) {
-//                this.keyStore.setKeyEntry(ALIAS_CLIENT_KEK, new SecretKeySpec(kekForKa, KEYSTORE_KEK_ALGONAME), null, null);
-//            }
-////            if (!this.contains(ALIAS_SERVER_KEK)) {
-////                this.keyStore.setKeyEntry(ALIAS_SERVER_KEK, new SecretKeySpec(kekForKs, KEYSTORE_KEK_ALGONAME), null, null);
-////            }
-//        } catch (KeyStoreException e) {
-//            log.error("An expected error occurred when trying to store the kek keys in HSM due to {}", e.getMessage());
-//        }
-//    }
-
-//    // TODO: Remove this if keys are already available in HSM (Java code should not create it)
-//    @Override
-//    public void addECDHKeys(String serverPublicKey, String serverPrivateKey) {
-//
-//        try {
-//            EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.decode(serverPrivateKey));
-//            KeyFactory generator = KeyFactory.getInstance(ECDH_ALGORITHM);
-//            PrivateKey privateKey = generator.generatePrivate(privateKeySpec);
-//
-//            EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.decode(serverPublicKey));
-//            this.publicKey = generator.generatePublic(publicKeySpec);
-//            KeyPair keyPair = new KeyPair(publicKey, privateKey);
-//
-//            generateCertificate(keyPair).ifPresent(x509Certificate -> {
-//
-//                X509Certificate[] chain = new X509Certificate[1];
-//                chain[0] = x509Certificate;
-//                try {
-//                    if (!this.contains(ALIAS_SERVER_ECDH_PRIVATE_KEY)) {
-//                        this.keyStore.setKeyEntry(ALIAS_SERVER_ECDH_PRIVATE_KEY, privateKey, null, chain);
-//                        log.warn("Storing ECDH server key");
-//                    }
-//                    else {
-//                        log.info("Server ECDH key already stored");
-//                    }
-//                } catch (KeyStoreException e) {
-//                    log.error("An expected error occured when trying to store the server public/private key due to {}", e.getMessage());
-//                    throw new RuntimeException("Unoble to store the private key of the server");
-//                }
-//            });
-//
-//        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-//            log.error("An expected error occured when trying to convert the server public/private key due to {}", e.getMessage());
-//        }
-//
-//    }
-
-//    private boolean isServerKeyAlias(String alias) {
-//        return Stream.of(ALIAS_SERVER_ECDH_PUBLIC_KEY, ALIAS_SERVER_ECDH_PRIVATE_KEY).anyMatch(item -> item.equals(alias));
-//    }
-
     /**
-     * Register key
+     * Register key (register-key in HSM)
      * @return
      */
     @Override
@@ -197,41 +142,11 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
         return null;
     }
 
-//    // TODO: remove
-//    private Optional<X509Certificate> generateCertificate(KeyPair keyPair) {
-//        try {
-//            // TODO: insert proper certificate info
-//            X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
-//                    new X500Name(SERVER_KEY_CERTIFICATE_CN), BigInteger.valueOf(System.currentTimeMillis()),
-//                    new Date(System.currentTimeMillis() - 50000), new Date(System.currentTimeMillis() + 50000),
-//                    new X500Name(SERVER_KEY_CERTIFICATE_CN), SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded()));
-//            JcaContentSignerBuilder builder = new JcaContentSignerBuilder("SHA512withECDSA");
-//            ContentSigner signer = builder.build(keyPair.getPrivate());
-//
-//            byte[] certBytes = certBuilder.build(signer).getEncoded();
-//            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-//            X509Certificate certificate = (X509Certificate)certificateFactory.generateCertificate(new ByteArrayInputStream(certBytes));
-//            return Optional.ofNullable(certificate);
-//
-//        } catch (Exception e) {
-//
-//            log.error("An error occured when trying to generate the certificate: {} due to {}", e.getClass(), e.getMessage());
-//        }
-//        return Optional.empty();
-//    }
-
     @Override
     public Provider getProvider() {
 
         return this.provider;
     }
-
-    // TODO: use for encrypting K_S keys that would be stored in Postgre (instead of HSM) or remove
-//    @Override
-//    public Key getKeyForEncryptingServerKeys() {
-//        return getKeyForEncryptingKeys(ALIAS_SERVER_KEK,
-//                "Unable to retrieve key for encrypting keys (KEK) for server from HSM");
-//    }
 
     @Override
     public Key getKeyForEncryptingClientKeys() {
@@ -278,20 +193,13 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
             }
             if (!this.keyStore.containsAlias(alias)) {
                 log.error("Key store does not contain key for alias {}", alias);
-
-//                // TODO: FIX-FOR-PROD this should be done by an external process to work with many cryptoBE and their HSM
-//                log.info("Creating new server key with alias {}", alias);
-//                serverKey = ByteUtils.generateRandom(SERVER_KEY_SIZE);
-//                this.keyStore.setKeyEntry(alias, new SecretKeySpec(serverKey, KEYSTORE_SKINNY64_ALGONAME), null, null);
-//                this.serverKeyCache.put(alias, serverKey);
-//                return serverKey;
             } else {
                 Key key = this.keyStore.getKey(alias, null);
                 serverKey = key.getEncoded();
                 this.serverKeyCache.put(alias, serverKey);
             }
         } catch (Exception e) {
-            log.error("An expected error occured when trying to store the alias {} due to {}", dateFromEpoch, e.getMessage());
+            log.error("An expected error occurred when trying to store the alias {} due to {}", dateFromEpoch, e.getMessage());
         }
 
         return serverKey;
@@ -322,7 +230,6 @@ public class CryptographicStorageServiceImpl implements ICryptographicStorageSer
                     log.info("Fetching and caching federation key from keystore");
                     Key federationKeyFromHSM = this.keyStore.getKey(ALIAS_FEDERATION_KEY, null);
 
-                    // TODO: review this and create issue tracking this behaviour
                     // Copy key content in new key to prevent any delegation to HSM and perform encryption in Java
                     this.federationKeyCached = new SecretKeySpec(federationKeyFromHSM.getEncoded(), KEYSTORE_KG_ALGONAME);
                 }

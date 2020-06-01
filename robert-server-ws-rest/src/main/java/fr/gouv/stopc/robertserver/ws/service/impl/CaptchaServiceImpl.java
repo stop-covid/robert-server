@@ -44,11 +44,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
 	@Override
 	public boolean verifyCaptcha(final RegisterVo registerVo) {
-
-		// TODO: Remove this forced returned value until reCATPCHA service is really
-		// used but method verifyCaptcha
-		// must be called for test
-		return true || Optional.ofNullable(registerVo).map(item -> {
+		return Optional.ofNullable(registerVo).map(item -> {
 
 			HttpEntity<RegisterVo> request = new HttpEntity(new CaptchaVo(item.getCaptcha(), this.propertyLoader.getCaptchaSecret()).toString(), initHttpHeaders());
 			Date sendingDate = new Date();

@@ -104,7 +104,6 @@ public class RegisterControllerWsRestTest {
 
 		this.currentEpoch = this.getCurrentEpoch();
 
-		// TODO: review this or find a better wail to validate epochid
 		// Sanity check: this test will fail one year after the start of the service
 		// (used to prevent epoch calculation errors)
 		assertTrue(this.currentEpoch <= 4*24*365);
@@ -124,33 +123,6 @@ public class RegisterControllerWsRestTest {
 		assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
 		verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
 	}
-// TODO: Uncomment theses tests when the captcha becomes mandatory
-//	@Test
-//	public void testNullCaptcha() {
-//		this.body = RegisterVo.builder().captcha(null).build();
-//
-//		this.requestEntity = new HttpEntity<>(this.body, this.headers);
-//
-//		ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
-//				this.requestEntity, String.class);
-//
-//		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-//		verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
-//	}
-//
-//	@Test
-//	public void testNoCaptcha() {
-//		this.body = RegisterVo.builder().build();
-//
-//		this.requestEntity = new HttpEntity<>(this.body, this.headers);
-//
-//		ResponseEntity<String> response = this.restTemplate.exchange(this.targetUrl.toString(), HttpMethod.POST,
-//				this.requestEntity, String.class);
-//
-//		assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-//		verify(this.registrationService, times(0)).saveRegistration(ArgumentMatchers.any());
-//	}
-
 
 	@Test
 	public void testCaptchaFailure() {

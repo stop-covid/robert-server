@@ -189,43 +189,4 @@ public class StatusControllerImpl implements IStatusController {
 		}
 	}
 
-	// TODO: delete commented code
-//	private void includeEphemeralTuplesForNextMEpochs(final StatusResponseDto statusResponse,
-//													  final Registration user,
-//													  final int numberOfDays) throws RobertServerException {
-//
-//		if (statusResponse != null && user != null) {
-//			List<ApplicationConfigurationModel> serverConf = this.applicationConfigService.findAll();
-//			if (CollectionUtils.isEmpty(serverConf)) {
-//				statusResponse.setConfig(Collections.emptyList());
-//			} else {
-//				statusResponse.setConfig(
-//						serverConf.stream().map(item -> ClientConfigDto.builder().name(item.getName()).value(item.getValue()).build()).collect(Collectors.toList()));
-//			}
-//
-//			final byte countryCode = this.serverConfigurationService.getServerCountryCode();
-//
-//			final long tpstStart = this.serverConfigurationService.getServiceTimeStart();
-//			final int numberOfEpochs = 4 * 24 * numberOfDays;
-//
-//			final int currentEpochId = TimeUtils.getCurrentEpochFrom(tpstStart);
-//
-//
-//			EncryptedEphemeralTupleBundleRequest request = EncryptedEphemeralTupleBundleRequest.newBuilder()
-//					.setCountryCode(ByteString.copyFrom(new byte[] { countryCode }))
-//					.setFromEpoch(currentEpochId)
-//					.setIdA(ByteString.copyFrom(user.getPermanentIdentifier()))
-//					.setNumberOfEpochsToGenerate(numberOfEpochs)
-//					.build();
-//
-//			Optional<EncryptedEphemeralTupleBundleResponse> encryptedTuples = this.cryptoServerClient.generateEncryptedEphemeralTuple(request);
-//
-//			if(!encryptedTuples.isPresent()) {
-//				log.error("Could not generate encrypted (EBID, ECC) tuples");
-//				throw new RobertServerException(MessageConstants.ERROR_OCCURED);
-//			}
-//
-//			statusResponse.setTuples(Base64.encode(encryptedTuples.get().getEncryptedTuples().toByteArray()));
-//		}
-//	}
 }

@@ -178,7 +178,6 @@ class CryptoServiceImplTest {
 
         //4. veries that idA
         // 7. retrieves from IDTable, Ka, the key associated with idA
-        // TODO: call DAO here to verify that user exists and get Ka in the same time here. "one call verify and get necessary information
 
         // 5. checks that
 

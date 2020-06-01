@@ -11,7 +11,7 @@ public enum MessageConstants {
 
 	INVALID_AUTHENTICATION("Invalid authentication"),
 
-	ERROR_OCCURED("An error occured"),
+	ERROR_OCCURED("An error occurred"),
 
 	INVALID_DATA("Invalid data");
 

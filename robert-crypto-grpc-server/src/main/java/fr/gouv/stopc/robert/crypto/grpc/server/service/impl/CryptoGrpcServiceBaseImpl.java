@@ -351,7 +351,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         int epochId;
     }
 
-    // TODO: handle edge cases at edges of an epoch (start and finish) by trying and previous K_S
     /**
      * Decrypt the provided ebid and check the authRequestEpoch it contains the provided one or the next/previous
      * @param ebid
@@ -369,7 +368,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
 
         if (Objects.isNull(serverKey)) {
             log.warn("Cannot retrieve server key for {}", authRequestEpoch);
-            //return manageEBIDDecryptRetry(ebid, authRequestEpoch, adjacentEpochMatchEnum);
             return null;
         }
 
@@ -502,8 +500,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             log.error("Request number of epochs is invalid for tuple generation");
             return Optional.empty();
         }
-
-        // TODO: limit generation to a max number of days ?
 
         // Generate tuples
         final byte[][] serverKeys = this.cryptographicStorageService.getServerKeys(
