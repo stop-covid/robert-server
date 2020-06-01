@@ -1,0 +1,13 @@
+server:
+  port: ${ROBERT_COCKPIT_PORT:8089}
+
+spring:  application:    name: robert-cockpit
+
+supervision:
+  elasticsearch-api-url: http://${SUPERVISION_ES_HOST:localhost}:${SUPERVISION_ES_PORT:9200}
+
+submissionCodeServer:
+       api-url: http://${SUBMISSION_CODE_SERVER_HOST:localhost}:${SUBMISSION_CODE_SERVER_PORT:8087}${SUBMISSION_CODE_SERVER_KPI_URI:/api/v1}
+       
+robertServer:
+       api-url: http://${ROBERT_SERVER_HOST:localhost}:${ROBERT_SERVER_PORT:8087}${ROBERT_SERVER_KPI_URI:/api/v1}
