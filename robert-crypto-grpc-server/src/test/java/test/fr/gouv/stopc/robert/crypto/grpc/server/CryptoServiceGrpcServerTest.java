@@ -29,6 +29,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.google.protobuf.ByteString;
@@ -60,10 +63,12 @@ import static org.mockito.Mockito.when;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
+@TestPropertySource("classpath:application.properties")
+@SpringBootTest(classes = { CryptoServerConfigurationServiceImpl.class })
 class CryptoServiceGrpcServerTest {
 
     private final static String UNEXPECTED_FAILURE_MESSAGE = "Should not fail";
-    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x33 };
+    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x21 };
     private final static int NUMBER_OF_DAYS_FOR_BUNDLES = 4;
 
     final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
@@ -73,8 +78,6 @@ class CryptoServiceGrpcServerTest {
     private CryptoServiceGrpcServer server;
 
     private CryptoGrpcServiceImplImplBase service;
-
-    private ICryptoServerConfigurationService serverConfigurationService;
 
     private CryptoService cryptoService;
 
@@ -90,10 +93,12 @@ class CryptoServiceGrpcServerTest {
 
     private Key federationKey;
 
+    @Autowired
+    private CryptoServerConfigurationServiceImpl serverConfigurationService;
+
+
     @BeforeEach
     void beforeEach() throws IOException {
-
-        serverConfigurationService = new CryptoServerConfigurationServiceImpl();
 
         cryptoService = new CryptoServiceImpl();
 
@@ -1067,8 +1072,11 @@ class CryptoServiceGrpcServerTest {
 
     @Test
     void testGetInfoFromHelloMessageSucceeds() {
-        byte[][] serverKeys = new byte[1][24];
+        byte[][] serverKeys = new byte[4][24];
         new SecureRandom().nextBytes(serverKeys[0]);
+        new SecureRandom().nextBytes(serverKeys[1]);
+        new SecureRandom().nextBytes(serverKeys[2]);
+        new SecureRandom().nextBytes(serverKeys[3]);
 
         Optional<ClientIdentifierBundle> clientIdentifierBundle = createId();
         HelloMessageBundle bundle = generateHelloMessage(

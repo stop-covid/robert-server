@@ -184,7 +184,8 @@ public class StatusControllerWsRestTest {
                 .permanentIdentifier(idA)
                 .atRisk(true)
                 .isNotified(false)
-                .lastStatusRequestEpoch(currentEpoch - 3).build();
+                .lastStatusRequestEpoch(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap())
+                .build();
 
         byte[] decryptedEbid = new byte[8];
         System.arraycopy(idA, 0, decryptedEbid, 3, 5);
@@ -523,7 +524,8 @@ public class StatusControllerWsRestTest {
                 .permanentIdentifier(idA)
                 .atRisk(true)
                 .isNotified(false)
-                .lastStatusRequestEpoch(currentEpoch - 3).build();
+                .lastStatusRequestEpoch(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap())
+                .build();
 
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
@@ -558,7 +560,8 @@ public class StatusControllerWsRestTest {
         assertTrue(response.getBody().isAtRisk());
         assertNotNull(response.getBody().getTuples());
         assertTrue(reg.isNotified());
-        assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
+        assertTrue(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap()
+                < reg.getLastStatusRequestEpoch());
         verify(this.registrationService, times(1)).findById(idA);
         verify(this.registrationService, times(1)).saveRegistration(reg);
     }
@@ -573,7 +576,8 @@ public class StatusControllerWsRestTest {
                 .permanentIdentifier(idA)
                 .atRisk(false)
                 .isNotified(false)
-                .lastStatusRequestEpoch(currentEpoch - 3).build();
+                .lastStatusRequestEpoch(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap())
+                .build();
 
         byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
@@ -608,7 +612,8 @@ public class StatusControllerWsRestTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(!response.getBody().isAtRisk());
         assertNotNull(response.getBody().getTuples());
-        assertTrue(currentEpoch - 3 < reg.getLastStatusRequestEpoch());
+        assertTrue(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap()
+                < reg.getLastStatusRequestEpoch());
         verify(this.registrationService, times(1)).findById(idA);
         verify(this.registrationService, times(1)).saveRegistration(reg);
     }
@@ -688,7 +693,7 @@ public class StatusControllerWsRestTest {
                 .permanentIdentifier(idA)
                 .atRisk(false)
                 .isNotified(true)
-                .lastStatusRequestEpoch(currentEpoch - 3)
+                .lastStatusRequestEpoch(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap())
                 .latestRiskEpoch(currentEpoch - 8)
                 .exposedEpochs(epochExpositions)
                 .build();
@@ -760,7 +765,7 @@ public class StatusControllerWsRestTest {
                 .permanentIdentifier(idA)
                 .atRisk(true)
                 .isNotified(true)
-                .lastStatusRequestEpoch(currentEpoch - 3)
+                .lastStatusRequestEpoch(currentEpoch - this.serverConfigurationService.getStatusRequestMinimumEpochGap())
                 .latestRiskEpoch(currentEpoch - 8)
                 .exposedEpochs(epochExpositions)
                 .build();
