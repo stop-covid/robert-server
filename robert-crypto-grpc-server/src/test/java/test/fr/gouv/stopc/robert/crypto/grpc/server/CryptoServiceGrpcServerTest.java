@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +66,7 @@ import static org.mockito.Mockito.when;
 class CryptoServiceGrpcServerTest {
 
     private final static String UNEXPECTED_FAILURE_MESSAGE = "Should not fail";
-    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x33 };
+    private final static byte[] SERVER_COUNTRY_CODE = new byte[] { (byte) 0x21 };
     private final static int NUMBER_OF_DAYS_FOR_BUNDLES = 4;
 
     final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
@@ -1030,12 +1033,17 @@ class CryptoServiceGrpcServerTest {
     }
 
     private HelloMessageBundle generateHelloMessage(byte[] id, byte[] serverKey, byte[] keyForMac, DigestSaltEnum digestSalt) {
+
+        final LocalDateTime ldt = LocalDateTime.of(2020, 4, 1, 00, 00);
+        final ZonedDateTime zdt = ldt.atZone(ZoneId.of("UTC"));
+        long otherTimeStart = TimeUtils.convertUnixMillistoNtpSeconds(zdt.toInstant().toEpochMilli());
+
         long time = getCurrentTimeNTPSeconds() - 500000;
-        int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
+        int epochId = TimeUtils.getNumberOfEpochsBetween(otherTimeStart, time);
         byte[] ebid = generateEbid(id, epochId, serverKey);
 
-        when(this.cryptographicStorageService.getServerKeys(epochId, this.serverConfigurationService.getServiceTimeStart(), 4)).thenReturn(new byte[][] { serverKey, serverKey, serverKey, serverKey });
-        when(this.cryptographicStorageService.getServerKey(epochId, this.serverConfigurationService.getServiceTimeStart())).thenReturn(serverKey);
+        when(this.cryptographicStorageService.getServerKeys(epochId, time, 4)).thenReturn(new byte[][] { serverKey, serverKey, serverKey, serverKey });
+        when(this.cryptographicStorageService.getServerKey(epochId, time)).thenReturn(serverKey);
         when(this.cryptographicStorageService.getFederationKey()).thenReturn(this.federationKey);
 
 

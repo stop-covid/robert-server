@@ -64,7 +64,7 @@ class CryptoServiceImplTest {
         int numberOfEpochs = 4 * 24 * 4;
 
         final TupleGenerator tupleGenerator = new TupleGenerator(serverKey, new SecretKeySpec(federationKey, CryptoAES.AES_ENCRYPTION_KEY_SCHEME));
-        final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(idA, currentEpoch, numberOfEpochs, (byte) 0x33);
+        final Collection<EphemeralTuple> ephemeralTuples = tupleGenerator.exec(idA, currentEpoch, numberOfEpochs, (byte) 0x21);
         tupleGenerator.stop();
 
 

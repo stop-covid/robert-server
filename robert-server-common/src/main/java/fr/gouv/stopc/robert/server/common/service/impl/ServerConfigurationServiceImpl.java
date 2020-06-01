@@ -25,7 +25,7 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
 
     @Override
     public byte getServerCountryCode() {
-        return (byte) 0x33;
+        return (byte) 0x21;
     }
 
     @Override
