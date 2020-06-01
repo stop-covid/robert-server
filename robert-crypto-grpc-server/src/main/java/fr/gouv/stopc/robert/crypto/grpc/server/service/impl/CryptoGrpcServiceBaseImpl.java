@@ -1,6 +1,8 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
 import java.security.Key;
+import java.sql.Timestamp;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -412,21 +414,30 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         }
     }
 
+    private AdjacentEpochMatchEnum atStartOrEndOfDay(long timeReceived) {
+        ZonedDateTime zonedDateTime = Instant
+                .ofEpochMilli(TimeUtils.convertNTPSecondsToUnixMillis(timeReceived))
+                .atZone(ZoneOffset.UTC);
+        int tolerance = this.serverConfigurationService.getHelloMessageTimeStampTolerance();
+
+        if (zonedDateTime.getHour() == 0
+                && (zonedDateTime.getMinute() * 60 + zonedDateTime.getSecond()) < tolerance) {
+            return AdjacentEpochMatchEnum.PREVIOUS;
+        } else if (zonedDateTime.getHour() == 23
+                && (60 * 60 - (zonedDateTime.getMinute() * 60 + zonedDateTime.getSecond())) < tolerance) {
+            return AdjacentEpochMatchEnum.NEXT;
+        }
+
+        return AdjacentEpochMatchEnum.NONE;
+    }
+
     private final static int EPOCH_DURATION = 900;
     private EbidContent decryptEBIDWithTimeReceived(byte[] ebid, long timeReceived) throws RobertServerCryptoException {
         int epoch = TimeUtils.getNumberOfEpochsBetween(
                 this.serverConfigurationService.getServiceTimeStart(),
                 timeReceived);
 
-        AdjacentEpochMatchEnum adjacentEpochMatch = AdjacentEpochMatchEnum.NONE;
-        // TODO: replace local EPOCH_DURATION with common epoch duration constant
-        if (timeReceived % EPOCH_DURATION < 5) {
-            adjacentEpochMatch = AdjacentEpochMatchEnum.PREVIOUS;
-        } else if (timeReceived % EPOCH_DURATION > EPOCH_DURATION - 5) {
-            adjacentEpochMatch = AdjacentEpochMatchEnum.NEXT;
-        }
-
-        return decryptEBIDAndCheckEpoch(ebid, epoch, adjacentEpochMatch);
+        return decryptEBIDAndCheckEpoch(ebid, epoch, atStartOrEndOfDay(timeReceived));
     }
 
     private enum AdjacentEpochMatchEnum {

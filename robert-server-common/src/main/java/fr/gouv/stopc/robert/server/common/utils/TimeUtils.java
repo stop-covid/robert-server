@@ -32,6 +32,10 @@ public final class TimeUtils {
     public static long convertUnixStoNtpSeconds(final long unixTimeInS) {
         return unixTimeInS + SECONDS_FROM_01_01_1900;
     }
+
+    public static long convertNTPSecondsToUnixMillis(final long ntpSeconds) {
+        return (ntpSeconds - SECONDS_FROM_01_01_1900) * 1000;
+    }
     
     /**
      * ref {@see <a href="https://stackoverflow.com/questions/29112071/how-to-convert-ntp-time-to-unix-epoch-time-in-c-language-linux/29138806#29138806">Stackoverflow NTP to unix time interval</a>}
