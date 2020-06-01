@@ -4,28 +4,24 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import fr.gouv.stopc.robert.server.batch.service.impl.ScoringStrategyServiceImpl;
-import fr.gouv.stopc.robert.server.common.service.impl.ServerConfigurationServiceImpl;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.annotation.DirtiesContext.ClassMode;
-import org.springframework.test.context.ContextConfiguration;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import fr.gouv.stopc.robert.server.batch.RobertServerBatchApplication;
 import fr.gouv.stopc.robert.server.batch.exception.RobertScoringException;
-import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
+import fr.gouv.stopc.robert.server.batch.service.impl.ScoringStrategyServiceImpl;
+import fr.gouv.stopc.robert.server.batch.utils.PropertyLoader;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
@@ -33,24 +29,37 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
+@TestPropertySource("classpath:application.properties")
 public class RSSICalibratedScoringStrategyTest {
 
     private final static String FAIL_EXCEPTION = "Should not fail";
 
+    @InjectMocks
     private ScoringStrategyServiceImpl scoringStrategyService;
 
-    private ServerConfigurationServiceImpl serverConfigurationService;
+    @Mock
+    private IServerConfigurationService serverConfigurationService;
+
+    @Mock
+    private PropertyLoader propertyLoader;
+
+    @Value("${robert.protocol.epoch-duration}")
+    private Integer epochDuration;
+
+    @Value("${robert.protocol.scoring-algo-rssi}")
+    private Integer rssiScoringAlgorithm;
 
     private Long randomReferenceEpochStartTime;
 
+    @Value("${robert.protocol.risk-threshold}")
     private Double riskThreshold;
 
     @BeforeEach
     public void beforeEach() {
-        this.serverConfigurationService = new ServerConfigurationServiceImpl();
-        this.scoringStrategyService = new ScoringStrategyServiceImpl(this.serverConfigurationService);
+        when(this.serverConfigurationService.getEpochDurationSecs()).thenReturn(this.epochDuration);
+        when(this.propertyLoader.getRssiScoringAlgorithm()).thenReturn(this.rssiScoringAlgorithm);
+
         this.randomReferenceEpochStartTime = this.serverConfigurationService.getServiceTimeStart() + new Random().nextInt(20) * this.serverConfigurationService.getEpochDurationSecs();
-        this.riskThreshold = this.serverConfigurationService.getRiskThreshold();
     }
 
     @Test
@@ -82,13 +91,13 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
 
         log.info(String.format("1-minute encounter (4 messages over 1 minute): %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < 1.0 && score > 0.75);
     }
 
     @Test
@@ -160,13 +169,13 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
 
         log.info(String.format("10-minute encounter (12 messages over 10 minutes): %f", score));
-        assertTrue(score > this.riskThreshold);
+        assertTrue(score > 9.0 && score < 10.0);
     }
 
     @Test
@@ -188,7 +197,7 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
@@ -226,13 +235,13 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
 
         log.info(String.format("Spotty encounter (4 messages over 10+ minutes): %f", score));
-        assertTrue(score > this.riskThreshold);
+        assertTrue(score > 6.0 && score < 7.0);
     }
 
     @Test
@@ -254,13 +263,13 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
 
         log.info(String.format("One early, one late: %f", score));
-        assertTrue(score < this.riskThreshold);
+        assertTrue(score < 4.0 && score > 3.9);
     }
 
     @Test
@@ -277,7 +286,7 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
@@ -300,7 +309,7 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
@@ -323,7 +332,7 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
@@ -346,7 +355,7 @@ public class RSSICalibratedScoringStrategyTest {
 
         Double score = null;
         try {
-            score = scoringStrategyService.execute(contact);
+            score = this.scoringStrategyService.execute(contact);
         } catch (RobertScoringException e) {
             fail(FAIL_EXCEPTION);
         }
@@ -363,8 +372,8 @@ public class RSSICalibratedScoringStrategyTest {
 
         RobertScoringException thrown = assertThrows(
                 RobertScoringException.class,
-                () -> scoringStrategyService.execute(contact),
-                "Expected doThing() to throw, but it didn't"
+                () -> this.scoringStrategyService.execute(contact),
+                "Expected scoring function to throw, but it didn't"
         );
 
         assertNotEquals(null, thrown);
