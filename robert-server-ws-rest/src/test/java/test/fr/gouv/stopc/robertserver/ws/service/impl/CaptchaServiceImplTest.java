@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.util.Date;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -97,7 +98,7 @@ public class CaptchaServiceImplTest {
                 .challengeTimestamp(new Date())
                 .hostname(this.captchaHostname)
                 .build();
-        when(this.restTemplate.postForEntity(any(String.class), any(),
+        when(this.restTemplate.postForEntity(any(URI.class), any(),
                 any())).thenReturn(ResponseEntity.ok(captchaDto));
 
         when(this.propertyLoader.getCaptchaVerificationUrl()).thenReturn(this.captchaVerificationUrl);
@@ -164,7 +165,7 @@ public class CaptchaServiceImplTest {
                 .challengeTimestamp(new Date())
                 .hostname(this.captchaHostname)
                 .build();
-        when(this.restTemplate.postForEntity(any(String.class), any(),
+        when(this.restTemplate.postForEntity(any(URI.class), any(),
                 any())).thenReturn(ResponseEntity.ok(captchaDto));
 
         when(this.propertyLoader.getCaptchaVerificationUrl()).thenReturn(this.captchaVerificationUrl);
