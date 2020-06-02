@@ -145,7 +145,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -242,7 +243,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -267,7 +269,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -292,7 +295,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -316,7 +320,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -342,7 +347,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		doReturn(Optional.of(reg)).when(this.registrationService).findById(ArgumentMatchers.any());
 
@@ -597,13 +603,16 @@ public class StatusControllerWsRestTest {
 		List<EpochExposition> epochExpositions = new ArrayList<>();
 
 		// Before latest notification
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 9)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 7)
 				.expositionScores(Arrays.asList(3.00, 4.30)).build());
 
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 4)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 2)
 				.expositionScores(Arrays.asList(0.076, 0.15)).build());
 
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 3)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
 				.expositionScores(Arrays.asList(0.052, 0.16)).build());
 
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(false).isNotified(true)
@@ -651,13 +660,16 @@ public class StatusControllerWsRestTest {
 		List<EpochExposition> epochExpositions = new ArrayList<>();
 
 		// Before latest notification
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 7)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 5)
 				.expositionScores(Arrays.asList(3.00, 4.30)).build());
 
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 4)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 2)
 				.expositionScores(Arrays.asList(0.076, 0.15)).build());
 
-		epochExpositions.add(EpochExposition.builder().epochId(currentEpoch - 3)
+		epochExpositions.add(EpochExposition.builder()
+				.epochId(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
 				.expositionScores(Arrays.asList(0.052, 0.16)).build());
 
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(true)
@@ -741,7 +753,8 @@ public class StatusControllerWsRestTest {
 		byte[] idA = this.generateKey(5);
 		byte[] kA = this.generateKA();
 		Registration reg = Registration.builder().permanentIdentifier(idA).atRisk(true).isNotified(false)
-				.lastStatusRequestEpoch(currentEpoch - 3).build();
+				.lastStatusRequestEpoch(currentEpoch - serverConfigurationService.getStatusRequestMinimumEpochGap() - 1)
+				.build();
 
 		byte[][] reqContent = createEBIDTimeMACFor(idA, kA, currentEpoch);
 
