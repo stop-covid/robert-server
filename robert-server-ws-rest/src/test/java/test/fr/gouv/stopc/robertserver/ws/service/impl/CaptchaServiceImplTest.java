@@ -39,13 +39,6 @@ public class CaptchaServiceImplTest {
     @Value("${captcha.hostname}")
     private String captchaHostname;
 
-    /**
-     *
-     * TODO: Remove this as far as it is no more needed for tests
-     */
-    @Value("${captcha.magicnumber}")
-    private String magicNumber;
-
     @InjectMocks
     private CaptchaServiceImpl captchaServiceImpl;
 
@@ -130,56 +123,56 @@ public class CaptchaServiceImplTest {
         assertFalse(isVerified);
     }
 
-    /**
-     *
-     * TODO: Remove this as far as it is no more needed for tests
-     */
-    @Test
-    public void testIsMagicNumber() {
-
-        when(this.propertyLoader.getMagicNumber()).thenReturn(this.magicNumber);
-
-        // Given
-        final RegisterVo registerVo = RegisterVo.builder()
-                .captcha(this.magicNumber).build();
-        // When
-        final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
-
-        // Then
-        assertTrue(isVerified);
-    }
-
-    /**
-     *
-     * TODO: Remove this as far as it is no more needed for tests
-     */
-    @Test
-    public void testIsMagicNumberButGotNoMagicNumberInPropertiesWhenCaptchaVerifyingSucceeds() {
-
-        // Given
-        final String fakeEmptyMagicNumberInProperties = "";
-        when(this.propertyLoader.getMagicNumber()).thenReturn(fakeEmptyMagicNumberInProperties);
-
-        CaptchaDto captchaDto = CaptchaDto.builder()
-                .success(true)
-                .challengeTimestamp(new Date())
-                .hostname(this.captchaHostname)
-                .build();
-        when(this.restTemplate.postForEntity(any(URI.class), any(),
-                any())).thenReturn(ResponseEntity.ok(captchaDto));
-
-        when(this.propertyLoader.getCaptchaVerificationUrl()).thenReturn(this.captchaVerificationUrl);
-        when(this.propertyLoader.getCaptchaSecret()).thenReturn(this.captchaSecret);
-        when(this.propertyLoader.getCaptchaHostname()).thenReturn(this.captchaHostname);
-        when(this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()).thenReturn(3600);
-
-        final RegisterVo registerVo = RegisterVo.builder()
-                .captcha(fakeEmptyMagicNumberInProperties).build();
-        // When
-        final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
-
-        // Then
-        assertTrue(isVerified);
-    }
+//    /**
+//     *
+//     * TODO: Remove this as far as it is no more needed for tests
+//     */
+//    @Test
+//    public void testIsMagicNumber() {
+//
+//        when(this.propertyLoader.getMagicNumber()).thenReturn(this.magicNumber);
+//
+//        // Given
+//        final RegisterVo registerVo = RegisterVo.builder()
+//                .captcha(this.magicNumber).build();
+//        // When
+//        final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
+//
+//        // Then
+//        assertTrue(isVerified);
+//    }
+//
+//    /**
+//     *
+//     * TODO: Remove this as far as it is no more needed for tests
+//     */
+//    @Test
+//    public void testIsMagicNumberButGotNoMagicNumberInPropertiesWhenCaptchaVerifyingSucceeds() {
+//
+//        // Given
+//        final String fakeEmptyMagicNumberInProperties = "";
+//        when(this.propertyLoader.getMagicNumber()).thenReturn(fakeEmptyMagicNumberInProperties);
+//
+//        CaptchaDto captchaDto = CaptchaDto.builder()
+//                .success(true)
+//                .challengeTimestamp(new Date())
+//                .hostname(this.captchaHostname)
+//                .build();
+//        when(this.restTemplate.postForEntity(any(URI.class), any(),
+//                any())).thenReturn(ResponseEntity.ok(captchaDto));
+//
+//        when(this.propertyLoader.getCaptchaVerificationUrl()).thenReturn(this.captchaVerificationUrl);
+//        when(this.propertyLoader.getCaptchaSecret()).thenReturn(this.captchaSecret);
+//        when(this.propertyLoader.getCaptchaHostname()).thenReturn(this.captchaHostname);
+//        when(this.serverConfigurationService.getCaptchaChallengeTimestampTolerance()).thenReturn(3600);
+//
+//        final RegisterVo registerVo = RegisterVo.builder()
+//                .captcha(fakeEmptyMagicNumberInProperties).build();
+//        // When
+//        final boolean isVerified = this.captchaServiceImpl.verifyCaptcha(registerVo);
+//
+//        // Then
+//        assertTrue(isVerified);
+//    }
 
 }
