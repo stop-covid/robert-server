@@ -69,9 +69,9 @@ public class RobertCockpitKpiController {
 	 */
 	@GetMapping("/kpi")
 	@RolesAllowed("${robert.cockpit.authorized-roles}")
-	public void getKpi(@RequestParam(name = "fromDate", required = false) LocalDateTime fromDate,
-			@RequestParam(name = "fromDate", required = false) LocalDateTime toDate,
-			@RequestParam("format") String format, HttpServletResponse response) throws UnknownKpiFormatException {
+	public void getKpi(@RequestParam(name = "fromDate") LocalDateTime fromDate,
+			@RequestParam(name = "toDate") LocalDateTime toDate, @RequestParam("format") String format,
+			HttpServletResponse response) throws UnknownKpiFormatException {
 
 		List<StopCovidKpi> kpis = generator.computeKpis(fromDate, toDate);
 		try {

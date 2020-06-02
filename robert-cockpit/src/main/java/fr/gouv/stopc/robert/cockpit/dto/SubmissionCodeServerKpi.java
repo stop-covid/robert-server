@@ -9,4 +9,9 @@ public class SubmissionCodeServerKpi {
 
 	private LocalDateTime date;
 
+	private Long nbShortCodesUsed;
+
+	private Long nbLongCodesUsed;
+
+	private Long nbExpiredCodes;
 }
