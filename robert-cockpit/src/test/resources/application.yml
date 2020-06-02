@@ -1,0 +1,8 @@
+# Robert config configuration
+robert:
+  scs:
+     api-url: http://localhost:8081/api/v1
+     kpi-endpoint: /kpi
+  rs:
+     api-url: http://localhost:8082/api/v1
+     kpi-endpoint: /kpi

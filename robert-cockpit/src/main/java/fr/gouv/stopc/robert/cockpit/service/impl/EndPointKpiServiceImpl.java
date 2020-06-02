@@ -1,7 +1,7 @@
 package fr.gouv.stopc.robert.cockpit.service.impl;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
+import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -61,14 +62,19 @@ public class EndPointKpiServiceImpl implements IEndPointKpiService {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public List<EndPointKpi> getKpi(LocalDateTime fromDate, LocalDateTime toDate) {
+	public List<EndPointKpi> getKpi(LocalDate fromDate, LocalDate toDate) {
 		try {
-			// TODO modifier avec la requete de Tony
-			MultiSearchResponse response = esRestClient.msearch(null, RequestOptions.DEFAULT.toBuilder().build());
-			return Stream.of(response.getResponses())
-					.map(x -> new EndPointKpi(x.getResponse().getAggregations().asMap())).collect(Collectors.toList());
+			if (esRestClient.ping(RequestOptions.DEFAULT)) {
+				// TODO modifier avec la requete de Tony
+				MultiSearchResponse response = esRestClient.msearch(new MultiSearchRequest(),
+						RequestOptions.DEFAULT.toBuilder().build());
+				// TODO gérer la date et la map
+				return Stream.of(response.getResponses())
+						.map(x -> new EndPointKpi(null, x.getResponse().getAggregations().asMap()))
+						.collect(Collectors.toList());
+			}
 		} catch (IOException e) {
-			log.error("Failed to query Elasticsearch", e);
+			log.error("Failed to query Elasticsearch");
 		}
 		return new ArrayList<>();
 	}

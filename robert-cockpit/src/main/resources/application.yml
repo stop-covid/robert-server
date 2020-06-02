@@ -3,6 +3,8 @@ server:
 
 spring:  application:    name: robert-cockpit
 
+feign:  hystrix:    enabled: true
+
 # Robert config configuration
 robert:
   cockpit:

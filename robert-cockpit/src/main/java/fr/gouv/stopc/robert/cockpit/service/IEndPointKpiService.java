@@ -1,13 +1,13 @@
 package fr.gouv.stopc.robert.cockpit.service;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import fr.gouv.stopc.robert.cockpit.dto.EndPointKpi;
 
 /**
  * 
- * @author MROUANET
+ * @author plant-stopcovid
  *
  */
 public interface IEndPointKpiService {
@@ -18,6 +18,6 @@ public interface IEndPointKpiService {
 	 * @param toDate
 	 * @return
 	 */
-	public List<EndPointKpi> getKpi(LocalDateTime fromDate, LocalDateTime toDate);
+	public List<EndPointKpi> getKpi(LocalDate fromDate, LocalDate toDate);
 
 }

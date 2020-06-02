@@ -1,13 +1,15 @@
 package fr.gouv.stopc.robert.cockpit.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +26,7 @@ import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 
 import fr.gouv.stopc.robert.cockpit.dto.StopCovidKpi;
 import fr.gouv.stopc.robert.cockpit.exception.UnknownKpiFormatException;
-import fr.gouv.stopc.robert.cockpit.service.IRobertKpiGenerationService;
+import fr.gouv.stopc.robert.cockpit.service.IStopCovidKpiGenerationService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -43,7 +45,9 @@ public class RobertCockpitKpiController {
 	 * 
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	private IRobertKpiGenerationService generator;
+	private IStopCovidKpiGenerationService generator;
+
+	private List<String> supportedFormats = Arrays.asList("json", "csv");
 
 	/**
 	 * Spring injection constructor
@@ -51,7 +55,7 @@ public class RobertCockpitKpiController {
 	 * @param generators the map of all services available for Kpi generation
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	public RobertCockpitKpiController(IRobertKpiGenerationService generator) {
+	public RobertCockpitKpiController(IStopCovidKpiGenerationService generator) {
 		this.generator = generator;
 	}
 
@@ -69,11 +73,17 @@ public class RobertCockpitKpiController {
 	 */
 	@GetMapping("/kpi")
 	@RolesAllowed("${robert.cockpit.authorized-roles}")
-	public void getKpi(@RequestParam(name = "fromDate") LocalDateTime fromDate,
-			@RequestParam(name = "toDate") LocalDateTime toDate, @RequestParam("format") String format,
-			HttpServletResponse response) throws UnknownKpiFormatException {
+	public void getKpi(
+			@RequestParam(name = "fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+			@RequestParam(name = "toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+			@RequestParam("format") String format, HttpServletResponse response) throws UnknownKpiFormatException {
+
+		if (!supportedFormats.contains(format)) {
+			throw new UnknownKpiFormatException("Unsupported output format " + format);
+		}
 
 		List<StopCovidKpi> kpis = generator.computeKpis(fromDate, toDate);
+
 		try {
 			if ("csv".equals(StringUtils.lowerCase(format))) {
 				// set file name and content type
@@ -93,8 +103,6 @@ public class RobertCockpitKpiController {
 				// Map the object into json & write it into the response
 				ObjectMapper mapper = new ObjectMapper();
 				mapper.writeValue(response.getWriter(), kpis);
-			} else {
-				throw new UnknownKpiFormatException("Unsupported output format " + format);
 			}
 		} catch (IOException | CsvDataTypeMismatchException | CsvRequiredFieldEmptyException e) {
 			log.error("Failed to generate the CSV content", e);

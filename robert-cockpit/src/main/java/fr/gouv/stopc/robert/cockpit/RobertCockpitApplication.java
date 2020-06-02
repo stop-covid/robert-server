@@ -5,7 +5,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
+@EnableFeignClients
 @EnableAutoConfiguration(exclude = { DataSourceAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class })
 @SpringBootApplication
 public class RobertCockpitApplication {

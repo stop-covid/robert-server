@@ -1,6 +1,6 @@
 package fr.gouv.stopc.robert.cockpit.service;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import fr.gouv.stopc.robert.cockpit.dto.StopCovidKpi;
@@ -10,7 +10,7 @@ import fr.gouv.stopc.robert.cockpit.dto.StopCovidKpi;
  * @author plant-stopcovid
  * @version 0.0.1-SNAPSHOT
  */
-public interface IRobertKpiGenerationService {
+public interface IStopCovidKpiGenerationService {
 
 	/**
 	 * 
@@ -19,6 +19,6 @@ public interface IRobertKpiGenerationService {
 	 * @return
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	List<StopCovidKpi> computeKpis(LocalDateTime fromDate, LocalDateTime toDate);
+	List<StopCovidKpi> computeKpis(LocalDate fromDate, LocalDate toDate);
 
 }

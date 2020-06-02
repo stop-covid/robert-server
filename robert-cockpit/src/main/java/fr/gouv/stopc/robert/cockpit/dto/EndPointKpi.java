@@ -1,7 +1,9 @@
 package fr.gouv.stopc.robert.cockpit.dto;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Map;
+
+import javax.validation.constraints.NotNull;
 
 import org.elasticsearch.search.aggregations.Aggregation;
 
@@ -16,7 +18,8 @@ import lombok.Getter;
 public class EndPointKpi {
 
 	@Getter
-	private LocalDateTime date;
+	@NotNull
+	private LocalDate date;
 
 	/**
 	 * Map of the results of the elasticsearch queries
@@ -28,9 +31,10 @@ public class EndPointKpi {
 	/**
 	 * Constructor
 	 * 
-	 * @param aggregationsMap
+	 * @param aggregationsMap the aggregation map to use
 	 */
-	public EndPointKpi(Map<String, Aggregation> aggregationsMap) {
+	public EndPointKpi(LocalDate date, Map<String, Aggregation> aggregationsMap) {
+		this.date = date;
 		this.aggregationsMap = aggregationsMap;
 	}
 
@@ -48,6 +52,24 @@ public class EndPointKpi {
 	 * @return
 	 */
 	public Long getRegisterEndpointCalls() {
+		// TODO use the aggregationsMap
+		return null;
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	public Long getStatusEndpointCalls() {
+		// TODO use the aggregationsMap
+		return null;
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	public Long getDeleteHistoryEndpointCalls() {
 		// TODO use the aggregationsMap
 		return null;
 	}

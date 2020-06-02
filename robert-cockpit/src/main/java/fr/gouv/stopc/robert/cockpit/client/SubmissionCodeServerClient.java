@@ -1,10 +1,13 @@
 package fr.gouv.stopc.robert.cockpit.client;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
-import feign.QueryMap;
-import feign.RequestLine;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import fr.gouv.stopc.robert.cockpit.dto.SubmissionCodeServerKpi;
 
 /**
@@ -13,6 +16,7 @@ import fr.gouv.stopc.robert.cockpit.dto.SubmissionCodeServerKpi;
  * @author plant-stopcovid
  * @version 0.0.1-SNAPSHOT
  */
+@FeignClient(name = "scs-client", url = "${robert.scs.api-url}", fallback = SubmissionCodeServerClientFallback.class)
 public interface SubmissionCodeServerClient {
 
 	/**
@@ -22,7 +26,8 @@ public interface SubmissionCodeServerClient {
 	 * @return the list of dated Kpi produced by Submission Code Server
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	@RequestLine("GET ${robert.scs.kpi-endpoint}?{parameters}")
-	public List<SubmissionCodeServerKpi> getKpi(@QueryMap Map<String, Object> parameter);
+	@RequestMapping(method = RequestMethod.GET, path = "/kpi")
+	public List<SubmissionCodeServerKpi> getKpi(@RequestParam("fromDate") LocalDate fromDate,
+			@RequestParam("toDate") LocalDate toDate);
 
 }
