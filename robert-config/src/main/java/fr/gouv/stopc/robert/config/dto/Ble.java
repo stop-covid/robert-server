@@ -34,7 +34,7 @@ public class Ble {
 
 	private Float riskThresholdLow;
 
-	private Float riskThresholdMax;
+	private Float riskThresholdHigh;
 
 	private Integer riskMin;
 
@@ -47,7 +47,7 @@ public class Ble {
 
 	private Integer tagPeak;
 
-	private Integer flagCalib;
+	private Boolean flagCalib;
 	
 	private String flagMode;
 

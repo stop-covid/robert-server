@@ -2,6 +2,7 @@ package fr.gouv.stopc.robert.config.service.impl;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -55,7 +56,8 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 	 * @param discoveryClient the <code>EurekaClient</code> bean to use
 	 * @since 0.0.1-SNAPSHOT
 	 */
-	public RobertConfigurationServiceImpl(IRobertConfigurationDao dao, EurekaClient discoveryClient) {
+	public RobertConfigurationServiceImpl(IRobertConfigurationDao dao,
+			@Autowired(required = false) EurekaClient discoveryClient) {
 		this.discoveryClient = discoveryClient;
 		this.dao = dao;
 	}
@@ -80,7 +82,23 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 			return IConfigurationUpdateResults.NOTHING_TO_UPDATE;
 		}
 
-		for (String appName : updateResult) {
+		if (discoveryClient != null) {
+			return notifyRobertApplications(updateResult);
+		}
+		// Configuration is updated and applications instances are refreshed
+		return IConfigurationUpdateResults.CONFIGURATION_UPDATED;
+	}
+
+	/**
+	 * Notify applications concerned by the update
+	 * 
+	 * @param applicationsToNotify the list of application names concerned by the
+	 *                             update
+	 * @return the update result
+	 * @since 0.0.1-SNAPSHOT
+	 */
+	private String notifyRobertApplications(List<String> applicationsToNotify) {
+		for (String appName : applicationsToNotify) {
 			// Retrieve all instances of the application with name appName
 			Application eurekaApp = discoveryClient.getApplication(appName);
 			if (eurekaApp == null || CollectionUtils.isEmpty(eurekaApp.getInstances())) {
@@ -102,7 +120,6 @@ public class RobertConfigurationServiceImpl implements IRobertConfigurationServi
 				}
 			}
 		}
-		// Configuration is updated and applications instances are refreshed
 		return IConfigurationUpdateResults.CONFIGURATION_UPDATED;
 	}
 
