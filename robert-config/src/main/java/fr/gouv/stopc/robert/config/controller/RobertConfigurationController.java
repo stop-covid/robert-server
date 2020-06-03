@@ -6,6 +6,7 @@ import javax.annotation.security.RolesAllowed;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -28,6 +29,7 @@ import fr.gouv.stopc.robert.config.util.IConfigurationUpdateResults;
  */
 @RestController
 @RequestMapping("/api/v1/config")
+@CrossOrigin
 public class RobertConfigurationController {
 
 	/**
@@ -60,7 +62,7 @@ public class RobertConfigurationController {
 	public ResponseEntity<String> updateConfiguration(@PathVariable("profile") String profile,
 			@RequestBody FunctionalConfiguration newConfiguration) {
 		// Compute the key / value version of the configuration
-		String result = service.updateConfiguration(profile, newConfiguration);
+		String result = this.service.updateConfiguration(profile, newConfiguration);
 		HttpStatus status = HttpStatus.OK;
 		if (IConfigurationUpdateResults.CONFIGURATION_UPDATE_FAILED.equals(result)) {
 			status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -80,7 +82,7 @@ public class RobertConfigurationController {
 	@GetMapping(path = "/history/{profile}")
 	public ResponseEntity<List<ConfigurationHistoryEntry>> getFunctionalConfigurationHistory(
 			@PathVariable(name = "profile") String profile) {
-		return ResponseEntity.ok(service.getHistory(profile));
+		return ResponseEntity.ok(this.service.getHistory(profile));
 	}
 
 	/**
@@ -94,6 +96,6 @@ public class RobertConfigurationController {
 	@GetMapping(path = "/{profile}")
 	public ResponseEntity<FunctionalConfiguration> getFunctionalConfiguration(
 			@PathVariable(name = "profile") String profile) {
-		return ResponseEntity.ok(service.getConfiguration(profile));
+		return ResponseEntity.ok(this.service.getConfiguration(profile));
 	}
 }
