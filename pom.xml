@@ -27,6 +27,7 @@
 	<description>Projet principal</description>
 
 	<modules>
+		<module>robert-cockpit</module>
 		<module>robert-server-ws-rest</module>
 		<module>robert-server-batch</module>
 		<module>robert-server-database</module>
