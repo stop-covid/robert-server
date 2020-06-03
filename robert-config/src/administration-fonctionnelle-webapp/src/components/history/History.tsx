@@ -4,20 +4,16 @@ import {Col, Row} from "react-bootstrap";
 import {HistoryLine} from "./sub-components/history-line/HistoryLine";
 
 export default function History() {
-    console.log("rendering <History/>")
 
     const [history, setHistory] = useState([] as JSX.Element[]);
 
-
     // Load data
     useEffect(() => {
-        console.log("useEffect is processing")
         const historyRendering = (hs : HistoryDataProviderResponse[] | undefined) => {
             var hJSX : JSX.Element[] = []
             if(!hs) {
                 setHistory([])
             } else {
-                console.log("hs :", hs)
                 hs.forEach((h :HistoryDataProviderResponse ) => hJSX.push(
                     <Row>
                         <Col>
@@ -31,8 +27,7 @@ export default function History() {
         }
 
         getHistory().then(response => {
-            console.log("response : ", response)
-            if(response) historyRendering(response)
+            if (response) historyRendering(response)
         })
             .catch(error => {
                 console.error("error has been caught : ", error)
@@ -42,8 +37,6 @@ export default function History() {
                 console.log("finally get history data from ")
             )
     }, [])
-
-
 
     return (
         <div style={{height:"100%", overflowY:"auto", overflowX:"hidden"}}>

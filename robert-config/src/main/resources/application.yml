@@ -12,7 +12,7 @@ spring:
     config:
       server:
         git:
-          uri: ${ROBERT_CONFIG_GIT_REPO_URI:file:///C:\Users\mrouanet\git\config-server-repo}
+          uri: ${ROBERT_CONFIG_GIT_REPO_URI:file:///C:\Developpements\stopcovid\config-server-repo}
         prefix: /spring-config
 
 # Robert config configuration
