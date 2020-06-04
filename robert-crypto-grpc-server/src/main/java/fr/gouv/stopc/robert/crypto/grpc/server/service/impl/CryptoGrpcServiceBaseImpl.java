@@ -1,6 +1,9 @@
 package fr.gouv.stopc.robert.crypto.grpc.server.service.impl;
 
 import java.security.Key;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -358,12 +361,17 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
      * @return
      * @throws RobertServerCryptoException
      */
-    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int authRequestEpoch, AdjacentEpochMatchEnum adjacentEpochMatchEnum)
+    private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid,
+                                                 int authRequestEpoch,
+                                                 boolean mustCheckWithPreviousDayKey,
+                                                 boolean ksAdjustment,
+                                                 AdjacentEpochMatchEnum adjacentEpochMatchEnum)
             throws RobertServerCryptoException {
 
         byte[] serverKey = this.cryptographicStorageService.getServerKey(
                 authRequestEpoch,
-                this.serverConfigurationService.getServiceTimeStart());
+                this.serverConfigurationService.getServiceTimeStart(),
+                mustCheckWithPreviousDayKey);
 
         if (Objects.isNull(serverKey)) {
             log.warn("Cannot retrieve server key for {}", authRequestEpoch);
@@ -375,15 +383,29 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         byte[] idA = getIdFromDecryptedEBID(decryptedEbid);
         int ebidEpochId = getEpochIdFromDecryptedEBID(decryptedEbid);
 
-        if (ebidEpochId < 0) {
-            log.warn("Epoch from EBID is negative");
-            return manageEBIDDecryptRetry(ebid, authRequestEpoch, adjacentEpochMatchEnum);
-        } else if (authRequestEpoch != ebidEpochId) {
-            log.warn("Epoch from EBID and accompanying authRequestEpoch do not match: ebid authRequestEpoch = {} vs auth request authRequestEpoch = {}", ebidEpochId, authRequestEpoch);
-            return manageEBIDDecryptRetry(ebid, authRequestEpoch, adjacentEpochMatchEnum);
+        if (authRequestEpoch != ebidEpochId) {
+            log.warn("Epoch from EBID and accompanying authRequestEpoch do not match: ebid epoch = {} vs auth request epoch = {}", ebidEpochId, authRequestEpoch);
+            if (ksAdjustment && !mustCheckWithPreviousDayKey) {
+                return decryptEBIDAndCheckEpoch(
+                        ebid,
+                        authRequestEpoch,
+                        true,
+                        false,
+                        adjacentEpochMatchEnum);
+            } else {
+                return manageEBIDDecryptRetry(ebid,
+                        authRequestEpoch,
+                        adjacentEpochMatchEnum);
+            }
         }
 
         return EbidContent.builder().epochId(ebidEpochId).idA(idA).build();
+    }
+
+
+    private final static int MAX_EPOCH_DOUBLE_KS_CHECK = 672;
+    private boolean isEBIDWithinRange(int epoch) {
+        return epoch >= 0 && epoch <= MAX_EPOCH_DOUBLE_KS_CHECK;
     }
 
     /**
@@ -394,7 +416,12 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
      * @throws RobertServerCryptoException
      */
     private EbidContent decryptEBIDAndCheckEpoch(byte[] ebid, int epoch) throws RobertServerCryptoException {
-        return decryptEBIDAndCheckEpoch(ebid, epoch, AdjacentEpochMatchEnum.NONE);
+        // hotfix: necessary because ebids encrypted with key from previous day may have been provided
+        return decryptEBIDAndCheckEpoch(ebid,
+                epoch,
+                false,
+                isEBIDWithinRange(epoch),
+                AdjacentEpochMatchEnum.NONE);
     }
 
     private EbidContent manageEBIDDecryptRetry(byte[] ebid, int authRequestEpoch, AdjacentEpochMatchEnum adjacentEpochMatchEnum)
@@ -402,10 +429,10 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         switch (adjacentEpochMatchEnum) {
             case PREVIOUS:
                 log.warn("Retrying ebid decrypt with previous epoch");
-                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch - 1, adjacentEpochMatchEnum.NONE);
+                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch - 1, false, false, adjacentEpochMatchEnum.NONE);
             case NEXT:
                 log.warn("Retrying ebid decrypt with next epoch");
-                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch + 1, adjacentEpochMatchEnum.NONE);
+                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch + 1, false, false,  adjacentEpochMatchEnum.NONE);
             case NONE:
             default:
                 return null;
@@ -418,15 +445,38 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 this.serverConfigurationService.getServiceTimeStart(),
                 timeReceived);
 
-        AdjacentEpochMatchEnum adjacentEpochMatch = AdjacentEpochMatchEnum.NONE;
-        // TODO: replace local EPOCH_DURATION with common epoch duration constant
-        if (timeReceived % EPOCH_DURATION < 5) {
-            adjacentEpochMatch = AdjacentEpochMatchEnum.PREVIOUS;
-        } else if (timeReceived % EPOCH_DURATION > EPOCH_DURATION - 5) {
-            adjacentEpochMatch = AdjacentEpochMatchEnum.NEXT;
+        return decryptEBIDAndCheckEpoch(
+                ebid,
+                epoch,
+                false,
+                isEBIDWithinRange(epoch),
+                atStartOrEndOfDay(timeReceived));
+
+//        AdjacentEpochMatchEnum adjacentEpochMatch = AdjacentEpochMatchEnum.NONE;
+//        // TODO: replace local EPOCH_DURATION with common epoch duration constant
+//        if (timeReceived % EPOCH_DURATION < 5) {
+//            adjacentEpochMatch = AdjacentEpochMatchEnum.PREVIOUS;
+//        } else if (timeReceived % EPOCH_DURATION > EPOCH_DURATION - 5) {
+//            adjacentEpochMatch = AdjacentEpochMatchEnum.NEXT;
+//        }
+        //return decryptEBIDAndCheckEpoch(ebid, epoch, false, true, adjacentEpochMatch);
+    }
+
+    private AdjacentEpochMatchEnum atStartOrEndOfDay(long timeReceived) {
+        ZonedDateTime zonedDateTime = Instant
+                .ofEpochMilli(TimeUtils.convertNTPSecondsToUnixMillis(timeReceived))
+                .atZone(ZoneOffset.UTC);
+        int tolerance = this.serverConfigurationService.getHelloMessageTimestampTolerance();
+
+        if (zonedDateTime.getHour() == 0
+                && (zonedDateTime.getMinute() * 60 + zonedDateTime.getSecond()) < tolerance) {
+            return AdjacentEpochMatchEnum.PREVIOUS;
+        } else if (zonedDateTime.getHour() == 23
+                && (60 * 60 - (zonedDateTime.getMinute() * 60 + zonedDateTime.getSecond())) < tolerance) {
+            return AdjacentEpochMatchEnum.NEXT;
         }
 
-        return decryptEBIDAndCheckEpoch(ebid, epoch, adjacentEpochMatch);
+        return AdjacentEpochMatchEnum.NONE;
     }
 
     private enum AdjacentEpochMatchEnum {
@@ -480,7 +530,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         return mappedTuples;
     }
 
-    private final static int EPOCHS_PER_DAY = 4 * 24;
     private Optional<TuplesGenerationResult> generateEncryptedTuples(byte[] tuplesEncryptionKey,
                                                                      byte[] id,
                                                                      int epochId,
@@ -504,17 +553,23 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             log.warn("Could not retrieve server keys for epoch span starting with: {}", epochId);
             return Optional.empty();
         }
+        int[] nbOfEpochsToGeneratePerDay = new int[serverKeys.length];
+        nbOfEpochsToGeneratePerDay[0] = TimeUtils.remainingEpochsForToday(epochId);
+        for (int i = 1; i < nbOfEpochsToGeneratePerDay.length;  i++) {
+            nbOfEpochsToGeneratePerDay[i] = TimeUtils.EPOCHS_PER_DAY;
+        }
 
         Collection<EphemeralTuple> ephemeralTuples = new ArrayList<>();
         final Key federationKey = this.cryptographicStorageService.getFederationKey();
+        int offset = 0;
         for (int i = 0; i < nbDays; i++) {
             if (serverKeys[i] != null) {
                 final TupleGenerator tupleGenerator = new TupleGenerator(serverKeys[i], federationKey);
                 try {
                     Collection<EphemeralTuple> tuplesForDay = tupleGenerator.exec(
                             id,
-                            epochId + (i * EPOCHS_PER_DAY),
-                            EPOCHS_PER_DAY,
+                            epochId + offset,
+                            nbOfEpochsToGeneratePerDay[i],
                             serverCountryCode
                     );
                     tupleGenerator.stop();
@@ -526,10 +581,15 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             } else {
                 log.warn("Cannot generating tuples for day {}, missing key", i);
             }
+            offset += nbOfEpochsToGeneratePerDay[i];
         }
         ephemeralTuples = ephemeralTuples.stream()
                 .sorted(Comparator.comparingInt(EphemeralTuple::getEpochId))
                 .collect(Collectors.toList());
+
+        if (offset != ephemeralTuples.size()) {
+            log.warn("Should have generated {} tuples but only returning {} to client", offset, ephemeralTuples.size());
+        }
 
         try {
             if (!CollectionUtils.isEmpty(ephemeralTuples)) {

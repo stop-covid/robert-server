@@ -65,7 +65,6 @@ public class CaptchaServiceImpl implements CaptchaService {
 						   .filter(captchaDto -> Objects.nonNull(captchaDto.getChallengeTimestamp()))
 						   .map(captchaDto -> {
 
-							   log.info("Result of CAPTCHA verification: {}", captchaDto);
 							   return isSuccess(captchaDto, sendingDate);
 						   })
 						   .orElse(false);
