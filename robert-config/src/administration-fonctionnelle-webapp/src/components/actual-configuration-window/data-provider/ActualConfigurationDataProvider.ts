@@ -21,10 +21,6 @@ export function getActualConfiguration(): Promise<any | null> {
 export function putNewConfiguration(data: any): Promise<any | null> {
     return AdministrationFonctionnelleApi.PUT(PUT_CONFIGURATION_ENDPOINT, data)
         .then(response => {
-            console.log(
-                'AdministrationFonctionnelleApi?putNewConfiguration --> response : ',
-                response.data
-            );
             return response.data;
         })
         .catch(error => {

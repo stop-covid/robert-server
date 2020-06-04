@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-// @ts-ignore
-import locale from 'react-json-editor-ajrm/locale/en';
 import SubmitModal from '../submit-modal';
 import {
     Container,
@@ -25,7 +23,11 @@ export default function ActualConfigurationWindow(): any {
         maxSimultaneousRegister: 1,
         checkStatusFrequency: 0,
         dataRetentionPeriod: 0,
+        preSymptomsSpan: 0,
+        minHourContactNotif: 0,
+        maxHourContactNotif: 0,
         simultaneousContacts: 0,
+        delta: 0,
         p0: -127,
         maxSampleSize: 0,
         riskThresholdLow: 0,
@@ -53,14 +55,19 @@ export default function ActualConfigurationWindow(): any {
         r0: 1
     };
 
-    const accountManagement = {
+    const account = {
         appAutonomy: 0,
         maxSimultaneousRegister: 0
     };
 
     const app = {
         checkStatusFrequency: 0,
-        dataRetentionPeriod: 0
+        dataRetentionPeriod: 0,
+        preSymptomsSpan: 0,
+        minHourContactNotif: 0,
+        maxHourContactNotif: 0,
+        appAvailability: false,
+        appUpgrade: false
     };
 
     const ble = {
@@ -89,7 +96,7 @@ export default function ActualConfigurationWindow(): any {
         dThreshold: 0
     };
 
-    const proximityTracing = {
+    const tracing = {
         app: app,
         ble: ble,
         riskThreshold: 0,
@@ -99,8 +106,8 @@ export default function ActualConfigurationWindow(): any {
     };
 
     const functionalConfiguration = {
-        accountManagement: accountManagement,
-        proximityTracing: proximityTracing
+        account: account,
+        tracing: tracing
     };
 
     const [config, setConfig] = useState(functionalConfiguration);
@@ -122,8 +129,6 @@ export default function ActualConfigurationWindow(): any {
         rssiThreshold: ''
     };
     const [errors, setErrors] = useState(defaultErrors);
-
-    const hasErrors = () => Object.keys(errors).length > 0;
 
     const handleCancel = () => {
         setEditable(!editable);
@@ -162,11 +167,11 @@ export default function ActualConfigurationWindow(): any {
     const handleAccountManagementChange = (event: any) => {
         const { name, value } = event.target;
         const _accountManagement = {
-            ...config.accountManagement,
+            ...config.account,
             [name]: value
         };
         const _configuration = { ...config };
-        _configuration.accountManagement = _accountManagement;
+        _configuration.account = _accountManagement;
 
         setConfig(_configuration);
         setValidated(true);
@@ -175,11 +180,11 @@ export default function ActualConfigurationWindow(): any {
     const handleProximityTracingChange = (event: any) => {
         const { name, value } = event.target;
         const _proximityTracing = {
-            ...config.proximityTracing,
+            ...config.tracing,
             [name]: value
         };
         const _configuration = { ...config };
-        _configuration.proximityTracing = _proximityTracing;
+        _configuration.tracing = _proximityTracing;
 
         setConfig(_configuration);
         setValidated(true);
@@ -188,11 +193,11 @@ export default function ActualConfigurationWindow(): any {
     const handleAppChange = (event: any) => {
         const target = event.target;
         const _app = {
-            ...config.proximityTracing.app,
+            ...config.tracing.app,
             [target.name]: target.value
         };
         const _configuration = { ...config };
-        _configuration.proximityTracing.app = _app;
+        _configuration.tracing.app = _app;
 
         setConfig(_configuration);
         setValidated(true);
@@ -202,20 +207,49 @@ export default function ActualConfigurationWindow(): any {
         const target = event.target;
         validateBle(target);
         const _ble = {
-            ...config.proximityTracing.ble,
+            ...config.tracing.ble,
             [target.name]: target.value
         };
         const _configuration = { ...config };
-        _configuration.proximityTracing.ble = _ble;
+        _configuration.tracing.ble = _ble;
 
         setConfig(_configuration);
         setValidated(true);
     };
 
-    const handleFlagCalibChange = (event: any) => {
+    const handleDeltaChange = (event: any) => {
+        const { id, value } = event.target;
+
+        if (id) {
+            const _configuration = { ...config };
+            _configuration.tracing.ble.delta[id] = value as never;
+            setConfig(_configuration);
+            setValidated(true);
+        }
+    };
+
+    const handleChangeOnCheck = (event: any) => {
         const _configuration = { ...config };
-        _configuration.proximityTracing.ble.flagCalib = !_configuration
-            .proximityTracing.ble.flagCalib;
+
+        switch (event.target.id) {
+            case 'flagCalib':
+                _configuration.tracing.ble.flagCalib = !_configuration.tracing
+                    .ble.flagCalib;
+                break;
+
+            case 'appAvailability':
+                _configuration.tracing.app.appAvailability = !_configuration
+                    .tracing.app.appAvailability;
+                break;
+
+            case 'appUpgrade':
+                _configuration.tracing.app.appUpgrade = !_configuration.tracing
+                    .app.appUpgrade;
+                break;
+
+            default:
+                break;
+        }
 
         setConfig(_configuration);
         setValidated(true);
@@ -226,27 +260,27 @@ export default function ActualConfigurationWindow(): any {
             case 'riskThresholdLow':
                 errors.riskThresholdLow = initErrorIfGreater(
                     target,
-                    config.proximityTracing.ble.riskThresholdHigh
+                    config.tracing.ble.riskThresholdHigh
                 );
                 break;
 
             case 'riskThresholdHigh':
                 errors.riskThresholdHigh = initErrorIfLower(
                     target,
-                    config.proximityTracing.ble.riskThresholdLow
+                    config.tracing.ble.riskThresholdLow
                 );
                 break;
             case 'riskMin':
                 errors.riskMin = initErrorIfGreater(
                     target,
-                    config.proximityTracing.ble.riskMax
+                    config.tracing.ble.riskMax
                 );
                 break;
 
             case 'riskMax':
                 errors.riskMax = initErrorIfLower(
                     target,
-                    config.proximityTracing.ble.riskMin
+                    config.tracing.ble.riskMin
                 );
                 break;
 
@@ -273,11 +307,11 @@ export default function ActualConfigurationWindow(): any {
         const target = event.target;
         validateModelName(target);
         const _signalCalibration = {
-            ...config.proximityTracing.ble.signalCalibrationPerModel[0],
+            ...config.tracing.ble.signalCalibrationPerModel[0],
             [target.name]: target.value
         };
         const _configuration = { ...config };
-        _configuration.proximityTracing.ble.signalCalibrationPerModel[0] = _signalCalibration;
+        _configuration.tracing.ble.signalCalibrationPerModel[0] = _signalCalibration;
 
         setConfig(_configuration);
         setValidated(true);
@@ -315,9 +349,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="appAutonomy"
                                         label="Application autonomy"
                                         name="appAutonomy"
-                                        value={
-                                            config.accountManagement.appAutonomy
-                                        }
+                                        value={config.account.appAutonomy}
                                         onChange={handleAccountManagementChange}
                                         min={minValues.appAutonomy}
                                         validated={validated}
@@ -327,7 +359,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="maxSimultaneousRegister"
                                         name="maxSimultaneousRegister"
                                         value={
-                                            config.accountManagement
+                                            config.account
                                                 .maxSimultaneousRegister
                                         }
                                         onChange={handleAccountManagementChange}
@@ -342,7 +374,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="checkStatusFrequency"
                                         name="checkStatusFrequency"
                                         value={
-                                            config.proximityTracing.app
+                                            config.tracing.app
                                                 .checkStatusFrequency
                                         }
                                         onChange={handleAppChange}
@@ -354,7 +386,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="dataRetentionPeriod"
                                         name="dataRetentionPeriod"
                                         value={
-                                            config.proximityTracing.app
+                                            config.tracing.app
                                                 .dataRetentionPeriod
                                         }
                                         onChange={handleAppChange}
@@ -365,11 +397,80 @@ export default function ActualConfigurationWindow(): any {
 
                                 <Form.Row>
                                     <NumberInput
+                                        id="preSymptomsSpan"
+                                        label="preSymptomsSpan"
+                                        name="preSymptomsSpan"
+                                        value={
+                                            config.tracing.app.preSymptomsSpan
+                                        }
+                                        onChange={handleAppChange}
+                                        min={minValues.preSymptomsSpan}
+                                        validated={validated}
+                                    />
+                                    <NumberInput
+                                        id="minHourContactNotif"
+                                        label="minHourContactNotif"
+                                        name="minHourContactNotif"
+                                        value={
+                                            config.tracing.app
+                                                .minHourContactNotif
+                                        }
+                                        onChange={handleAppChange}
+                                        min={minValues.minHourContactNotif}
+                                        validated={validated}
+                                    />
+                                    <NumberInput
+                                        id="maxHourContactNotif"
+                                        label="maxHourContactNotif"
+                                        name="maxHourContactNotif"
+                                        value={
+                                            config.tracing.app
+                                                .maxHourContactNotif
+                                        }
+                                        onChange={handleAppChange}
+                                        min={minValues.maxHourContactNotif}
+                                        validated={validated}
+                                    />
+                                    <FormGroup
+                                        className="px-1"
+                                        controlId="appAvailability"
+                                    >
+                                        <FormLabel />
+                                        <Form.Check
+                                            type="switch"
+                                            id="appAvailability"
+                                            label="appAvailability"
+                                            checked={
+                                                config.tracing.app
+                                                    .appAvailability
+                                            }
+                                            onChange={handleChangeOnCheck}
+                                        />
+                                    </FormGroup>
+                                    <FormGroup
+                                        className="px-1"
+                                        controlId="appUpgrade"
+                                    >
+                                        <FormLabel />
+                                        <Form.Check
+                                            type="switch"
+                                            id="appUpgrade"
+                                            label="appUpgrade"
+                                            checked={
+                                                config.tracing.app.appUpgrade
+                                            }
+                                            onChange={handleChangeOnCheck}
+                                        />
+                                    </FormGroup>
+                                </Form.Row>
+
+                                <Form.Row>
+                                    <NumberInput
                                         id="simultaneousContacts"
                                         label="simultaneousContacts"
                                         name="simultaneousContacts"
                                         value={
-                                            config.proximityTracing.ble
+                                            config.tracing.ble
                                                 .simultaneousContacts
                                         }
                                         onChange={handleBleChange}
@@ -384,7 +485,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="txGain"
                                         name="txGain"
                                         value={
-                                            config.proximityTracing.ble
+                                            config.tracing.ble
                                                 .signalCalibrationPerModel[0]
                                                 .txGain
                                         }
@@ -398,7 +499,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="rxGain"
                                         name="rxGain"
                                         value={
-                                            config.proximityTracing.ble
+                                            config.tracing.ble
                                                 .signalCalibrationPerModel[0]
                                                 .rxGain
                                         }
@@ -409,10 +510,10 @@ export default function ActualConfigurationWindow(): any {
                                     />
                                     <TextInput
                                         id="model_name"
-                                        label="model_name"
+                                        label="Model name"
                                         name="model_name"
                                         value={
-                                            config.proximityTracing.ble
+                                            config.tracing.ble
                                                 .signalCalibrationPerModel[0]
                                                 .model_name
                                         }
@@ -427,10 +528,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="maxSampleSize"
                                         label="maxSampleSize"
                                         name="maxSampleSize"
-                                        value={
-                                            config.proximityTracing.ble
-                                                .maxSampleSize
-                                        }
+                                        value={config.tracing.ble.maxSampleSize}
                                         onChange={handleBleChange}
                                         max={maxValues.maxSampleSize}
                                     />
@@ -438,7 +536,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="p0"
                                         label="p0"
                                         name="p0"
-                                        value={config.proximityTracing.ble.p0}
+                                        value={config.tracing.ble.p0}
                                         onChange={handleBleChange}
                                         min={minValues.p0}
                                         max={maxValues.p0}
@@ -447,34 +545,47 @@ export default function ActualConfigurationWindow(): any {
                                         id="b"
                                         label="b"
                                         name="b"
-                                        value={config.proximityTracing.ble.b}
+                                        value={config.tracing.ble.b}
                                         onChange={handleBleChange}
                                     />
                                 </Form.Row>
 
                                 <Form.Row>
-                                    <NumberInput
+                                    {config.tracing.ble.delta.map(
+                                        (delta: any, index: number) => {
+                                            return (
+                                                <NumberInput
+                                                    id={`${index}`}
+                                                    label={`Delta ${index + 1}`}
+                                                    name={`{index}`}
+                                                    value={delta}
+                                                    onChange={handleDeltaChange}
+                                                    min={minValues.delta}
+                                                />
+                                            );
+                                        }
+                                    )}
+                                </Form.Row>
+
+                                <Form.Row>
+                                    <DecimalInput
                                         id="riskThresholdLow"
                                         label="riskThresholdLow"
                                         name="riskThresholdLow"
                                         value={
-                                            config.proximityTracing.ble
-                                                .riskThresholdLow
+                                            config.tracing.ble.riskThresholdLow
                                         }
                                         onChange={handleBleChange}
                                         min={minValues.riskThresholdLow}
                                         error={errors.riskThresholdLow}
                                         validated={validated}
                                     />
-                                    <NumberInput
+                                    <DecimalInput
                                         as={2}
                                         id="riskThreshold"
                                         label="riskThreshold"
                                         name="riskThreshold"
-                                        value={
-                                            config.proximityTracing
-                                                .riskThreshold
-                                        }
+                                        value={config.tracing.riskThreshold}
                                         onChange={handleProximityTracingChange}
                                         min={minValues.riskThreshold}
                                     />
@@ -483,8 +594,7 @@ export default function ActualConfigurationWindow(): any {
                                         label="riskThresholdHigh"
                                         name="riskThresholdHigh"
                                         value={
-                                            config.proximityTracing.ble
-                                                .riskThresholdHigh
+                                            config.tracing.ble.riskThresholdHigh
                                         }
                                         onChange={handleBleChange}
                                         min={minValues.riskThresholdHigh}
@@ -498,9 +608,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="riskMin"
                                         label="riskMin"
                                         name="riskMin"
-                                        value={
-                                            config.proximityTracing.ble.riskMin
-                                        }
+                                        value={config.tracing.ble.riskMin}
                                         onChange={handleBleChange}
                                         min={minValues.riskMin}
                                         error={errors.riskMin}
@@ -510,18 +618,14 @@ export default function ActualConfigurationWindow(): any {
                                         id="tagPeak"
                                         label="tagPeak"
                                         name="tagPeak"
-                                        value={
-                                            config.proximityTracing.ble.tagPeak
-                                        }
+                                        value={config.tracing.ble.tagPeak}
                                         onChange={handleBleChange}
                                     />
                                     <NumberInput
                                         id="riskMax"
                                         label="riskMax"
                                         name="riskMax"
-                                        value={
-                                            config.proximityTracing.ble.riskMax
-                                        }
+                                        value={config.tracing.ble.riskMax}
                                         onChange={handleBleChange}
                                         min={minValues.riskMax}
                                         error={errors.riskMax}
@@ -537,32 +641,26 @@ export default function ActualConfigurationWindow(): any {
                                             id="flagCalib"
                                             label="flagCalib"
                                             checked={
-                                                config.proximityTracing.ble
-                                                    .flagCalib
+                                                config.tracing.ble.flagCalib
                                             }
-                                            onChange={handleFlagCalibChange}
+                                            onChange={handleChangeOnCheck}
                                         />
                                     </FormGroup>
                                     <TextInput
                                         id="flagMode"
                                         label="Flag mode"
                                         name="flagMode"
-                                        value={
-                                            config.proximityTracing.ble.flagMode
-                                        }
+                                        value={config.tracing.ble.flagMode}
                                         onChange={handleBleChange}
                                     />
                                 </Form.Row>
 
                                 <Form.Row>
-                                    <DecimalInput
+                                    <NumberInput
                                         id="rssiThreshold"
                                         label="rssiThreshold"
                                         name="rssiThreshold"
-                                        value={
-                                            config.proximityTracing.ble
-                                                .rssiThreshold
-                                        }
+                                        value={config.tracing.ble.rssiThreshold}
                                         onChange={handleBleChange}
                                         min={minValues.rssiThreshold}
                                         max={maxValues.rssiThreshold}
@@ -573,7 +671,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="rssi1m"
                                         label="rssi1m"
                                         name="rssi1m"
-                                        value={config.proximityTracing.rssi1m}
+                                        value={config.tracing.rssi1m}
                                         onChange={handleProximityTracingChange}
                                         min={minValues.rssi1m}
                                         max={maxValues.rssi1m}
@@ -583,7 +681,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="mu0"
                                         label="mu0"
                                         name="mu0"
-                                        value={config.proximityTracing.mu0}
+                                        value={config.tracing.mu0}
                                         onChange={handleProximityTracingChange}
                                     />
                                     <DecimalInput
@@ -591,7 +689,7 @@ export default function ActualConfigurationWindow(): any {
                                         id="r0"
                                         label="r0"
                                         name="r0"
-                                        value={config.proximityTracing.r0}
+                                        value={config.tracing.r0}
                                         onChange={handleProximityTracingChange}
                                         min={minValues.r0}
                                         max={maxValues.r0}

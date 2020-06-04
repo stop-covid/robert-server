@@ -9,7 +9,6 @@ type SubmitModalResponse = {
     message : String
 }
 
-
 export default function SubmitModal<T extends SubmitModalResponse >({showParam, handleClose, submitResponse, redirection = "/" } :any) {
 
     const [response, setResponse] = useState(undefined as T | undefined)
@@ -19,7 +18,6 @@ export default function SubmitModal<T extends SubmitModalResponse >({showParam, 
         if(submitResponse) {
             submitResponse
                 .then((response : T )=>{
-                    console.log("Response", response)
                     delay(2000).finally(
                         () => setResponse(response)
                     )

@@ -15,6 +15,7 @@ export function TextInput(props: any) {
                 isInvalid={props.error && props.error.length > 0}
                 required
             />
+
             <FormControl.Feedback type="invalid">
                 {props.error && props.error.length > 0 ? (
                     props.error
