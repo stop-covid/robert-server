@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @JsonInclude(Include.NON_NULL)
 public class FunctionalConfiguration {
 
-	private AccountManagement accountManagement;
+	private AccountManagement account;
 
-	private ProximityTracing proximityTracing;
+	private ProximityTracing tracing;
 
 }

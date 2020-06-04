@@ -6,9 +6,9 @@ import org.springframework.stereotype.Component;
 
 import lombok.Getter;
 
-@RefreshScope
 @Getter
 @Component
+@RefreshScope
 public class PropertyLoader {
 
 	@Value("${robert.crypto.hostname}")
@@ -40,15 +40,15 @@ public class PropertyLoader {
 	@Value("${captcha.hostname}")
 	private String captchaHostname;
 
-	@Value("${submission.code.server.host}")
+	@Value("${submissionCode.server.hostname}")
 	private String serverCodeHost;
 
-	@Value("${submission.code.server.port}")
+	@Value("${submissionCode.server.port}")
 	private String serverCodePort;
 
-	@Value("${submission.code.server.verify.path}")
+	@Value("${submissionCode.server.verify-path}")
 	private String serverCodeVerificationPath;
 
-	@Value("${robert.esr.limit}")
+	@Value("${robert.server.esr-limit}")
 	private Integer esrLimit;
 }

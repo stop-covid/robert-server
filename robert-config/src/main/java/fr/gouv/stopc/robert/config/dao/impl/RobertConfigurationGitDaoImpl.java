@@ -143,33 +143,33 @@ public class RobertConfigurationGitDaoImpl implements IRobertConfigurationDao {
 
 		List<ComparisonResult> result = new ArrayList<>();
 		// Configuration can be null if conf file is empty
-		if (currentConfiguration != null && currentConfiguration.getProximityTracing() != null
-				&& currentConfiguration.getProximityTracing().getBle() != null) {
+		if (currentConfiguration != null && currentConfiguration.getTracing() != null
+				&& currentConfiguration.getTracing().getBle() != null) {
 			// Update signalCalibrationPerModel if present in the current conf
-			if (!currentConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel()
-					.equals(newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel())) {
+			if (!currentConfiguration.getTracing().getBle().getSignalCalibrationPerModel()
+					.equals(newConfiguration.getTracing().getBle().getSignalCalibrationPerModel())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.signalCalibrationPerModel");
 				signalCalibrationCompare.setCurrentValue(
-						currentConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
+						currentConfiguration.getTracing().getBle().getSignalCalibrationPerModel().toString());
 				signalCalibrationCompare.setNewValue(
-						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel().toString());
+						newConfiguration.getTracing().getBle().getSignalCalibrationPerModel().toString());
 				result.add(signalCalibrationCompare);
-				currentConfiguration.getProximityTracing().getBle().setSignalCalibrationPerModel(
-						newConfiguration.getProximityTracing().getBle().getSignalCalibrationPerModel());
+				currentConfiguration.getTracing().getBle().setSignalCalibrationPerModel(
+						newConfiguration.getTracing().getBle().getSignalCalibrationPerModel());
 			}
 			// Update delta if present in the current conf
-			if (!currentConfiguration.getProximityTracing().getBle().getDelta()
-					.equals(newConfiguration.getProximityTracing().getBle().getDelta())) {
+			if (!currentConfiguration.getTracing().getBle().getDelta()
+					.equals(newConfiguration.getTracing().getBle().getDelta())) {
 				ComparisonResult signalCalibrationCompare = new ComparisonResult();
 				signalCalibrationCompare.setKey("proximityTracing.ble.delta");
 				signalCalibrationCompare
-						.setCurrentValue(currentConfiguration.getProximityTracing().getBle().getDelta().toString());
+						.setCurrentValue(currentConfiguration.getTracing().getBle().getDelta().toString());
 				signalCalibrationCompare
-						.setNewValue(newConfiguration.getProximityTracing().getBle().getDelta().toString());
+						.setNewValue(newConfiguration.getTracing().getBle().getDelta().toString());
 				result.add(signalCalibrationCompare);
-				currentConfiguration.getProximityTracing().getBle()
-						.setDelta(newConfiguration.getProximityTracing().getBle().getDelta());
+				currentConfiguration.getTracing().getBle()
+						.setDelta(newConfiguration.getTracing().getBle().getDelta());
 			}
 		}
 

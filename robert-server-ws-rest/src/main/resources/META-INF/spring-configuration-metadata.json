@@ -32,6 +32,11 @@
 			"description": "Port to use when exchanging with the Robert Crypto server"
 		},
 		{
+			"name": "robert.server.esr-limit",
+			"type": "java.lang.Integer",
+			"description": "To be completed"
+		},
+		{
 			"name": "submissionCode.server.hostname",
 			"type": "java.lang.String",
 			"description": "Host name of the Submission Code server"

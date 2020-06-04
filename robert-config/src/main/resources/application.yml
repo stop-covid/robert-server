@@ -25,7 +25,7 @@ robert:
 # - fetchRegistry allows Robert-Config to work even if Eureka goes down
 eureka:
   client:
-    enabled: ${ROBERT_REGISTRY_ENABLED:false}
+    enabled: ${ROBERT_REGISTRY_ENABLED:true}
     service-url:
       defaultZone: ${ROBERT_REGISTRY_URI:http://localhost:8761/eureka}
     registerWithEureka: false

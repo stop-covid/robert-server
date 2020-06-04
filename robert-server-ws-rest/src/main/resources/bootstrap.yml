@@ -18,6 +18,7 @@ spring:
       uri: ${ROBERT_SERVER_DB_URI:mongodb://${ROBERT_SERVER_DB_HOST:localhost}:${ROBERT_SERVER_DB_PORT:27017}/${ROBERT_SERVER_DB_NAME:protectedRobertDB}}
   cloud:
     config:
+      profile: dev
       label: ${ROBERT_CONFIG_LABEL:dev}
       uri: ${ROBERT_CONFIG_URI:http://localhost:8888/spring-config}
 
@@ -39,6 +40,7 @@ debug: ${ROBERT_SERVER_DEBUG_ERRORS:false}
 
 robert:
   server:
+    esr-limit: ${ROBERT_ESR_LIMIT:1}
     controller-path-prefix: /api/v1
   crypto:
     hostname: ${ROBERT_CRYPTO_SERVER_HOST:localhost}
