@@ -19,7 +19,7 @@
 
 	<groupId>fr.gouv.stopc</groupId>
 	<artifactId>robert-server</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<name>robert-server</name>
 	<packaging>pom</packaging>
 	<description>Projet principal</description>
@@ -324,7 +324,7 @@
 		<connection>scm:git:${gitRepositoryUrl}</connection>
 		<developerConnection>scm:git:${gitRepositoryUrl}</developerConnection>
 		<url>${gitRepositoryUrl}</url>
-		<tag>robert-server-1.0.0</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 </project>
