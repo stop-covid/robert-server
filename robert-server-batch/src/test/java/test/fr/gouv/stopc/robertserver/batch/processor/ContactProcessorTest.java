@@ -958,7 +958,7 @@ public class ContactProcessorTest {
 
 	private void assertRiskThresholdExceededBasedOnConfiguration(Registration expectedRegistration) {
 		boolean atRisk = expectedRegistration.isAtRisk();
-		if (this.serverConfigurationService.getRiskThreshold() >= sumRiskScores(expectedRegistration.getExposedEpochs())) {
+		if (this.propertyLoader.getRiskThreshold() >= sumRiskScores(expectedRegistration.getExposedEpochs())) {
 			assertFalse(atRisk);
 		} else {
 			assertTrue(atRisk);
