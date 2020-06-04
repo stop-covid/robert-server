@@ -52,8 +52,22 @@ public final class TimeUtils {
      */
     public static LocalDate getDateFromEpoch(int epoch, long timeStart) {
 
-        long fromInNtpSecs = (EPOCH_DURATION_SECS * epoch) + timeStart;
-        long fromUnixMillis = (fromInNtpSecs - SECONDS_FROM_01_01_1900) * 1000;
-        return Instant.ofEpochMilli(fromUnixMillis).atZone(ZoneId.of("Europe/Paris")).toLocalDate();
-    }
+		long fromInNtpSecs = (EPOCH_DURATION_SECS * epoch) + timeStart;
+		long fromUnixMillis = (fromInNtpSecs - SECONDS_FROM_01_01_1900) * 1000;
+		return Instant.ofEpochMilli(fromUnixMillis).atZone(ZoneId.of("Europe/Paris")).toLocalDate();
+	}
+
+	/**
+	 * Converts a <code>LocalDate</code> in number of epochs for a given reference
+	 * time
+	 * 
+	 * @param date      the date to convert
+	 * @param timeStart reference time in NTP seconds
+	 * @return the corresponding number of epochs
+	 */
+	public static long getEpochFromDate(LocalDate date, long timeStart) {
+		long nbSecondNtp = date.atStartOfDay().atZone(ZoneId.of("Europe/Paris")).toEpochSecond()
+				+ SECONDS_FROM_01_01_1900 - timeStart;
+		return nbSecondNtp / EPOCH_DURATION_SECS;
+	}
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import fr.gouv.stopc.robertserver.ws.vo.RobertServerKpi;
 
 /**
+ * Service for Kpis generation
  * 
  * @author plant-stopcovid
  *
@@ -13,10 +14,11 @@ import fr.gouv.stopc.robertserver.ws.vo.RobertServerKpi;
 public interface IKpiService {
 
 	/**
+	 * Compute the Kpis for each day on a period
 	 * 
-	 * @param fromDate
-	 * @param toDate
-	 * @return
+	 * @param fromDate the beginning date of the period
+	 * @param toDate   the ending date of the period
+	 * @return the list of <code>RobertServerKpi</code> for each day on the period
 	 */
 	List<RobertServerKpi> computeKpi(LocalDate fromDate, LocalDate toDate);
 
