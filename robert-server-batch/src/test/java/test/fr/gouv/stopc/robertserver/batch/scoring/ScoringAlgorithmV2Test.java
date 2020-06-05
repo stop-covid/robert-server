@@ -40,24 +40,7 @@ public class ScoringAlgorithmV2Test {
 	@Test
 	public void test_C4_20_A() {
 		try {
-			List<Contact> contacts = new ArrayList<>();
-			for (File input : new File(getClass().getClassLoader().getResource("input_v2/C4_20_A").toURI())
-					.listFiles()) {
-				// Read the current file corresponding to a contact
-				CSVReader reader = new CSVReader(new FileReader(input));
-				// Skip the header
-				reader.skip(1);
-				List<String[]> lines = reader.readAll();
-				// Each line is a HelloMessageDetail
-				List<HelloMessageDetail> hellos = lines.stream()
-						.map(line -> HelloMessageDetail.builder().timeCollectedOnDevice(Long.parseLong(line[1].trim()))
-								.timeFromHelloMessage(Integer.parseInt(line[2].trim()))
-								.rssiCalibrated(Integer.parseInt(line[3].trim())).build())
-						.collect(Collectors.toList());
-				// Add the contact
-				contacts.add(Contact.builder().messageDetails(hellos).build());
-				reader.close();
-			}
+			List<Contact> contacts = retrieveContacts("input_v2/C4_20_A");
 			List<ScoringResult> risks = contacts.stream().map(contact -> {
 				try {
 					return serviceScoring.execute(contact);
@@ -74,26 +57,33 @@ public class ScoringAlgorithmV2Test {
 		}
 	}
 
+	private List<Contact> retrieveContacts(String dir) throws URISyntaxException, IOException, CsvException{
+		List<Contact> contacts = new ArrayList<>();
+		for (File input : new File(getClass().getClassLoader().getResource(dir).toURI())
+				.listFiles()) {
+			// Read the current file corresponding to a contact
+			CSVReader reader = new CSVReader(new FileReader(input));
+			// Skip the header
+			reader.skip(1);
+			List<String[]> lines = reader.readAll();
+			// Each line is a HelloMessageDetail
+			List<HelloMessageDetail> hellos = lines.stream()
+					.map(line -> HelloMessageDetail.builder().timeCollectedOnDevice(Long.parseLong(line[1].trim()))
+							.timeFromHelloMessage(Integer.parseInt(line[2].trim()))
+							.rssiCalibrated(Integer.parseInt(line[3].trim())).build())
+					.collect(Collectors.toList());
+			// Add the contact
+			contacts.add(Contact.builder().messageDetails(hellos).build());
+			reader.close();
+		}
+		
+		return contacts;
+	}
+	
 	@Test
 	public void test_R1_AA() {
 		try {
-			List<Contact> contacts = new ArrayList<>();
-			for (File input : new File(getClass().getClassLoader().getResource("input_v2/R1_AA").toURI()).listFiles()) {
-				// Read the current file corresponding to a contact
-				CSVReader reader = new CSVReader(new FileReader(input));
-				// Skip the header
-				reader.skip(1);
-				List<String[]> lines = reader.readAll();
-				// Each line is a HelloMessageDetail
-				List<HelloMessageDetail> hellos = lines.stream()
-						.map(line -> HelloMessageDetail.builder().timeCollectedOnDevice(Long.parseLong(line[1].trim()))
-								.timeFromHelloMessage(Integer.parseInt(line[2].trim()))
-								.rssiCalibrated(Integer.parseInt(line[3].trim())).build())
-						.collect(Collectors.toList());
-				// Add the contact
-				contacts.add(Contact.builder().messageDetails(hellos).build());
-				reader.close();
-			}
+			List<Contact> contacts = retrieveContacts("input_v2/R1_AA");
 			List<ScoringResult> risks = contacts.stream().map(contact -> {
 				try {
 					return serviceScoring.execute(contact);
