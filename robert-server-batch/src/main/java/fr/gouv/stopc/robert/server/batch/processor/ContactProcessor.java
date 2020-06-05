@@ -17,6 +17,7 @@ import fr.gouv.stopc.robert.crypto.grpc.server.client.service.ICryptoServerGrpcC
 import fr.gouv.stopc.robert.server.batch.exception.RobertScoringException;
 import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
 import fr.gouv.stopc.robert.server.batch.utils.PropertyLoader;
+import fr.gouv.stopc.robert.server.batch.vo.ScoringResult;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 import fr.gouv.stopc.robert.server.crypto.exception.RobertServerCryptoException;
@@ -203,13 +204,13 @@ public class ContactProcessor implements ItemProcessor<Contact, Contact> {
                 .filter(item -> item.getEpochId() == epochIdFromEBID)
                 .findFirst();
 
-        Double scoredRisk =  this.scoringStrategy.execute(contact);
+        ScoringResult scoredRisk =  this.scoringStrategy.execute(contact);
         if (epochToAddTo.isPresent()) {
             List<Double> epochScores = epochToAddTo.get().getExpositionScores();
-            epochScores.add(scoredRisk);
+            epochScores.add(scoredRisk.getRssiScore());
         } else {
             exposedEpochs.add(EpochExposition.builder()
-                    .expositionScores(Arrays.asList(scoredRisk))
+                    .expositionScores(Arrays.asList(scoredRisk.getRssiScore()))
                     .epochId(epochIdFromEBID)
                     .build());
         }
