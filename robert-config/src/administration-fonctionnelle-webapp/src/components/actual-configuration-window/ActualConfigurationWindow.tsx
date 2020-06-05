@@ -9,15 +9,16 @@ import {
     FormGroup,
     FormLabel
 } from 'react-bootstrap';
+import { FaSave, FaTrashRestore } from 'react-icons/fa';
 import {
-    getActualConfiguration,
-    putNewConfiguration
+    getConfiguration,
+    updateConfiguration
 } from './data-provider/ActualConfigurationDataProvider';
 import { DecimalInput } from './input/DecimalInput';
 import { NumberInput } from './input/NumberInput';
 import { TextInput } from './input/TextInput';
 
-export default function ActualConfigurationWindow(): any {
+export default function ActualConfigurationWindow(props: any): any {
     const minValues = {
         appAutonomy: 0,
         maxSimultaneousRegister: 1,
@@ -141,7 +142,7 @@ export default function ActualConfigurationWindow(): any {
         if (validated) {
             handleShow();
             setSubmitResponse(
-                putNewConfiguration(config)
+                updateConfiguration(config, props.token)
                     .then(result => {
                         loadConfiguration();
                         return { isSubmitted: true, message: result };
@@ -152,7 +153,7 @@ export default function ActualConfigurationWindow(): any {
     };
 
     const loadConfiguration = () => {
-        getActualConfiguration()
+        getConfiguration(props.token)
             .then(configuration => {
                 setConfig({ ...configuration });
             })
@@ -367,7 +368,6 @@ export default function ActualConfigurationWindow(): any {
                                         validated={validated}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="checkStatusFrequency"
@@ -394,7 +394,6 @@ export default function ActualConfigurationWindow(): any {
                                         validated={validated}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="preSymptomsSpan"
@@ -463,7 +462,6 @@ export default function ActualConfigurationWindow(): any {
                                         />
                                     </FormGroup>
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="simultaneousContacts"
@@ -478,7 +476,6 @@ export default function ActualConfigurationWindow(): any {
                                         validated={validated}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="txGain"
@@ -522,7 +519,6 @@ export default function ActualConfigurationWindow(): any {
                                         }
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="maxSampleSize"
@@ -549,13 +545,13 @@ export default function ActualConfigurationWindow(): any {
                                         onChange={handleBleChange}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     {config.tracing.ble.delta.map(
                                         (delta: any, index: number) => {
                                             return (
                                                 <NumberInput
                                                     id={`${index}`}
+                                                    key={index}
                                                     label={`Delta ${index + 1}`}
                                                     name={`{index}`}
                                                     value={delta}
@@ -566,7 +562,6 @@ export default function ActualConfigurationWindow(): any {
                                         }
                                     )}
                                 </Form.Row>
-
                                 <Form.Row>
                                     <DecimalInput
                                         id="riskThresholdLow"
@@ -602,7 +597,6 @@ export default function ActualConfigurationWindow(): any {
                                         validated={validated}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="riskMin"
@@ -654,7 +648,6 @@ export default function ActualConfigurationWindow(): any {
                                         onChange={handleBleChange}
                                     />
                                 </Form.Row>
-
                                 <Form.Row>
                                     <NumberInput
                                         id="rssiThreshold"
@@ -695,21 +688,21 @@ export default function ActualConfigurationWindow(): any {
                                         max={maxValues.r0}
                                     />
                                 </Form.Row>
-
                                 <Button
+                                    className="px-1"
                                     onClick={handleSubmit}
                                     variant={'outline-success'}
                                     disabled={!validated}
                                 >
-                                    Save
-                                </Button>
-
+                                    <FaSave /> Save
+                                </Button>{' '}
                                 <Button
+                                    className="px-1"
                                     onClick={handleCancel}
                                     variant={'warning'}
                                     disabled={!validated}
                                 >
-                                    Cancel
+                                    <FaTrashRestore /> Cancel
                                 </Button>
                             </Form>
 

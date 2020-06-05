@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Link, Route, Switch } from 'react-router-dom';
+import Keycloak from 'keycloak-js';
 import Header from './components/header';
 import MainContainer from './components/main-container';
 import Home from './pages/home';
@@ -10,6 +11,28 @@ import { Nav, Navbar } from 'react-bootstrap';
 import ConfigurationDetails from './pages/configuration-details';
 
 function App() {
+    const [state, setState] = useState({
+        authenticated: false,
+        token: ''
+    });
+
+    const authenticate = () => {
+        const _keycloak: any = Keycloak('/keycloak/keycloak.json');
+        _keycloak
+            .init({
+                onLoad: 'login-required'
+            })
+            .then((authenticated: any) => {
+                const { token } = _keycloak;
+                console.log('You have been successfully authenticated.');
+                setState({ authenticated, token });
+            });
+    };
+
+    useEffect(() => {
+        authenticate();
+    }, []);
+
     return (
         <div className="administrationFonctionnelle">
             <Router>
@@ -48,7 +71,7 @@ function App() {
                         </Route>
 
                         <Route path="/configuration">
-                            <ConfigurationDetails />
+                            <ConfigurationDetails token={state.token} />
                         </Route>
 
                         <Route path="/">

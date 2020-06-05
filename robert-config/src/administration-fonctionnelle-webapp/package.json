@@ -4,6 +4,7 @@
     "proxy": "http://localhost:8080",
     "private": true,
     "dependencies": {
+        "@babel/core": "^7.10.2",
         "@testing-library/jest-dom": "^4.2.4",
         "@testing-library/react": "^9.3.2",
         "@testing-library/user-event": "^7.1.2",
@@ -21,15 +22,16 @@
         "eslint": "6.6.0",
         "eslint-config-google": "^0.14.0",
         "eslint-plugin-react": "^7.16.0",
+        "keycloak-js": "^10.0.2",
         "node-sass": "^4.12.0",
         "react": "^16.13.1",
         "react-bootstrap": "^1.0.1",
         "react-dom": "^16.13.1",
+        "react-icons": "^3.10.0",
         "react-json-editor-ajrm": "^2.5.9",
         "react-router-dom": "latest",
         "react-scripts": "3.4.1",
-        "typescript": "~3.7.2",
-        "@babel/core": "^7.10.2"
+        "typescript": "~3.7.2"
     },
     "scripts": {
         "start": "react-scripts start",
@@ -37,22 +39,22 @@
         "eject": "react-scripts eject",
         "build": "react-scripts build",
         "build:windows": "react-scripts build",
-        "postbuild:windows":
-            "npm run clean-old-build:windows && npm run create-static:windows && npm run copy-build:windows && npm run clean-new-build:windows",
-        "clean-old-build:windows":
-            "rmdir /Q /S  \"..\\main\\resources\\static\" 2>nul || echo \"clean-old-build failed.\"",
-        "create-static:windows":
-            "md \"..\\main\\resources\\static\\\" || echo \"clean-old-build failed.\"",
+        "postbuild:windows": "npm run clean-old-build:windows && npm run create-static:windows && npm run copy-build:windows && npm run clean-new-build:windows",
+        "clean-old-build:windows": "rmdir /Q /S  \"..\\main\\resources\\static\" 2>nul || echo \"clean-old-build failed.\"",
+        "create-static:windows": "md \"..\\main\\resources\\static\\\" || echo \"clean-old-build failed.\"",
         "copy-build:windows": "xcopy /E build ..\\main\\resources\\static\\",
-        "clean-new-build:windows":
-            "rmdir /Q /S build || echo \"clean-old-build failed.\" ",
+        "clean-new-build:windows": "rmdir /Q /S build || echo \"clean-old-build failed.\" ",
         "lint": "npm run eslint",
         "lint:fix": "npm run eslint:fix",
         "eslint": "eslint src/*.ts* ",
         "eslint:fix": "npm run eslint -- --fix"
     },
     "browserslist": {
-        "production": [">0.2%", "not dead", "not op_mini all"],
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
         "development": [
             "last 1 chrome version",
             "last 1 firefox version",

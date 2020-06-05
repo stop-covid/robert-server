@@ -4,28 +4,38 @@ import {
     PUT_CONFIGURATION_ENDPOINT
 } from '../../../constantes/Environments';
 
-export function getActualConfiguration(): Promise<any | null> {
-    return AdministrationFonctionnelleApi.GET(GET_ACTUAL_CONFIGURATION_ENDPOINT)
+export function getConfiguration(token: string): Promise<any | null> {
+    return AdministrationFonctionnelleApi.GET(
+        GET_ACTUAL_CONFIGURATION_ENDPOINT,
+        token
+    )
         .then(response => {
             return response.data;
         })
         .catch(error => {
             console.error(
-                'AdministrationFonctionnelleApi?getActualConfiguration --> error : ',
+                'AdministrationFonctionnelleApi?getConfiguration --> error : ',
                 error
             );
             return null;
         });
 }
 
-export function putNewConfiguration(data: any): Promise<any | null> {
-    return AdministrationFonctionnelleApi.PUT(PUT_CONFIGURATION_ENDPOINT, data)
+export function updateConfiguration(
+    data: any,
+    token: string
+): Promise<any | null> {
+    return AdministrationFonctionnelleApi.PUT(
+        PUT_CONFIGURATION_ENDPOINT,
+        data,
+        token
+    )
         .then(response => {
             return response.data;
         })
         .catch(error => {
             console.error(
-                'AdministrationFonctionnelleApi?putNewConfiguration --> error : ',
+                'AdministrationFonctionnelleApi?updateConfiguration --> error : ',
                 error
             );
             return null;

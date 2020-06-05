@@ -6,8 +6,10 @@ export type HistoryDataProviderResponse = {
     message: string;
 };
 
-export function getHistory(): Promise<HistoryDataProviderResponse[] | null> {
-    return AdministrationFonctionnelleApi.GET(GET_HISTORY_ENDPOINT)
+export function getHistory(
+    token: string
+): Promise<HistoryDataProviderResponse[] | null> {
+    return AdministrationFonctionnelleApi.GET(GET_HISTORY_ENDPOINT, token)
         .then(response => {
             return response.data as HistoryDataProviderResponse[];
         })

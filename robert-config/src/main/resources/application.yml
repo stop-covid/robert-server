@@ -43,6 +43,5 @@ keycloak:
   realm: ${ROBERT_CONFIG_KEYCLOAK_REALM:keycloak_realm}
   ssl-required: external
   resource: ${ROBERT_CONFIG_KEYCLOAK_CLIENT:keycloak_client}
-  bearer-only: true
-  use-resource-role-mappings: true
+  public-client: true
   credentials:    secret: ${ROBERT_CONFIG_KEYCLOAK_CLIENT_SECRET:client_secret}

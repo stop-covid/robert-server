@@ -6,7 +6,7 @@ import {
 import { Container, Col, Row } from 'react-bootstrap';
 import { HistoryLine } from './sub-components/history-line/HistoryLine';
 
-export default function History() {
+export default function History(props: any) {
     const [history, setHistory] = useState([] as JSX.Element[]);
 
     // Load data
@@ -18,11 +18,11 @@ export default function History() {
             if (!hs) {
                 setHistory([]);
             } else {
-                hs.forEach((h: HistoryDataProviderResponse) =>
+                hs.map((_history: HistoryDataProviderResponse, index: number) =>
                     hJSX.push(
-                        <Row>
+                        <Row key={index}>
                             <Col>
-                                <HistoryLine historydata={h} />
+                                <HistoryLine historydata={_history} />
                             </Col>
                         </Row>
                     )
@@ -32,9 +32,11 @@ export default function History() {
             }
         };
 
-        getHistory()
+        getHistory(props.token)
             .then(response => {
-                if (response) historyRendering(response);
+                if (response) {
+                    historyRendering(response);
+                }
             })
             .catch(error => {
                 console.error('error has been caught : ', error);
