@@ -24,6 +24,6 @@ public interface RegistrationRepository extends MongoRepository<Registration, by
 	 * @param epochTo
 	 * @return
 	 */
-	@Query(value = "{ latestRiskEpoch: {$lt: ?0}, atRisk: {$eq: false} , exposedEpochs: {$eq: []}}", count = true)
+	@Query(value = "{ latestRiskEpoch: {$lt: ?0}, atRisk: {$eq: false} , exposedEpochs: {$ne: []}}", count = true)
 	Long countNbExposedUsersButNotAtRisk(int epoch);
 }

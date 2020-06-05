@@ -2,30 +2,34 @@ package test.fr.gouv.stopc.robertserver.database.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
-import lombok.extern.slf4j.Slf4j;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.crypto.KeyGenerator;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.test.context.TestPropertySource;
+import org.mockito.Mockito;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import fr.gouv.stopc.robert.server.common.utils.ByteUtils;
 import fr.gouv.stopc.robertserver.database.model.Registration;
 import fr.gouv.stopc.robertserver.database.repository.RegistrationRepository;
 import fr.gouv.stopc.robertserver.database.service.impl.RegistrationService;
-
-import javax.crypto.KeyGenerator;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import lombok.extern.slf4j.Slf4j;
+import test.fr.gouv.stopc.robertserver.database.utils.RegistrationFactory;
 
 @Slf4j
 @ExtendWith(SpringExtension.class)
@@ -37,28 +41,27 @@ public class RegistrationServiceImplTest {
 	@Mock
 	RegistrationRepository registrationRepository;
 
-
 	private byte[] generateIdA() {
 		byte[] id = generateKey(5);
-		while(registrationRepository.existsById(id)) {
+		while (registrationRepository.existsById(id)) {
 			id = generateKey(5);
 		}
 		return id;
 	}
 
-	public byte [] generateKA() {
-		byte [] ka = null;
+	public byte[] generateKA() {
+		byte[] ka = null;
 
 		try {
 			KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
 
-			//Creating a SecureRandom object
+			// Creating a SecureRandom object
 			SecureRandom secRandom = new SecureRandom();
 
-			//Initializing the KeyGenerator
+			// Initializing the KeyGenerator
 			keyGen.init(secRandom);
 
-			//Creating/Generating a key
+			// Creating/Generating a key
 			Key key = keyGen.generateKey();
 			ka = key.getEncoded();
 		} catch (NoSuchAlgorithmException e) {
@@ -175,4 +178,5 @@ public class RegistrationServiceImplTest {
 		verify(this.registrationRepository).findAll();
 	}
 
+	
 }
