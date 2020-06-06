@@ -103,7 +103,11 @@ public class ScoringAlgorithmV2Test {
         expectedOutput.add(ScoringResult.builder().rssiScore(1.0).duration(5).nbContacts(6).build());
         expectedOutput.add(ScoringResult.builder().rssiScore(1.0).duration(8).nbContacts(9).build());
 
-        launchTestsOnDirectoryAndExpectOutput(directory, expectedOutput, 0.07562234455563899);
+        for (ScoringResult scoringResult : expectedOutput) {
+            scoringResult.setRssiScore(scoringResult.getRssiScore() * scoringResult.getDuration());
+        }
+
+        launchTestsOnDirectoryAndExpectOutput(directory, expectedOutput, 0.4032597205158922);
     }
 
     private List<Contact> retrieveContacts(String dir) throws URISyntaxException, IOException, CsvException {
@@ -206,7 +210,11 @@ public class ScoringAlgorithmV2Test {
         expectedOutput.add(ScoringResult.builder().rssiScore(0.20528318167146567).duration(1).nbContacts(2).build());
         expectedOutput.add(ScoringResult.builder().rssiScore(0.0).duration(1).nbContacts(0).build());
 
-        launchTestsOnDirectoryAndExpectOutput(directory, expectedOutput, 0.03991493973736204);
+        for (ScoringResult scoringResult : expectedOutput) {
+            scoringResult.setRssiScore(scoringResult.getRssiScore() * scoringResult.getDuration());
+        }
+
+        launchTestsOnDirectoryAndExpectOutput(directory, expectedOutput, 0.1753681436934148);
     }
 
     private void launchTestsOnDirectoryAndExpectOutput(String directory,
@@ -223,6 +231,13 @@ public class ScoringAlgorithmV2Test {
                     return null;
                 }
             }).collect(Collectors.toList());
+
+            for (int i = 0; i < risks.size(); i++) {
+                if (risks.get(i) != expectedOutput.get(i)) {
+                    log.error("Values differ; expected={}; found={}", expectedOutput.get(i), risks.get(i));
+                }
+            }
+
             assertTrue(Arrays.equals(expectedOutput.toArray(), risks.toArray()));
             assertEquals(expectedFinalRisk,
                     this.serviceScoring.aggregate(risks
