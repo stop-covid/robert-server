@@ -3,6 +3,7 @@ package fr.gouv.stopc.robert.server.batch.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import fr.gouv.stopc.robert.server.batch.utils.PropertyLoader;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,9 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 
 	private final ScoringAlgorithmConfiguration configuration;
 
+	private final PropertyLoader propertyLoader;
+
+
 	/**
 	 * Spring injection constructor
 	 * 
@@ -40,9 +44,11 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 	 *                                   bean to inject
 	 */
 	public ScoringStrategyV2ServiceImpl(IServerConfigurationService serverConfigurationService,
-			ScoringAlgorithmConfiguration configuration) {
+										ScoringAlgorithmConfiguration configuration,
+										PropertyLoader propertyLoader) {
 		this.serverConfigurationService = serverConfigurationService;
 		this.configuration = configuration;
+		this.propertyLoader = propertyLoader;
 	}
 
 	@Override
@@ -59,7 +65,6 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 	// for (EpochExposition epochExposition : scoresSinceLastNotif) {
 	public final static int NB_EPOCHS_SCORED_AT_RISK = 1;
 	// https://hal.inria.fr/hal-02641630/document (Table 4)
-	private final static double SCORING_R0 = 0.007;
 
 	// Aggregate (formula n56) taken from https://hal.inria.fr/hal-02641630/document
 	public double aggregate(List<Double> scores) {
@@ -73,7 +78,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 			scoreSum += score;
 		}
 
-		return (1 - Math.exp(-SCORING_R0 * scoreSum));
+		return (1 - Math.exp(-this.propertyLoader.getR0ScoringAlgorithm() * scoreSum));
 	}
 
 	/**

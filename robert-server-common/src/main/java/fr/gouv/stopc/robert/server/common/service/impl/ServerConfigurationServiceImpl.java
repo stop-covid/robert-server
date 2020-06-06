@@ -65,9 +65,4 @@ public class ServerConfigurationServiceImpl implements IServerConfigurationServi
         return 60;
     }
 
-    // Issue #TODO: store all values of this risk threshold to track any configuration change over time
-    @Override
-    public double getRiskThreshold() {
-        return 15.0;
-    }
 }

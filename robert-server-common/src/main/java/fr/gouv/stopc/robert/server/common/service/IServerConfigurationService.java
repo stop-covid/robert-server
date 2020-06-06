@@ -54,9 +54,4 @@ public interface IServerConfigurationService {
      */
     int getCaptchaChallengeTimestampTolerance();
 
-    /**
-     *
-     * @return the risk threshold (theta) determining whether someone is at risk
-     */
-    double getRiskThreshold();
 }

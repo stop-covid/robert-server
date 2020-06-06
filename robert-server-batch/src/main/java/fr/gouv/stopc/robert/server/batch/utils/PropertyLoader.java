@@ -21,4 +21,7 @@ public class PropertyLoader {
 	@Value("${robert.protocol.risk-threshold}")
 	private Double riskThreshold;
 
+	@Value("${robert.scoring.scoring-algo-r0}")
+	private Double r0ScoringAlgorithm;
+
 }

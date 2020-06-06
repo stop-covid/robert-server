@@ -288,7 +288,7 @@ public class RSSICalibratedScoringStrategyTest {
 		}
 
 		log.info(String.format("Just after half way of epoch: %f", score));
-		assertTrue(score < this.riskThreshold);
+		assertTrue(score < 0.5);
 	}
 
 	@Test
@@ -307,7 +307,7 @@ public class RSSICalibratedScoringStrategyTest {
 		}
 
 		log.info(String.format("Just before half way of epoch: %f", score));
-		assertTrue(score < this.riskThreshold);
+		assertTrue(score < 0.5);
 	}
 
 	@Test
