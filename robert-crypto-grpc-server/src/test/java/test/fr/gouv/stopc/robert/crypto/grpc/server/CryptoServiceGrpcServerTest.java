@@ -1047,7 +1047,7 @@ class CryptoServiceGrpcServerTest {
     }
 
     private HelloMessageBundle generateHelloMessage(byte[] id, byte[] serverKey, byte[] keyForMac, DigestSaltEnum digestSalt) {
-        long time = getCurrentTimeNTPSeconds() - 500000;
+        long time = getCurrentTimeNTPSeconds() - 100000;
         int epochId = TimeUtils.getNumberOfEpochsBetween(this.serverConfigurationService.getServiceTimeStart(), time);
         byte[] ebid = generateEbid(id, epochId, serverKey);
 

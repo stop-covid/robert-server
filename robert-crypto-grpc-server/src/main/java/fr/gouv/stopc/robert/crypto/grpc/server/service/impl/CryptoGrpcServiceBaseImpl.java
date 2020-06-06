@@ -200,7 +200,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
             return;
         }
 
-        log.info("XXXXXXXXXX");
         // Check MAC
         try {
             Optional<ClientIdentifierBundle> clientIdentifierBundle = this.clientStorageService.findKeyById(idA);
@@ -366,7 +365,6 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 authRequestEpoch,
                 this.serverConfigurationService.getServiceTimeStart());
 
-        log.info("decryptEBIDAndCheckEpoch -- -- - - - KS = {} and ebid ={} and epoch = {}", serverKey, ebid, authRequestEpoch);
         if (Objects.isNull(serverKey)) {
             log.warn("Cannot retrieve server key for {}", authRequestEpoch);
             //return manageEBIDDecryptRetry(ebid, authRequestEpoch, adjacentEpochMatchEnum);
