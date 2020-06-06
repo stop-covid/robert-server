@@ -18,10 +18,7 @@ import fr.gouv.stopc.robert.server.common.utils.TimeUtils;
 @Service
 public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfigurationService {
 
-	@Value("${robert.server.time-start}")
-	private String timeStart;
-
-	@Value("${robert.protocol.hello-message-timestamp-tolerance:180}")
+	@Value("${robert.protocol.hello-message-timestamp-tolerance}")
 	private Integer helloMessageTimeStampTolerance;
 	
 	private Long timeStartNtp;
@@ -31,7 +28,7 @@ public class CryptoServerConfigurationServiceImpl implements ICryptoServerConfig
 	 */
 	@PostConstruct
 	private void initTimeStartNtp() {
-		LocalDate ld = LocalDate.parse(timeStart, DateTimeFormatter.BASIC_ISO_DATE);
+		LocalDate ld = LocalDate.parse("20200601", DateTimeFormatter.BASIC_ISO_DATE);
 		timeStartNtp = TimeUtils.convertUnixStoNtpSeconds(ld.atStartOfDay().toEpochSecond(ZoneOffset.UTC));
 	}
 	
