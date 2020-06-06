@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import fr.gouv.stopc.robert.server.batch.configuration.ScoringAlgorithmConfiguration;
 import fr.gouv.stopc.robert.server.batch.exception.RobertScoringException;
 import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
-import fr.gouv.stopc.robert.server.batch.vo.ScoringResult;
+import fr.gouv.stopc.robert.server.batch.model.ScoringResult;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
@@ -45,6 +45,35 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 		this.configuration = configuration;
 	}
 
+	@Override
+	public int getScoringStrategyVersion() {
+		return 2;
+	}
+
+	@Override
+	public int getNbEpochsScoredAtRiskThreshold() {
+		return NB_EPOCHS_SCORED_AT_RISK;
+	}
+
+	// IF INCREASED TO VALUE > 1, remove the break; in the loop
+	// for (EpochExposition epochExposition : scoresSinceLastNotif) {
+	public final static int NB_EPOCHS_SCORED_AT_RISK = 1;
+	// https://hal.inria.fr/hal-02641630/document (Table 4)
+	private final static double SCORING_R0 = 0.007;
+
+	// Aggregate (formula n56) taken from https://hal.inria.fr/hal-02641630/document
+	public double aggregate(List<Double> scores) {
+		//double scoreSum = scores.stream().mapToDouble(Double::doubleValue).sum();
+
+		double scoreSum = 0.0;
+		// https://hal.inria.fr/hal-02641630/document (56)
+		for (Double score : scores) {
+			scoreSum += score;
+		}
+
+		return (1 - Math.exp(-SCORING_R0 * scoreSum));
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -58,7 +87,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 		double[] qm = new double[epochDurationInMinutes];
 		int[] np = new int[epochDurationInMinutes];
 		for (int k = 0; k < epochDurationInMinutes; k++) {
-			listRSSI[k] = new ArrayList<Number>();
+			listRSSI[k] = new ArrayList<>();
 		}
 
 		// Verification
@@ -88,7 +117,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 					listRSSI[index].add(rssi);
 				}
 			} else {
-				String errorMessage = "Epoch in minutes too big " + index;
+				String errorMessage = String.format("Epoch in minutes too big {}", index);
 				log.error(errorMessage);
 				throw new RobertScoringException(errorMessage);
 			}
@@ -111,7 +140,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 
 		int kmax = 0;
 		int nbcontacts = 0;
-		List<Number> risk = new ArrayList<Number>();
+		List<Number> risk = new ArrayList<>();
 
 		for (int k = 0; k < epochDurationInMinutes; k++) {
 			if (np[k] > 0) {
@@ -126,8 +155,11 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 			}
 		}
 
-		return ScoringResult.builder().rssiScore(softMax(risk, configuration.getSoftMaxB()))
-				.duration(kmax).nbcontacts(nbcontacts).build();
+		return ScoringResult.builder()
+				.rssiScore(softMax(risk, configuration.getSoftMaxB()))
+				.duration(kmax)
+				.nbContacts(nbcontacts)
+				.build();
 
 	}
 

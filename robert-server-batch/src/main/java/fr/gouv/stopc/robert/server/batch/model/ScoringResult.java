@@ -1,4 +1,4 @@
-package fr.gouv.stopc.robert.server.batch.vo;
+package fr.gouv.stopc.robert.server.batch.model;
 
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +9,7 @@ public class ScoringResult {
 
 	private Integer duration;
 	
-	private Integer nbcontacts;
+	private Integer nbContacts;
 	
 	private Double rssiScore;
 	

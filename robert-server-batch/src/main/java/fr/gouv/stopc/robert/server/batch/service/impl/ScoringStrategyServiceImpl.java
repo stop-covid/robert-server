@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import fr.gouv.stopc.robert.server.batch.exception.RobertScoringException;
 import fr.gouv.stopc.robert.server.batch.service.ScoringStrategyService;
 import fr.gouv.stopc.robert.server.batch.utils.PropertyLoader;
-import fr.gouv.stopc.robert.server.batch.vo.ScoringResult;
+import fr.gouv.stopc.robert.server.batch.model.ScoringResult;
 import fr.gouv.stopc.robert.server.common.service.IServerConfigurationService;
 import fr.gouv.stopc.robertserver.database.model.Contact;
 import fr.gouv.stopc.robertserver.database.model.HelloMessageDetail;
@@ -36,6 +36,22 @@ public class ScoringStrategyServiceImpl implements ScoringStrategyService {
 
         this.serverConfigurationService = serverConfigurationService;
         this.propertyLoader = propertyLoader;
+    }
+
+    @Override
+    public int getScoringStrategyVersion() {
+        return 1;
+    }
+
+    @Override
+    public double aggregate(List<Double> scores) {
+        return scores.stream().mapToDouble(Double::doubleValue).sum();
+
+    }
+
+    @Override
+    public int getNbEpochsScoredAtRiskThreshold() {
+        return 1;
     }
 
     @Override
