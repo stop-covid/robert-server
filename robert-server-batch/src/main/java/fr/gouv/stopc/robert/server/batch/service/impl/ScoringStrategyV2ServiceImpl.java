@@ -67,7 +67,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 
 		double scoreSum = 0.0;
 		// https://hal.inria.fr/hal-02641630/document (56)
-		
+
 		// These are not actual rssi scores, they are rssiScore * duration in order to be formula 57
 		for (Double score : scores) {
 			scoreSum += score;
@@ -158,7 +158,7 @@ public class ScoringStrategyV2ServiceImpl implements ScoringStrategyService {
 		}
 
 		return ScoringResult.builder()
-				.rssiScore(softMax(risk, configuration.getSoftMaxB()) * kmax) // multiplying by duration because we do not store it yet in list of exposed epochs
+				.rssiScore(Math.min(softMax(risk, configuration.getSoftMaxB()) * 1.2, 1.0) * kmax) // multiplying by duration because we do not store it yet in list of exposed epochs
 				.duration(kmax)
 				.nbContacts(nbcontacts)
 				.build();
