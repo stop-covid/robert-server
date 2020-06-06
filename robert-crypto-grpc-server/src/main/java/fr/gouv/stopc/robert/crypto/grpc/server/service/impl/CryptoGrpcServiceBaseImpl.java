@@ -357,6 +357,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
      * Decrypt the provided ebid and check the authRequestEpoch it contains the provided one or the next/previous
      * @param ebid
      * @param authRequestEpoch
+     * @param enableEpochOverlapping authorrize the epoch overlapping (ie too close epochs =>  (Math.abs(epoch1 - epoch2) == 1))
      * @param adjacentEpochMatchEnum
      * @return
      * @throws RobertServerCryptoException
@@ -365,6 +366,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                                                  int authRequestEpoch,
                                                  boolean mustCheckWithPreviousDayKey,
                                                  boolean ksAdjustment,
+                                                 boolean enableEpochOverlapping,
                                                  AdjacentEpochMatchEnum adjacentEpochMatchEnum)
             throws RobertServerCryptoException {
 
@@ -383,15 +385,18 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         byte[] idA = getIdFromDecryptedEBID(decryptedEbid);
         int ebidEpochId = getEpochIdFromDecryptedEBID(decryptedEbid);
 
-        if (authRequestEpoch != ebidEpochId) {
+        if ((authRequestEpoch != ebidEpochId)) {
             log.warn("Epoch from EBID and accompanying authRequestEpoch do not match: ebid epoch = {} vs auth request epoch = {}", ebidEpochId, authRequestEpoch);
-            if (ksAdjustment && !mustCheckWithPreviousDayKey) {
+
+            if(enableEpochOverlapping && (Math.abs(authRequestEpoch - ebidEpochId) == 1)) {
+                return EbidContent.builder().epochId(ebidEpochId).idA(idA).build();
+            } else if (ksAdjustment && !mustCheckWithPreviousDayKey) {
                 return decryptEBIDAndCheckEpoch(
                         ebid,
                         authRequestEpoch,
                         true,
                         false,
-                        adjacentEpochMatchEnum);
+                        enableEpochOverlapping, adjacentEpochMatchEnum);
             } else {
                 return manageEBIDDecryptRetry(ebid,
                         authRequestEpoch,
@@ -421,7 +426,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 epoch,
                 false,
                 isEBIDWithinRange(epoch),
-                AdjacentEpochMatchEnum.NONE);
+                false, AdjacentEpochMatchEnum.NONE);
     }
 
     private EbidContent manageEBIDDecryptRetry(byte[] ebid, int authRequestEpoch, AdjacentEpochMatchEnum adjacentEpochMatchEnum)
@@ -429,10 +434,10 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
         switch (adjacentEpochMatchEnum) {
             case PREVIOUS:
                 log.warn("Retrying ebid decrypt with previous epoch");
-                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch - 1, false, false, adjacentEpochMatchEnum.NONE);
+                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch - 1, false, false, false, adjacentEpochMatchEnum.NONE);
             case NEXT:
                 log.warn("Retrying ebid decrypt with next epoch");
-                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch + 1, false, false,  adjacentEpochMatchEnum.NONE);
+                return decryptEBIDAndCheckEpoch(ebid, authRequestEpoch + 1, false, false,  false, adjacentEpochMatchEnum.NONE);
             case NONE:
             default:
                 return null;
@@ -450,7 +455,7 @@ public class CryptoGrpcServiceBaseImpl extends CryptoGrpcServiceImplImplBase {
                 epoch,
                 false,
                 isEBIDWithinRange(epoch),
-                atStartOrEndOfDay(timeReceived));
+                true, atStartOrEndOfDay(timeReceived));
 
 //        AdjacentEpochMatchEnum adjacentEpochMatch = AdjacentEpochMatchEnum.NONE;
 //        // TODO: replace local EPOCH_DURATION with common epoch duration constant
