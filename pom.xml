@@ -48,7 +48,7 @@
 		<protobuf.version>3.11.0</protobuf.version>
 		<error_prone_annotations.version>2.3.4
 		</error_prone_annotations.version>
-		<postgresql.version>42.2.12</postgresql.version>
+		<postgresql.version>42.3.3</postgresql.version>
 		<bountycastle.version>1.65</bountycastle.version>
     <sonar.projectKey>stop-covid_robert-server</sonar.projectKey>
     <sonar.organization>stop-covid</sonar.organization>
